@@ -67,7 +67,7 @@ export function TopBar() {
     : "";
 
   return (
-    <div className="sticky top-0 z-10 px-3 sm:px-6 py-2 border-b border-[var(--border-soft)] bg-[var(--bg-app)]/85 backdrop-blur flex items-center gap-2 sm:gap-3">
+    <div className="sticky top-0 z-10 pl-3 sm:pl-6 pr-3 py-2 border-b border-[var(--border-soft)] bg-[var(--bg-app)]/85 backdrop-blur flex items-center gap-2 sm:gap-3">
       <SidebarToggle />
 
       {/* Search — flexes */}
@@ -135,23 +135,24 @@ export function TopBar() {
         )}
       </div>
 
-      {/* Right: quick ask + theme toggle + clock */}
+      {/* Right: quick ask + theme toggle + clock — all anchored to the corner,
+          unified height (30px) so they read as one row of controls. */}
       <div className="flex items-center gap-2 shrink-0">
         <Link
           href="/ask"
-          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--bg-card-hover)] transition"
+          className="inline-flex items-center gap-1.5 h-[30px] px-3 rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] text-xs text-[var(--text)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm"
           title="Ask my notes"
         >
-          <Sparkles size={11} />
+          <Sparkles size={12} />
           Ask
         </Link>
         <ThemeToggle />
         {now && (
-          <div className="hidden sm:flex flex-col items-end leading-tight">
+          <div className="hidden sm:flex flex-col items-end justify-center h-[30px] px-3 rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] leading-none shadow-sm">
             <span className="text-[11px] tabular-nums text-[var(--text)] font-mono">
               {timeLabel}
             </span>
-            <span className="text-[9px] uppercase tracking-wide text-[var(--text-faint)]">
+            <span className="mt-0.5 text-[9px] uppercase tracking-wide text-[var(--text-faint)]">
               {dateLabel}
             </span>
           </div>
