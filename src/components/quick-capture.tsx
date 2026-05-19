@@ -227,83 +227,84 @@ export function QuickCapture() {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] bg-black/75 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
           onClick={reset}
         >
           <div
-            className="relative w-full max-w-2xl mx-4 rounded-2xl overflow-hidden life-rise"
+            className="w-full max-w-lg rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-card)] shadow-2xl overflow-hidden life-rise"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background:
-                "linear-gradient(180deg, #1a1a20 0%, #131318 100%)",
-              border: "1px solid #34343f",
-              boxShadow:
-                "0 40px 80px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(212,168,102,0.08), 0 0 60px -20px rgba(212,168,102,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
-            }}
           >
-            {/* Top accent bar tinted by kind */}
+            {/* Atmospheric tinted header, mirrors the welcome modal */}
             <div
-              className="h-[3px] w-full"
+              className="relative h-28 overflow-hidden transition-[background] duration-500"
               style={{
-                background: `linear-gradient(90deg, transparent 0%, ${activeMeta.tint}40 20%, ${activeMeta.tint} 50%, ${activeMeta.tint}40 80%, transparent 100%)`,
+                background: `linear-gradient(135deg,
+                  color-mix(in oklch, ${activeMeta.tint} 55%, #2a1d3a) 0%,
+                  color-mix(in oklch, ${activeMeta.tint} 28%, #1a1330) 55%,
+                  color-mix(in oklch, ${activeMeta.tint} 12%, #0c0c0f) 100%)`,
               }}
-            />
-
-            {/* Header */}
-            <div className="px-6 pt-5 pb-4">
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <div
-                  className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em]"
-                  style={{ color: activeMeta.tint }}
-                >
-                  <ActiveIcon size={12} />
-                  New {activeMeta.label.toLowerCase()}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] to-transparent" />
+              <div className="absolute inset-0 grid place-items-center">
+                <div className="grid place-items-center w-14 h-14 rounded-full bg-white/10 backdrop-blur border border-white/15 shadow-lg">
+                  <ActiveIcon size={22} className="text-white" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAll((v) => !v)}
-                  className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-muted)] transition px-1.5 py-0.5 rounded"
-                >
-                  {showAll ? (
-                    <>
-                      Fewer <ChevronUp size={10} />
-                    </>
-                  ) : (
-                    <>
-                      More <ChevronDown size={10} />
-                    </>
-                  )}
-                </button>
               </div>
+            </div>
 
-              <div className="flex items-center gap-1 flex-wrap">
-                {PRIMARY.map((k, i) => (
+            {/* Centered kind label + more toggle */}
+            <div className="px-7 pt-1 pb-3 text-center relative">
+              <div
+                className="text-[11px] uppercase tracking-[0.18em] font-semibold"
+                style={{ color: activeMeta.tint }}
+              >
+                New {activeMeta.label.toLowerCase()}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAll((v) => !v)}
+                className="absolute right-5 top-0 inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-muted)] transition px-1.5 py-0.5 rounded"
+              >
+                {showAll ? (
+                  <>
+                    Fewer <ChevronUp size={10} />
+                  </>
+                ) : (
+                  <>
+                    More <ChevronDown size={10} />
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Kind tabs — centered, pill style */}
+            <div className="px-5 pb-2 flex items-center justify-center gap-1 flex-wrap">
+              {PRIMARY.map((k, i) => (
+                <KindTab
+                  key={k}
+                  kind={k}
+                  active={kind === k}
+                  onClick={() => setKind(k)}
+                  shortcut={i + 1}
+                />
+              ))}
+            </div>
+            {showAll && (
+              <div className="px-5 pb-2 flex items-center justify-center gap-1 flex-wrap">
+                {SECONDARY.map((k) => (
                   <KindTab
                     key={k}
                     kind={k}
                     active={kind === k}
                     onClick={() => setKind(k)}
-                    shortcut={i + 1}
+                    small
                   />
                 ))}
               </div>
-              {showAll && (
-                <div className="mt-1.5 flex items-center gap-1 flex-wrap">
-                  {SECONDARY.map((k) => (
-                    <KindTab
-                      key={k}
-                      kind={k}
-                      active={kind === k}
-                      onClick={() => setKind(k)}
-                      small
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
 
-            {/* Title — clean, big, no visible border. Accent line under input on focus. */}
-            <div className="px-6 pb-3 pt-2 border-t border-[var(--border-soft)]">
+            {/* Title */}
+            <div className="px-7 pt-3">
               <div className="relative">
                 <input
                   autoFocus
@@ -316,7 +317,7 @@ export function QuickCapture() {
                   className="pointer-events-none absolute left-0 right-0 -bottom-px h-px bg-[var(--border-soft)] peer-focus:bg-[var(--accent)] transition-colors"
                 />
               </div>
-              <div className="mt-2 flex items-center gap-3 text-[11px] text-[var(--text-faint)] min-h-[16px]">
+              <div className="mt-1.5 flex items-center gap-3 text-[11px] text-[var(--text-faint)] min-h-[16px]">
                 {parsed && (
                   <span className="inline-flex items-center gap-1 text-[var(--accent)]">
                     📅 due {dateLabel(parsed.date)}
@@ -337,31 +338,31 @@ export function QuickCapture() {
             </div>
 
             {/* Body */}
-            <div className="px-6 pb-3 pt-2">
+            <div className="px-7 pt-2 pb-3">
               <textarea
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 rows={5}
                 placeholder={bodyPlaceholderForKind(kind)}
-                className="qc-body w-full bg-transparent text-[14px] leading-relaxed placeholder:text-[var(--text-faint)]/60 outline-none resize-none py-2 text-[var(--text)]"
+                className="qc-body w-full bg-transparent text-[14px] leading-relaxed placeholder:text-[var(--text-faint)]/60 outline-none resize-none py-1 text-[var(--text)]"
               />
             </div>
 
             {(kind === "task" ||
               (KIND_CAN_BE_LINKED.includes(kind) && projects.length > 0)) && (
-              <div className="px-5 pb-3 flex items-center gap-4 flex-wrap">
+              <div className="px-7 pb-4 flex items-center justify-center gap-4 flex-wrap">
                 {kind === "task" && (
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
                       Priority
                     </span>
-                    <div className="inline-flex items-center gap-0.5 rounded-md bg-[var(--bg-rail)] p-0.5">
+                    <div className="inline-flex items-center gap-0.5 rounded-full bg-[var(--bg-rail)] p-0.5">
                       {(["low", "medium", "high"] as const).map((p) => (
                         <button
                           key={p}
                           type="button"
                           onClick={() => setPriority(p)}
-                          className={`text-[10px] uppercase tracking-wide px-2.5 py-1 rounded transition ${
+                          className={`text-[10px] uppercase tracking-wide px-2.5 py-1 rounded-full transition ${
                             priority === p
                               ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                               : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"
@@ -381,7 +382,7 @@ export function QuickCapture() {
                     <select
                       value={projectId ?? ""}
                       onChange={(e) => setProjectId(e.target.value || null)}
-                      className="rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] text-xs px-2 py-1 text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                      className="rounded-full bg-[var(--bg-rail)] border border-[var(--border-soft)] text-xs px-3 py-1 text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                     >
                       <option value="">— none —</option>
                       {projects.map((p) => (
@@ -395,27 +396,30 @@ export function QuickCapture() {
               </div>
             )}
 
-            <div className="px-6 py-3 flex items-center justify-between border-t border-[#26262e] bg-[#0e0e12]">
-              <div className="flex items-center gap-3 text-[11px] text-[var(--text-faint)]">
+            {/* Footer — matches welcome modal: faint Skip / pill CTA */}
+            <div className="px-6 py-4 flex items-center justify-between border-t border-[var(--border-soft)]">
+              <div className="flex items-center gap-3 text-[10px] text-[var(--text-faint)]">
                 <span className="inline-flex items-center gap-1.5">
                   <Sparkles size={11} className="text-[var(--accent)]" />
                   AI enriches in the background
                 </span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-3">
                 <button
+                  type="button"
                   onClick={reset}
-                  className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-card-hover)] transition"
+                  className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] transition"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={save}
                   disabled={pending}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[var(--accent)] text-zinc-950 px-4 py-1.5 text-sm font-semibold hover:brightness-110 transition disabled:opacity-50 shadow-[0_4px_14px_rgba(212,168,102,0.35)]"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-5 py-2 text-sm font-medium hover:brightness-110 transition disabled:opacity-50 shadow-lg"
                 >
                   Save
-                  <kbd className="ml-0.5 text-[10px] opacity-70 inline-flex items-center">
+                  <kbd className="text-[10px] opacity-70 inline-flex items-center">
                     <CornerDownLeft size={11} />
                   </kbd>
                 </button>
