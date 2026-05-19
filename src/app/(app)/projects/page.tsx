@@ -1,37 +1,18 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc, or } from "drizzle-orm";
-import { getViewerId, safeQuery, demoUniverse } from "@/lib/viewer";
-import { FolderKanban, Folder, Plus } from "lucide-react";
+"use client";
+
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/store/db";
+import type { StoredItem } from "@/lib/store/items";
+import { FolderKanban, Folder } from "lucide-react";
 import Link from "next/link";
 import { NewProject } from "./new-project";
 
-export const metadata = { title: "Projects & Areas · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function ProjectsPage() {
-  const userId = await getViewerId();
-
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(
-          and(
-            eq(items.userId, userId),
-            or(eq(items.kind, "project"), eq(items.kind, "area")),
-          ),
-        )
-        .orderBy(desc(items.updatedAt))
-        .limit(100),
-    [],
-  );
-  if (rows.length === 0) {
-    rows = demoUniverse(userId).filter(
-      (i) => i.kind === "project" || i.kind === "area",
-    );
-  }
+export default function ProjectsPage() {
+  const rows =
+    useLiveQuery(async () => {
+      const all = await db.items.toArray();
+      return all.filter((i) => i.kind === "project" || i.kind === "area");
+    }) ?? [];
 
   const projects = rows.filter((r) => r.kind === "project");
   const areas = rows.filter((r) => r.kind === "area");
@@ -88,11 +69,7 @@ export default async function ProjectsPage() {
   );
 }
 
-function ProjectCard({
-  project,
-}: {
-  project: { id: string; title: string | null; summary: string | null; metadata: Record<string, unknown> | unknown };
-}) {
+function ProjectCard({ project }: { project: StoredItem }) {
   const meta = (project.metadata ?? {}) as {
     targetDate?: string;
     progress?: number;
@@ -128,11 +105,7 @@ function ProjectCard({
   );
 }
 
-function AreaCard({
-  area,
-}: {
-  area: { id: string; title: string | null; summary: string | null };
-}) {
+function AreaCard({ area }: { area: StoredItem }) {
   return (
     <Link href={`/items/${area.id}`} className="life-card life-card-hover p-4 block">
       <div className="flex items-center gap-2">

@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 export function NewProject() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<"project" | "area">("project");
   const [title, setTitle] = useState("");
@@ -20,18 +19,14 @@ export function NewProject() {
   async function save() {
     if (!title.trim()) return;
     startTransition(async () => {
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind, title: title.trim() }),
-      });
-      if (!res.ok) {
+      try {
+        await captureItem({ kind, title: title.trim() });
+      } catch {
         toast.error("Couldn't create");
         return;
       }
       toast.success(`${kind === "project" ? "Project" : "Area"} created`);
       reset();
-      router.refresh();
     });
   }
 

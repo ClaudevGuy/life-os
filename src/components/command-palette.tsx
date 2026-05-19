@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import {
@@ -13,6 +13,7 @@ import {
   Network,
   Settings,
 } from "lucide-react";
+import { db } from "@/lib/store/db";
 
 type Hit = {
   id: string;
@@ -33,7 +34,7 @@ const NAV: Array<{
   { href: "/decisions", label: "Decisions", icon: Lightbulb },
   { href: "/timeline", label: "Timeline", icon: Clock },
   { href: "/graph", label: "Graph", icon: Network },
-  { href: "/settings/keys", label: "Settings", icon: Settings },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function CommandPalette() {
@@ -41,7 +42,6 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
-  const abortRef = useRef<AbortController | null>(null);
 
   // ⌘K / Ctrl+K to toggle
   useEffect(() => {
@@ -55,29 +55,40 @@ export function CommandPalette() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Debounced search
+  // Debounced in-browser search against IndexedDB
   useEffect(() => {
     if (!q.trim() || !open) {
       setHits([]);
       return;
     }
+    let cancelled = false;
     const t = setTimeout(async () => {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      try {
-        const res = await fetch(
-          `/api/search?q=${encodeURIComponent(q)}&limit=12`,
-          { signal: controller.signal },
-        );
-        if (!res.ok) return;
-        const data = (await res.json()) as { hits: Hit[] };
-        setHits(data.hits);
-      } catch {
-        // aborted or failed; ignore
+      const needle = q.toLowerCase();
+      const all = await db.items.toArray();
+      if (cancelled) return;
+      const matches: Hit[] = [];
+      for (const i of all) {
+        const hay = [i.title, i.summary, i.body, i.topic, ...(i.keyPoints ?? [])]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (hay.includes(needle)) {
+          matches.push({
+            id: i.id,
+            kind: i.kind,
+            title: i.title,
+            summary: i.summary,
+            topic: i.topic,
+          });
+          if (matches.length >= 12) break;
+        }
       }
-    }, 150);
-    return () => clearTimeout(t);
+      if (!cancelled) setHits(matches);
+    }, 100);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [q, open]);
 
   function go(href: string) {

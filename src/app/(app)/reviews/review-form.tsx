@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
-import type { Item } from "@/db/schema";
+import type { StoredItem as Item } from "@/lib/store/items";
+import { captureItem, updateItem } from "@/lib/store/items";
 
 const PROMPTS = [
   {
@@ -57,7 +57,6 @@ export function WeeklyReviewForm({
   weekKey: string;
   existing: Item | null;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [answers, setAnswers] = useState<Record<number, string>>(
     parseExisting(existing?.body ?? null),
@@ -79,39 +78,22 @@ export function WeeklyReviewForm({
   async function save() {
     startTransition(async () => {
       const body = compose(answers);
-      const payload = existing
-        ? {
-            // edit existing
-            url: `/api/items/${existing.id}`,
-            method: "PATCH" as const,
-            body: JSON.stringify({
-              body,
-              metadata: { ...(existing.metadata ?? {}), reviewWeek: weekKey },
-            }),
-          }
-        : {
-            url: "/api/capture",
-            method: "POST" as const,
-            body: JSON.stringify({
-              kind: "note",
-              title: `Weekly review · ${weekKey}`,
-              body,
-              metadata: { reviewWeek: weekKey, isReview: true },
-            }),
-          };
-
-      const res = await fetch(payload.url, {
-        method: payload.method,
-        headers: { "content-type": "application/json" },
-        body: payload.body,
-      });
-      if (res.ok) {
-        setSavedAt(new Date());
-        if (!existing) {
-          // first save creates the item; refresh to pick up the existing edit path
-          router.refresh();
+      try {
+        if (existing) {
+          await updateItem(existing.id, {
+            body,
+            metadata: { ...(existing.metadata ?? {}), reviewWeek: weekKey },
+          });
+        } else {
+          await captureItem({
+            kind: "note",
+            title: `Weekly review · ${weekKey}`,
+            body,
+            metadata: { reviewWeek: weekKey, isReview: true },
+          });
         }
-      } else {
+        setSavedAt(new Date());
+      } catch {
         toast.error("Couldn't save");
       }
     });

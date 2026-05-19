@@ -1,27 +1,11 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
-import { getViewerId, safeQuery, demoUniverse } from "@/lib/viewer";
+"use client";
+
+import { useItemsOfKind } from "@/lib/store/items";
 import { BookOpen } from "lucide-react";
 import { ReadingList } from "./reading-list";
 
-export const metadata = { title: "Reading · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function ReadingPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(and(eq(items.userId, userId), eq(items.kind, "bookmark")))
-        .orderBy(desc(items.capturedAt))
-        .limit(500),
-    [],
-  );
-  if (rows.length === 0)
-    rows = demoUniverse(userId).filter((i) => i.kind === "bookmark");
+export default function ReadingPage() {
+  const rows = useItemsOfKind("bookmark") ?? [];
 
   return (
     <div className="p-8 max-w-4xl mx-auto">

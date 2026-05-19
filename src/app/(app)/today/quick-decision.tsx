@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 export function QuickDecision() {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
@@ -31,22 +30,23 @@ export function QuickDecision() {
       return;
     }
     startTransition(async () => {
-      const res = await fetch("/api/decisions", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await captureItem({
+          kind: "decision",
           title: title.trim(),
-          body: body.trim(),
-          reviewAt,
-        }),
-      });
-      if (!res.ok) {
+          body: body.trim() || null,
+          status: "active",
+          metadata: {
+            reviewAt: new Date(`${reviewAt}T09:00:00`).toISOString(),
+            outcome: "pending",
+          },
+        });
+      } catch {
         toast.error("Failed to save");
         return;
       }
       toast.success("Decision logged");
       reset();
-      router.refresh();
     });
   }
 

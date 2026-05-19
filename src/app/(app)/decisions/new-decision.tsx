@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Plus, Lightbulb } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 export function NewDecision() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -29,26 +28,22 @@ export function NewDecision() {
       return;
     }
     startTransition(async () => {
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await captureItem({
           kind: "decision",
           title: title.trim(),
-          body: body.trim() || undefined,
+          body: body.trim() || null,
           metadata: {
             reviewAt: new Date(`${reviewAt}T09:00:00`).toISOString(),
             outcome: "pending",
           },
-        }),
-      });
-      if (!res.ok) {
+        });
+      } catch {
         toast.error("Couldn't save");
         return;
       }
       toast.success("Decision logged");
       reset();
-      router.refresh();
     });
   }
 

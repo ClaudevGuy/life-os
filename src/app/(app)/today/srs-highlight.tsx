@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Sparkles, Shuffle } from "lucide-react";
-import type { Item } from "@/db/schema";
+import type { StoredItem as Item } from "@/lib/store/items";
 
 /**
  * Spaced-repetition style widget: shows a single old highlight to re-read.
@@ -17,11 +17,16 @@ export function SrsHighlight({ pool }: { pool: Item[] }) {
     (Date.now() - new Date(h.capturedAt).getTime()) / 86_400_000,
   );
 
+  const tint = "var(--kind-voice)";
   return (
-    <div className="life-card p-4">
+    <div className="life-card p-4 relative overflow-hidden">
+      <div
+        className="absolute -top-px left-0 right-0 h-px pointer-events-none"
+        style={{ background: `linear-gradient(90deg, transparent, ${tint}, transparent)` }}
+      />
       <div className="flex items-center justify-between mb-2">
         <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-          <Sparkles size={11} className="text-[var(--accent)]" />
+          <Sparkles size={11} style={{ color: tint }} />
           Worth re-reading
         </div>
         {pool.length > 1 && (

@@ -1,23 +1,12 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { getViewerId, safeQuery, demoUniverse } from "@/lib/viewer";
+"use client";
+
+import { useAllItems } from "@/lib/store/items";
 import { CalendarDays } from "lucide-react";
 import { CalendarView } from "./calendar-view";
 
-export const metadata = { title: "Calendar · Life OS" };
-export const dynamic = "force-dynamic";
+export default function CalendarPage() {
+  const rows = useAllItems() ?? [];
 
-export default async function CalendarPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () => db.select().from(items).where(eq(items.userId, userId)),
-    [],
-  );
-  if (rows.length === 0) rows = demoUniverse(userId);
-
-  // Build calendar items. Each row contributes up to 3 entries depending on
-  // its kind and metadata (captured date, due date, review date).
   const calItems: Array<{
     id: string;
     kind: string;
@@ -53,9 +42,7 @@ export default async function CalendarPage() {
         isoDate: meta.reviewAt.slice(0, 10),
         via: "review",
       });
-      // also show the capture day, so you see "I decided this" historically
     }
-    // Default placement: capturedAt
     calItems.push({
       id: r.id,
       kind: r.kind,

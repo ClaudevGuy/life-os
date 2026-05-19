@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Sparkles, Pencil } from "lucide-react";
+import { Check } from "lucide-react";
+import { updateItem } from "@/lib/store/items";
 
 // ---------- Decision outcome ----------
 
@@ -21,7 +21,6 @@ export function DecisionOutcomeEditor({
   id: string;
   metadata: Record<string, unknown>;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [reviewAt, setReviewAt] = useState<string>(
     (metadata.reviewAt as string | undefined)?.slice(0, 10) ??
@@ -36,19 +35,12 @@ export function DecisionOutcomeEditor({
 
   function save(partial: { outcome?: string; reviewAt?: string; outcomeNote?: string }) {
     startTransition(async () => {
-      const res = await fetch(`/api/items/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          metadata: { ...metadata, ...partial },
-        }),
-      });
-      if (!res.ok) {
+      try {
+        await updateItem(id, { metadata: { ...metadata, ...partial } });
+        toast.success("Saved");
+      } catch {
         toast.error("Couldn't update");
-        return;
       }
-      toast.success("Saved");
-      router.refresh();
     });
   }
 
@@ -129,7 +121,6 @@ export function GoalProgressEditor({
   id: string;
   metadata: Record<string, unknown>;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [progress, setProgress] = useState<number>(
     Math.max(0, Math.min(100, Number(metadata.progress ?? 0))),
@@ -141,18 +132,11 @@ export function GoalProgressEditor({
 
   function patch(partial: Record<string, unknown>) {
     startTransition(async () => {
-      const res = await fetch(`/api/items/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          metadata: { ...metadata, ...partial },
-        }),
-      });
-      if (!res.ok) {
+      try {
+        await updateItem(id, { metadata: { ...metadata, ...partial } });
+      } catch {
         toast.error("Couldn't update");
-        return;
       }
-      router.refresh();
     });
   }
 
@@ -165,7 +149,6 @@ export function GoalProgressEditor({
       ? completedMilestones.filter((x) => x !== m)
       : [...completedMilestones, m];
     setCompletedMilestones(next);
-    // Auto-derive progress from milestones if any exist
     const newProgress =
       milestones.length > 0
         ? Math.round((next.length / milestones.length) * 100)
@@ -263,7 +246,6 @@ export function BookmarkStateEditor({
   id: string;
   metadata: Record<string, unknown>;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<string>(
     (metadata.readState as string | undefined) ?? "to-read",
@@ -272,18 +254,11 @@ export function BookmarkStateEditor({
   function set(value: string) {
     setState(value);
     startTransition(async () => {
-      const res = await fetch(`/api/items/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          metadata: { ...metadata, readState: value },
-        }),
-      });
-      if (!res.ok) {
+      try {
+        await updateItem(id, { metadata: { ...metadata, readState: value } });
+      } catch {
         toast.error("Couldn't update");
-        return;
       }
-      router.refresh();
     });
   }
 

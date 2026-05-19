@@ -1,21 +1,12 @@
+"use client";
+
 import { AskClient } from "./ask-client";
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { getViewerId, safeQuery, demoUniverse } from "@/lib/viewer";
+import { useAllItems } from "@/lib/store/items";
 import { Sparkles } from "lucide-react";
 
-export const metadata = { title: "Ask · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function AskPage() {
-  const userId = await getViewerId();
-  const rows = await safeQuery(
-    () => db.select({ id: items.id }).from(items).where(eq(items.userId, userId)),
-    [],
-  );
-  const count =
-    rows.length > 0 ? rows.length : demoUniverse(userId).length;
+export default function AskPage() {
+  const items = useAllItems() ?? [];
+  const count = items.length;
 
   return (
     <div className="p-8 max-w-3xl mx-auto">

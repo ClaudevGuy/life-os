@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Moon, Check } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 const PROMPTS = [
   "What's one thing that went well today?",
@@ -16,7 +16,6 @@ const PROMPTS = [
 ];
 
 export function EveningReflection() {
-  const router = useRouter();
   const [hour, setHour] = useState<number | null>(null);
   const [text, setText] = useState("");
   const [saved, setSaved] = useState(false);
@@ -36,23 +35,19 @@ export function EveningReflection() {
   function save() {
     if (!text.trim()) return;
     startTransition(async () => {
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await captureItem({
           kind: "journal",
           title: `Evening — ${PROMPTS[promptIdx]}`,
           body: text.trim(),
           metadata: { eveningReflection: true },
-        }),
-      });
-      if (!res.ok) {
+        });
+      } catch {
         toast.error("Couldn't save");
         return;
       }
       toast.success("Saved");
       setSaved(true);
-      router.refresh();
     });
   }
 

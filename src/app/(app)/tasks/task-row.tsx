@@ -2,8 +2,23 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Check, Repeat } from "lucide-react";
-import type { Item } from "@/db/schema";
-import { useRouter } from "next/navigation";
+import type { StoredItem } from "@/lib/store/items";
+import { updateItem, captureItem } from "@/lib/store/items";
+
+function nextOccurrence(recurrence: string, from: Date): Date {
+  const next = new Date(from);
+  if (recurrence === "daily") next.setDate(next.getDate() + 1);
+  else if (recurrence === "weekly") next.setDate(next.getDate() + 7);
+  else if (recurrence === "monthly") next.setMonth(next.getMonth() + 1);
+  else if (recurrence === "weekdays") {
+    do {
+      next.setDate(next.getDate() + 1);
+    } while (next.getDay() === 0 || next.getDay() === 6);
+  } else {
+    next.setDate(next.getDate() + 1);
+  }
+  return next;
+}
 
 export function TaskRow({
   task,
@@ -11,12 +26,11 @@ export function TaskRow({
   compact,
   indent,
 }: {
-  task: Item;
+  task: StoredItem;
   done?: boolean;
   compact?: boolean;
   indent?: boolean;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [isDone, setIsDone] = useState(Boolean(done));
   const burstRef = useRef<HTMLSpanElement>(null);
@@ -55,8 +69,22 @@ export function TaskRow({
     setIsDone(next);
     if (next) fireConfetti();
     startTransition(async () => {
-      await fetch(`/api/tasks/${task.id}/toggle`, { method: "POST" }).catch(() => {});
-      router.refresh();
+      const completedAt = next ? new Date().toISOString() : null;
+      await updateItem(task.id, {
+        metadata: { ...meta, completedAt },
+        status: next ? "archived" : "active",
+      });
+      if (next && meta.recurrence) {
+        await captureItem({
+          kind: "task",
+          title: task.title,
+          metadata: {
+            ...meta,
+            completedAt: null,
+            dueDate: nextOccurrence(meta.recurrence, new Date()).toISOString(),
+          },
+        });
+      }
     });
   }
 

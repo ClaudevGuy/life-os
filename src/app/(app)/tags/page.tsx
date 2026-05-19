@@ -1,26 +1,10 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { getViewerId, safeQuery } from "@/lib/viewer";
-import { DEMO_ITEMS } from "@/lib/demo-data";
+"use client";
+
+import { useAllItems } from "@/lib/store/items";
 import { Tag } from "lucide-react";
 
-export const metadata = { title: "Tags · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function TagsPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select({ topic: items.topic })
-        .from(items)
-        .where(eq(items.userId, userId)),
-    [] as { topic: string | null }[],
-  );
-  if (rows.length === 0) {
-    rows = DEMO_ITEMS.map((i) => ({ topic: i.topic }));
-  }
+export default function TagsPage() {
+  const rows = useAllItems() ?? [];
 
   const counts = new Map<string, number>();
   for (const r of rows) {

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pin, Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { updateItem, deleteItem } from "@/lib/store/items";
 
 export function ItemActions({
   id,
@@ -21,22 +22,12 @@ export function ItemActions({
   const [pinned, setPinned] = useState(isPinned);
   const [archived, setArchived] = useState(status === "archived");
 
-  async function patch(body: Record<string, unknown>) {
-    const res = await fetch(`/api/items/${id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error("Failed");
-  }
-
   function togglePin() {
     setPinned((v) => !v);
     startTransition(async () => {
       try {
-        await patch({ isPinned: !pinned });
+        await updateItem(id, { isPinned: !pinned });
         toast.success(!pinned ? "Pinned" : "Unpinned");
-        router.refresh();
       } catch {
         setPinned((v) => !v);
         toast.error("Couldn't update");
@@ -49,9 +40,8 @@ export function ItemActions({
     setArchived(next);
     startTransition(async () => {
       try {
-        await patch({ status: next ? "archived" : "active" });
+        await updateItem(id, { status: next ? "archived" : "active" });
         toast.success(next ? "Archived" : "Restored");
-        router.refresh();
       } catch {
         setArchived((v) => !v);
         toast.error("Couldn't update");
@@ -63,11 +53,9 @@ export function ItemActions({
     if (!confirm("Delete this item? This can't be undone.")) return;
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/items/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error();
+        await deleteItem(id);
         toast.success("Deleted");
         router.push(backHref);
-        router.refresh();
       } catch {
         toast.error("Couldn't delete");
       }

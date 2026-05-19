@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Pin, BookOpen, BookCheck, Bookmark } from "lucide-react";
-import type { Item } from "@/db/schema";
+import type { StoredItem as Item } from "@/lib/store/items";
+import { BlobImg } from "@/components/blob-img";
 
 type State = "all" | "to-read" | "reading" | "finished";
 
@@ -94,10 +95,8 @@ export function ReadingList({ rows }: { rows: Item[] }) {
                   className="life-card life-card-hover block transition overflow-hidden"
                 >
                   {firstPhoto && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={`/api/blobs/${firstPhoto}`}
-                      alt=""
+                    <BlobImg
+                      id={firstPhoto}
                       className="w-full h-32 object-cover border-b border-[var(--border-soft)]"
                     />
                   )}

@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Plus, Sparkles } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 export function NewHighlight() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [quote, setQuote] = useState("");
   const [source, setSource] = useState("");
@@ -26,23 +25,19 @@ export function NewHighlight() {
       return;
     }
     startTransition(async () => {
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await captureItem({
           kind: "highlight",
-          title: source.trim() || undefined,
+          title: source.trim() || null,
           body: quote.trim(),
-          metadata: topic.trim() ? { topic: topic.trim() } : {},
-        }),
-      });
-      if (!res.ok) {
+          topic: topic.trim() || null,
+        });
+      } catch {
         toast.error("Couldn't save");
         return;
       }
       toast.success("Highlight saved");
       reset();
-      router.refresh();
     });
   }
 

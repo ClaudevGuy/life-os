@@ -1,28 +1,12 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
-import { getViewerId, safeQuery, demoUniverse } from "@/lib/viewer";
+"use client";
+
+import { useItemsOfKind, type StoredItem } from "@/lib/store/items";
 import Link from "next/link";
 import { NotebookPen, Pin } from "lucide-react";
 import { NewNote } from "./new-note";
 
-export const metadata = { title: "Notes · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function NotesPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(and(eq(items.userId, userId), eq(items.kind, "note")))
-        .orderBy(desc(items.updatedAt))
-        .limit(200),
-    [],
-  );
-  if (rows.length === 0) rows = demoUniverse(userId).filter((i) => i.kind === "note");
-
+export default function NotesPage() {
+  const rows = useItemsOfKind("note") ?? [];
   const pinned = rows.filter((r) => r.isPinned);
   const others = rows.filter((r) => !r.isPinned);
 
@@ -67,9 +51,7 @@ export default async function NotesPage() {
   );
 }
 
-import type { Item } from "@/db/schema";
-
-function NoteGrid({ rows }: { rows: Item[] }) {
+function NoteGrid({ rows }: { rows: StoredItem[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 life-stagger">
       {rows.map((n) => (

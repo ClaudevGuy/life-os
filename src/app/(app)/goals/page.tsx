@@ -1,28 +1,12 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
-import { getViewerId, safeQuery } from "@/lib/viewer";
-import { demoForKind } from "@/lib/demo-data";
+"use client";
+
+import { useItemsOfKind } from "@/lib/store/items";
 import { Target } from "lucide-react";
 import Link from "next/link";
 import { NewGoal } from "./new-goal";
 
-export const metadata = { title: "Goals · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function GoalsPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(and(eq(items.userId, userId), eq(items.kind, "goal")))
-        .orderBy(desc(items.updatedAt))
-        .limit(60),
-    [],
-  );
-  if (rows.length === 0) rows = demoForKind("goal");
+export default function GoalsPage() {
+  const rows = useItemsOfKind("goal") ?? [];
 
   return (
     <div className="p-8 max-w-4xl">

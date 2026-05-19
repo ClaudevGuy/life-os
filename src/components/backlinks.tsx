@@ -1,55 +1,33 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, ilike, or } from "drizzle-orm";
-import { safeQuery, demoUniverse } from "@/lib/viewer";
+"use client";
+
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/store/db";
 import Link from "next/link";
 import { Link as LinkIcon, MessageCircle } from "lucide-react";
 
-export async function Backlinks({
-  userId,
+export function Backlinks({
   item,
 }: {
-  userId: string;
   item: { id: string; title: string | null; kind?: string };
 }) {
-  if (!item.title && !item.id) return null;
   const needles = [item.title, item.id].filter(Boolean) as string[];
 
-  let mentions = await safeQuery(
-    () =>
-      db
-        .select({
-          id: items.id,
-          title: items.title,
-          summary: items.summary,
-          kind: items.kind,
-        })
-        .from(items)
-        .where(
-          and(
-            eq(items.userId, userId),
-            or(
-              ...needles.map((n) => ilike(items.body, `%[[${n}]]%`)),
-            ),
-          ),
+  const mentions =
+    useLiveQuery(async () => {
+      if (needles.length === 0) return [];
+      const all = await db.items.toArray();
+      return all
+        .filter((i) =>
+          needles.some((n) => (i.body ?? "").includes(`[[${n}]]`)),
         )
-        .limit(20),
-    [] as Array<{ id: string; title: string | null; summary: string | null; kind: string }>,
-  );
-
-  if (mentions.length === 0) {
-    mentions = demoUniverse(userId)
-      .filter((i) =>
-        needles.some((n) => (i.body ?? "").includes(`[[${n}]]`)),
-      )
-      .filter((i) => i.id !== item.id)
-      .map((i) => ({
-        id: i.id,
-        title: i.title,
-        summary: i.summary,
-        kind: i.kind,
-      }));
-  }
+        .filter((i) => i.id !== item.id)
+        .map((i) => ({
+          id: i.id,
+          title: i.title,
+          summary: i.summary,
+          kind: i.kind,
+        }));
+    }, [item.id, item.title]) ?? [];
 
   if (mentions.length === 0) return null;
 

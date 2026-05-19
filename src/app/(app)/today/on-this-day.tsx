@@ -1,4 +1,4 @@
-import type { Item } from "@/db/schema";
+import type { StoredItem as Item } from "@/lib/store/items";
 import Link from "next/link";
 import { History } from "lucide-react";
 
@@ -14,10 +14,15 @@ export function OnThisDay({ items }: { items: Item[] }) {
 
   if (matches.length === 0) return null;
 
+  const tint = "var(--kind-bookmark)";
   return (
-    <div className="life-card p-4">
+    <div className="life-card p-4 relative overflow-hidden">
+      <div
+        className="absolute -top-px left-0 right-0 h-px pointer-events-none"
+        style={{ background: `linear-gradient(90deg, transparent, ${tint}, transparent)` }}
+      />
       <h2 className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3">
-        <History size={11} />
+        <History size={11} style={{ color: tint }} />
         On this day
       </h2>
       <ul className="space-y-2">

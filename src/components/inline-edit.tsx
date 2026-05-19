@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Markdown } from "@/components/markdown";
 import { Pencil, X, Check } from "lucide-react";
+import { updateItem } from "@/lib/store/items";
 
 export function InlineTitle({
   id,
@@ -13,7 +13,6 @@ export function InlineTitle({
   id: string;
   value: string | null;
 }) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
   const [pending, startTransition] = useTransition();
@@ -30,17 +29,12 @@ export function InlineTitle({
       return;
     }
     startTransition(async () => {
-      const res = await fetch(`/api/items/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title: trimmed }),
-      });
-      if (!res.ok) {
+      try {
+        await updateItem(id, { title: trimmed });
+        setEditing(false);
+      } catch {
         toast.error("Couldn't save title");
-        return;
       }
-      setEditing(false);
-      router.refresh();
     });
   }
 
@@ -94,7 +88,6 @@ export function InlineBody({
   id: string;
   value: string | null;
 }) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
   const [pending, startTransition] = useTransition();
@@ -110,17 +103,12 @@ export function InlineBody({
       return;
     }
     startTransition(async () => {
-      const res = await fetch(`/api/items/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ body: draft }),
-      });
-      if (!res.ok) {
+      try {
+        await updateItem(id, { body: draft });
+        setEditing(false);
+      } catch {
         toast.error("Couldn't save body");
-        return;
       }
-      setEditing(false);
-      router.refresh();
     });
   }
 

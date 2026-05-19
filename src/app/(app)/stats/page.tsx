@@ -1,20 +1,11 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { getViewerId, safeQuery, demoUniverse } from "@/lib/viewer";
+"use client";
+
+import { useAllItems } from "@/lib/store/items";
 import { BarChart3 } from "lucide-react";
 import { StatsView, type StatsItem } from "./stats-view";
 
-export const metadata = { title: "Stats · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function StatsPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () => db.select().from(items).where(eq(items.userId, userId)),
-    [],
-  );
-  if (rows.length === 0) rows = demoUniverse(userId);
+export default function StatsPage() {
+  const rows = useAllItems() ?? [];
 
   const data: StatsItem[] = rows.map((i) => ({
     id: i.id,

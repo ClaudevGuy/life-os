@@ -1,27 +1,12 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
-import { getViewerId, safeQuery } from "@/lib/viewer";
-import { demoForKind } from "@/lib/demo-data";
+"use client";
+
+import { useItemsOfKind } from "@/lib/store/items";
 import Link from "next/link";
 import { NewPersonButton } from "./new-person";
+import { BlobImg } from "@/components/blob-img";
 
-export const metadata = { title: "People · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function PeoplePage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(and(eq(items.userId, userId), eq(items.kind, "person")))
-        .orderBy(desc(items.updatedAt))
-        .limit(200),
-    [],
-  );
-  if (rows.length === 0) rows = demoForKind("person");
+export default function PeoplePage() {
+  const rows = useItemsOfKind("person") ?? [];
 
   return (
     <div className="p-8 max-w-3xl">
@@ -56,16 +41,11 @@ export default async function PeoplePage() {
               .join("")
               .toUpperCase();
             return (
-              <li
-                key={p.id}
-                className="life-card life-card-hover transition"
-              >
+              <li key={p.id} className="life-card life-card-hover transition">
                 <Link href={`/items/${p.id}`} className="flex gap-3 p-3.5">
                   {avatar ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={`/api/blobs/${avatar}`}
-                      alt=""
+                    <BlobImg
+                      id={avatar}
                       className="w-10 h-10 rounded-full object-cover shrink-0 border border-[var(--border-soft)]"
                     />
                   ) : (

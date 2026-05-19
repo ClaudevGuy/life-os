@@ -15,6 +15,8 @@ import {
   Command,
 } from "lucide-react";
 import { Markdown } from "@/components/markdown";
+import { db } from "@/lib/store/db";
+import { aiHeaders } from "@/lib/ai-key";
 
 type Source = {
   id: string;
@@ -93,10 +95,40 @@ export function AskClient() {
     setTurns((t) => [...t, { role: "assistant", text: "", sources: [] }]);
 
     try {
-      const res = await fetch("/api/ask", {
+      // Pick context locally: keyword match against the user's IndexedDB,
+      // then fall back to "most recent 8" so the AI has something to chew on.
+      const needle = question.toLowerCase();
+      const all = await db.items.orderBy("capturedAt").reverse().toArray();
+      let context = all
+        .filter((i) => {
+          const hay = [
+            i.title,
+            i.summary,
+            i.body,
+            i.topic,
+            ...(i.keyPoints ?? []),
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return hay.includes(needle);
+        })
+        .slice(0, 8);
+      if (context.length === 0) context = all.slice(0, 8);
+
+      const res = await fetch("/api/ai/ask", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question }),
+        headers: aiHeaders(),
+        body: JSON.stringify({
+          question,
+          items: context.map((i) => ({
+            id: i.id,
+            kind: i.kind,
+            title: i.title,
+            summary: i.summary,
+            body: i.body?.slice(0, 1000) ?? null,
+          })),
+        }),
       });
       if (!res.ok || !res.body) {
         const detail = await res.json().catch(() => null);

@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Flame } from "lucide-react";
-import type { Item } from "@/db/schema";
-import { useRouter } from "next/navigation";
+import type { StoredItem as Item } from "@/lib/store/items";
+import { updateItem } from "@/lib/store/items";
 
 function ymd(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -29,7 +29,6 @@ function calcStreak(checkins: Set<string>) {
 }
 
 export function HabitCard({ habit }: { habit: Item }) {
-  const router = useRouter();
   const meta = (habit.metadata ?? {}) as { checkins?: string[]; cadence?: string };
   const [checkins, setCheckins] = useState<Set<string>>(
     new Set(meta.checkins ?? []),
@@ -47,8 +46,9 @@ export function HabitCard({ habit }: { habit: Item }) {
     else next.add(today);
     setCheckins(next);
     startTransition(async () => {
-      await fetch(`/api/habits/${habit.id}/checkin`, { method: "POST" }).catch(() => {});
-      router.refresh();
+      await updateItem(habit.id, {
+        metadata: { ...meta, checkins: [...next] },
+      });
     });
   }
 

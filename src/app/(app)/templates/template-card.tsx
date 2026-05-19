@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Sparkles, ArrowUpRight } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 export function TemplateCard({
   template,
@@ -21,25 +22,20 @@ export function TemplateCard({
 
   function use() {
     startTransition(async () => {
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      let id: string | null = null;
+      try {
+        const item = await captureItem({
           kind: template.kind,
           title: template.title,
           body: template.body,
-        }),
-      });
-      if (!res.ok) {
-        toast.error("Couldn't save (DB not configured?)");
+        });
+        id = item.id;
+      } catch {
+        toast.error("Couldn't save");
         return;
       }
-      const data = (await res.json().catch(() => null)) as
-        | { item?: { id: string } }
-        | null;
       toast.success("Template used");
-      if (data?.item?.id) router.push(`/items/${data.item.id}`);
-      else router.refresh();
+      if (id) router.push(`/items/${id}`);
     });
   }
 

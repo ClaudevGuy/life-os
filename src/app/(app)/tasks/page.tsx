@@ -1,29 +1,13 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
-import { getViewerId, safeQuery, demoUniverse } from "@/lib/viewer";
+"use client";
+
+import { useItemsOfKind } from "@/lib/store/items";
 import { ListTodo } from "lucide-react";
 import { NewTask } from "./new-task";
 import { TasksView } from "./tasks-view";
 
-export const metadata = { title: "Tasks · Life OS" };
-export const dynamic = "force-dynamic";
+export default function TasksPage() {
+  const rows = useItemsOfKind("task") ?? [];
 
-export default async function TasksPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(and(eq(items.userId, userId), eq(items.kind, "task")))
-        .orderBy(desc(items.capturedAt))
-        .limit(500),
-    [],
-  );
-  if (rows.length === 0) rows = demoUniverse(userId).filter((i) => i.kind === "task");
-
-  // Stats
   const now = new Date();
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);

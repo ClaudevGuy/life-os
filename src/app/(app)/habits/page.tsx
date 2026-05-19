@@ -1,28 +1,12 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
-import { getViewerId, safeQuery } from "@/lib/viewer";
-import { demoForKind } from "@/lib/demo-data";
+"use client";
+
+import { useItemsOfKind } from "@/lib/store/items";
 import { Flame } from "lucide-react";
 import { HabitCard } from "./habit-card";
 import { NewHabit } from "./new-habit";
 
-export const metadata = { title: "Habits · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function HabitsPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(and(eq(items.userId, userId), eq(items.kind, "habit")))
-        .orderBy(desc(items.capturedAt))
-        .limit(100),
-    [],
-  );
-  if (rows.length === 0) rows = demoForKind("habit");
+export default function HabitsPage() {
+  const rows = useItemsOfKind("habit") ?? [];
 
   return (
     <div className="p-8 max-w-4xl">

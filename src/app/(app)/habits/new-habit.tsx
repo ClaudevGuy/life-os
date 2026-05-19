@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Plus, Flame } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 export function NewHabit() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -26,23 +25,19 @@ export function NewHabit() {
       return;
     }
     startTransition(async () => {
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await captureItem({
           kind: "habit",
           title: title.trim(),
-          body: summary.trim() || undefined,
+          body: summary.trim() || null,
           metadata: { cadence, checkins: [] },
-        }),
-      });
-      if (!res.ok) {
+        });
+      } catch {
         toast.error("Couldn't save");
         return;
       }
       toast.success("Habit added");
       reset();
-      router.refresh();
     });
   }
 

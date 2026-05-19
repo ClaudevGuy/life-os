@@ -23,6 +23,8 @@ import {
   CornerDownLeft,
 } from "lucide-react";
 import { parseNaturalDate, dateLabel } from "@/lib/natural-date";
+import { captureItem } from "@/lib/store/items";
+import { db } from "@/lib/store/db";
 
 type Kind =
   | "bookmark"
@@ -131,12 +133,16 @@ export function QuickCapture() {
     }
   }, [title, kind]);
 
-  // Lazy-load project options the first time the modal opens
+  // Lazy-load project options from the local store
   useEffect(() => {
     if (!open || projects.length > 0) return;
-    fetch("/api/projects/options")
-      .then((r) => r.json())
-      .then((d: { projects: ProjectOption[] }) => setProjects(d.projects ?? []))
+    db.items
+      .where("kind")
+      .equals("project")
+      .toArray()
+      .then((rows) =>
+        setProjects(rows.map((p) => ({ id: p.id, title: p.title }))),
+      )
       .catch(() => {});
   }, [open, projects.length]);
 
@@ -178,26 +184,23 @@ export function QuickCapture() {
       }
 
       const finalTitle = cleanTitle || title.trim();
-      const payload = isBookmarkUrl
-        ? {
-            kind,
-            sourceUrl: finalTitle,
-            body: body.trim() || undefined,
-            metadata,
-          }
-        : {
-            kind,
-            title: finalTitle || undefined,
-            body: body.trim() || undefined,
-            metadata,
-          };
-
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
+      try {
+        await captureItem(
+          isBookmarkUrl
+            ? {
+                kind,
+                sourceUrl: finalTitle,
+                body: body.trim() || null,
+                metadata,
+              }
+            : {
+                kind,
+                title: finalTitle || null,
+                body: body.trim() || null,
+                metadata,
+              },
+        );
+      } catch {
         toast.error("Couldn't save");
         return;
       }

@@ -1,7 +1,7 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc, sql } from "drizzle-orm";
-import { safeQuery, demoUniverse } from "@/lib/viewer";
+"use client";
+
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/store/db";
 import Link from "next/link";
 import { FolderKanban } from "lucide-react";
 
@@ -9,33 +9,18 @@ import { FolderKanban } from "lucide-react";
  * Renders the "Linked items" panel on a project's detail page.
  * Pulls every item whose metadata.projectId == this project's id.
  */
-export async function ProjectRollUp({
-  userId,
-  projectId,
-}: {
-  userId: string;
-  projectId: string;
-}) {
-  let linked = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(
-          and(
-            eq(items.userId, userId),
-            sql`(${items.metadata} ->> 'projectId') = ${projectId}`,
-          ),
+export function ProjectRollUp({ projectId }: { projectId: string }) {
+  const linked =
+    useLiveQuery(async () => {
+      const all = await db.items.toArray();
+      return all
+        .filter(
+          (i) =>
+            ((i.metadata ?? {}) as { projectId?: string }).projectId ===
+            projectId,
         )
-        .orderBy(desc(items.capturedAt))
-        .limit(100),
-    [],
-  );
-  if (linked.length === 0) {
-    linked = demoUniverse(userId).filter(
-      (i) => ((i.metadata ?? {}) as { projectId?: string }).projectId === projectId,
-    );
-  }
+        .sort((a, b) => b.capturedAt.getTime() - a.capturedAt.getTime());
+    }, [projectId]) ?? [];
 
   const byKind = new Map<string, typeof linked>();
   for (const i of linked) {

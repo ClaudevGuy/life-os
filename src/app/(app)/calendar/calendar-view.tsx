@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { captureItem } from "@/lib/store/items";
 import {
   ChevronLeft,
   ChevronRight,
@@ -496,7 +496,6 @@ function DayDrawer({
   items: CalItem[];
   onClose: () => void;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState<"task" | "note" | "decision" | null>(null);
 
@@ -522,18 +521,14 @@ function DayDrawer({
         metadata.reviewAt = new Date(`${day}T09:00:00`).toISOString();
         metadata.outcome = "pending";
       }
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind, title: title.trim(), metadata }),
-      });
-      if (!res.ok) {
+      try {
+        await captureItem({ kind, title: title.trim(), metadata });
+      } catch {
         toast.error("Couldn't save");
         return;
       }
       toast.success("Added");
       setOpen(null);
-      router.refresh();
     });
   }
 

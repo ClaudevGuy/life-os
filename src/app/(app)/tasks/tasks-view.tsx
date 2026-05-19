@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Item } from "@/db/schema";
+import type { StoredItem as Item } from "@/lib/store/items";
 import { TaskRow } from "./task-row";
 import { LayoutList, KanbanSquare } from "lucide-react";
 

@@ -2,12 +2,11 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Plus, Calendar } from "lucide-react";
 import { parseNaturalDate, dateLabel } from "@/lib/natural-date";
+import { captureItem } from "@/lib/store/items";
 
 export function NewTask() {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
@@ -24,21 +23,13 @@ export function NewTask() {
         completedAt: null,
       };
       if (parsed) metadata.dueDate = parsed.date.toISOString();
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          kind: "task",
-          title: finalTitle,
-          metadata,
-        }),
-      });
-      if (!res.ok) {
+      try {
+        await captureItem({ kind: "task", title: finalTitle, metadata });
+      } catch {
         toast.error("Couldn't save");
         return;
       }
       setTitle("");
-      router.refresh();
     });
   }
 

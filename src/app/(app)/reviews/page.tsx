@@ -1,13 +1,10 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { eq, gte, and, sql } from "drizzle-orm";
-import { getViewerId, safeQuery, demoUniverse } from "@/lib/viewer";
+"use client";
+
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/store/db";
 import { Sparkles, ListTodo, Lightbulb, Target, Flame } from "lucide-react";
 import Link from "next/link";
 import { WeeklyReviewForm } from "./review-form";
-
-export const metadata = { title: "Reviews · Life OS" };
-export const dynamic = "force-dynamic";
 
 function weekKey(d: Date = new Date()) {
   const monday = new Date(d);
@@ -17,51 +14,33 @@ function weekKey(d: Date = new Date()) {
   return monday.toISOString().slice(0, 10);
 }
 
-export default async function ReviewsPage() {
-  const userId = await getViewerId();
+export default function ReviewsPage() {
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
-
-  let weekItems = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(and(eq(items.userId, userId), gte(items.capturedAt, sevenDaysAgo)))
-        .limit(500),
-    [],
-  );
-  if (weekItems.length === 0) {
-    weekItems = demoUniverse(userId).filter(
-      (i) => new Date(i.capturedAt) >= sevenDaysAgo,
-    );
-  }
-
   const wk = weekKey();
 
-  // Load any saved review notes for this week
-  let savedReview = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(
-          and(
-            eq(items.userId, userId),
-            eq(items.kind, "note"),
-            sql`(${items.metadata} ->> 'reviewWeek') = ${wk}`,
-          ),
-        )
-        .limit(1),
-    [],
-  );
-  if (savedReview.length === 0) {
-    savedReview = demoUniverse(userId).filter(
-      (i) =>
-        i.kind === "note" &&
-        ((i.metadata ?? {}) as { reviewWeek?: string }).reviewWeek === wk,
-    );
-  }
-  const existing = savedReview[0] ?? null;
+  const weekItems =
+    useLiveQuery(
+      () =>
+        db.items.where("capturedAt").above(sevenDaysAgo).toArray(),
+      [sevenDaysAgo.getTime()],
+    ) ?? [];
+
+  const existing =
+    useLiveQuery(
+      async () => {
+        const rows = await db.items
+          .where("kind")
+          .equals("note")
+          .toArray();
+        return (
+          rows.find(
+            (r) =>
+              ((r.metadata ?? {}) as { reviewWeek?: string }).reviewWeek === wk,
+          ) ?? null
+        );
+      },
+      [wk],
+    ) ?? null;
 
   const byKind = (k: string) => weekItems.filter((i) => i.kind === k);
 

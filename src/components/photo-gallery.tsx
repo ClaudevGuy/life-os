@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ImagePlus, X, Upload, Loader2 } from "lucide-react";
+import { saveBlob, deleteBlob } from "@/lib/store/blobs";
+import { updateItem } from "@/lib/store/items";
+import { BlobImg } from "@/components/blob-img";
 
 type Photo = string; // blob id
 
@@ -16,7 +18,6 @@ export function PhotoGallery({
   metadata: Record<string, unknown>;
   emptyHint?: string;
 }) {
-  const router = useRouter();
   const [photos, setPhotos] = useState<Photo[]>(
     (metadata.photos as Photo[] | undefined) ?? [],
   );
@@ -34,29 +35,18 @@ export function PhotoGallery({
       try {
         const newIds: string[] = [];
         for (const file of list) {
-          const fd = new FormData();
-          fd.append("file", file);
-          const res = await fetch("/api/blobs/upload", { method: "POST", body: fd });
-          if (!res.ok) {
-            const err = (await res.json().catch(() => null)) as { detail?: string } | null;
-            toast.error(err?.detail ?? "Upload failed");
-            continue;
+          try {
+            const saved = await saveBlob(file);
+            newIds.push(saved.id);
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Upload failed");
           }
-          const data = (await res.json()) as { id: string };
-          newIds.push(data.id);
         }
         if (newIds.length === 0) return;
         const next = [...photos, ...newIds];
         setPhotos(next);
         startTransition(async () => {
-          await fetch(`/api/items/${itemId}`, {
-            method: "PATCH",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              metadata: { ...metadata, photos: next },
-            }),
-          });
-          router.refresh();
+          await updateItem(itemId, { metadata: { ...metadata, photos: next } });
         });
         toast.success(`${newIds.length} photo${newIds.length === 1 ? "" : "s"} added`);
       } finally {
@@ -72,18 +62,11 @@ export function PhotoGallery({
       const next = photos.filter((p) => p !== id);
       setPhotos(next);
       startTransition(async () => {
-        await fetch(`/api/items/${itemId}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            metadata: { ...metadata, photos: next },
-          }),
-        });
-        fetch(`/api/blobs/${id}`, { method: "DELETE" }).catch(() => {});
-        router.refresh();
+        await updateItem(itemId, { metadata: { ...metadata, photos: next } });
+        await deleteBlob(id).catch(() => {});
       });
     },
-    [photos, itemId, metadata, router],
+    [photos, itemId, metadata],
   );
 
   function onDrop(e: React.DragEvent) {
@@ -171,10 +154,8 @@ export function PhotoGallery({
               key={id}
               className="relative aspect-square rounded-lg overflow-hidden border border-[var(--border-soft)] group bg-[var(--bg-rail)]"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/blobs/${id}`}
-                alt=""
+              <BlobImg
+                id={id}
                 className="w-full h-full object-cover cursor-zoom-in"
                 onClick={() => setLightbox(id)}
               />
@@ -197,10 +178,8 @@ export function PhotoGallery({
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur grid place-items-center p-6 cursor-zoom-out"
           onClick={() => setLightbox(null)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`/api/blobs/${lightbox}`}
-            alt=""
+          <BlobImg
+            id={lightbox}
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
           />
         </div>
@@ -212,10 +191,8 @@ export function PhotoGallery({
 /** Compact thumbnail used in card views (journal list, highlight list, etc.) */
 export function PhotoThumb({ id, size = 48 }: { id: string; size?: number }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={`/api/blobs/${id}`}
-      alt=""
+    <BlobImg
+      id={id}
       width={size}
       height={size}
       className="rounded-md object-cover shrink-0 border border-[var(--border-soft)]"

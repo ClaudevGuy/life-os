@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 export function NewPersonButton() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
@@ -24,18 +23,19 @@ export function NewPersonButton() {
       return;
     }
     startTransition(async () => {
-      const res = await fetch("/api/people", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), handle: handle.trim() }),
-      });
-      if (!res.ok) {
+      try {
+        await captureItem({
+          kind: "person",
+          title: name.trim(),
+          status: "active",
+          metadata: { handle: handle.trim() || undefined },
+        });
+      } catch {
         toast.error("Failed");
         return;
       }
       toast.success("Added");
       reset();
-      router.refresh();
     });
   }
 

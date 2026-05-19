@@ -1,29 +1,10 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
-import { getViewerId, safeQuery, demoUniverse } from "@/lib/viewer";
+"use client";
+
+import { useAllItems } from "@/lib/store/items";
 import Link from "next/link";
 
-export const metadata = { title: "Timeline · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function TimelinePage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(eq(items.userId, userId))
-        .orderBy(desc(items.capturedAt))
-        .limit(200),
-    [],
-  );
-  if (rows.length === 0) {
-    rows = [...demoUniverse(userId)].sort(
-      (a, b) => b.capturedAt.getTime() - a.capturedAt.getTime(),
-    );
-  }
+export default function TimelinePage() {
+  const rows = useAllItems() ?? [];
 
   const byDay = new Map<string, typeof rows>();
   for (const r of rows) {

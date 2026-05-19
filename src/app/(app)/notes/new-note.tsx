@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Plus, NotebookPen } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 export function NewNote() {
   const router = useRouter();
@@ -24,26 +25,21 @@ export function NewNote() {
       return;
     }
     startTransition(async () => {
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      let id: string | null = null;
+      try {
+        const item = await captureItem({
           kind: "note",
-          title: title.trim() || undefined,
-          body: body.trim() || undefined,
-        }),
-      });
-      if (!res.ok) {
+          title: title.trim() || null,
+          body: body.trim() || null,
+        });
+        id = item.id;
+      } catch {
         toast.error("Couldn't save");
         return;
       }
-      const data = (await res.json().catch(() => null)) as {
-        item?: { id: string };
-      } | null;
       toast.success("Note created");
       reset();
-      if (data?.item?.id) router.push(`/items/${data.item.id}`);
-      else router.refresh();
+      if (id) router.push(`/items/${id}`);
     });
   }
 

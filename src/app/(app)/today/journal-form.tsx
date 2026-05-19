@@ -2,10 +2,12 @@
 
 import { useState, useTransition, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Item } from "@/db/schema";
-import { Sparkles, ImagePlus, X } from "lucide-react";
+import type { StoredItem as Item } from "@/lib/store/items";
+import { Sparkles, ImagePlus, X, BookOpen } from "lucide-react";
+import { captureItem, updateItem } from "@/lib/store/items";
+import { saveBlob, deleteBlob } from "@/lib/store/blobs";
+import { BlobImg } from "@/components/blob-img";
 
 const MOODS = ["😄", "🙂", "😐", "😕", "😫"] as const;
 
@@ -21,7 +23,6 @@ const PROMPTS_BY_DAY: Record<number, string> = {
 };
 
 export function JournalForm({ existing }: { existing: Item | null }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const existingMeta = (existing?.metadata ?? {}) as {
     energy?: number;
@@ -44,30 +45,20 @@ export function JournalForm({ existing }: { existing: Item | null }) {
     try {
       const newIds: string[] = [];
       for (const file of list) {
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await fetch("/api/blobs/upload", { method: "POST", body: fd });
-        if (!res.ok) {
-          toast.error("Upload failed");
-          continue;
+        try {
+          const saved = await saveBlob(file);
+          newIds.push(saved.id);
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Upload failed");
         }
-        const data = (await res.json()) as { id: string };
-        newIds.push(data.id);
       }
       if (newIds.length === 0) return;
       const next = [...photos, ...newIds];
       setPhotos(next);
-      // Persist immediately if the journal already exists; otherwise it
-      // gets saved together with the body on next save.
       if (existing) {
-        await fetch(`/api/items/${existing.id}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            metadata: { ...existingMeta, photos: next },
-          }),
+        await updateItem(existing.id, {
+          metadata: { ...existingMeta, photos: next },
         });
-        router.refresh();
       }
       toast.success(`${newIds.length} photo${newIds.length === 1 ? "" : "s"} added`);
     } finally {
@@ -75,19 +66,15 @@ export function JournalForm({ existing }: { existing: Item | null }) {
     }
   }
 
-  function removePhoto(id: string) {
+  async function removePhoto(id: string) {
     const next = photos.filter((p) => p !== id);
     setPhotos(next);
     if (existing) {
-      fetch(`/api/items/${existing.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          metadata: { ...existingMeta, photos: next },
-        }),
-      }).then(() => router.refresh());
-      fetch(`/api/blobs/${id}`, { method: "DELETE" }).catch(() => {});
+      await updateItem(existing.id, {
+        metadata: { ...existingMeta, photos: next },
+      });
     }
+    await deleteBlob(id).catch(() => {});
   }
 
   const prompt = useMemo(() => {
@@ -101,30 +88,42 @@ export function JournalForm({ existing }: { existing: Item | null }) {
       return;
     }
     startTransition(async () => {
-      const res = await fetch("/api/today/journal", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          id: existing?.id,
-          body: body.trim(),
-          energy,
-          mood,
-          photos,
-        }),
-      });
-      if (!res.ok) {
+      const metadata: Record<string, unknown> = { energy, mood };
+      if (photos.length > 0) metadata.photos = photos;
+      try {
+        if (existing) {
+          await updateItem(existing.id, { body: body.trim(), metadata });
+        } else {
+          const today = new Date().toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          });
+          await captureItem({
+            kind: "journal",
+            title: today,
+            body: body.trim(),
+            status: "active",
+            metadata,
+          });
+        }
+        toast.success(existing ? "Updated" : "Saved");
+      } catch {
         toast.error("Failed to save");
-        return;
       }
-      toast.success(existing ? "Updated" : "Saved");
-      router.refresh();
     });
   }
 
+  const tint = "var(--kind-journal)";
   return (
-    <div className="life-card p-4">
+    <div className="life-card p-4 relative overflow-hidden">
+      <div
+        className="absolute -top-px left-0 right-0 h-px pointer-events-none"
+        style={{ background: `linear-gradient(90deg, transparent, ${tint}, transparent)` }}
+      />
       <div className="flex items-baseline justify-between mb-2">
         <h2 className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+          <BookOpen size={11} style={{ color: tint }} />
           Journal
         </h2>
         {existing && (
@@ -170,20 +169,10 @@ export function JournalForm({ existing }: { existing: Item | null }) {
             >
               {existing ? (
                 <Link href={`/items/${existing.id}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`/api/blobs/${id}`}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
+                  <BlobImg id={id} className="w-full h-full object-cover" />
                 </Link>
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`/api/blobs/${id}`}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+                <BlobImg id={id} className="w-full h-full object-cover" />
               )}
               <button
                 type="button"

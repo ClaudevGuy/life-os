@@ -1,60 +1,40 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pin, ExternalLink, Sparkles, Archive, Trash2 } from "lucide-react";
-import type { Item } from "@/db/schema";
 import { FilterChips } from "./filter-chips";
+import {
+  useInboxItems,
+  updateItem,
+  deleteItem,
+  type StoredItem,
+} from "@/lib/store/items";
 
 type Kind = "all" | "bookmark" | "note" | "task" | "idea" | "highlight";
 
-export function InboxList({ rows }: { rows: Item[] }) {
-  const router = useRouter();
+export function InboxList() {
+  const rows = useInboxItems() ?? [];
   const [filter, setFilter] = useState<Kind>("all");
-  const [pending, startTransition] = useTransition();
-  const [localPins, setLocalPins] = useState<Record<string, boolean>>({});
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  const visible = rows.filter((r) => !hidden.has(r.id));
-  const filtered =
-    filter === "all" ? visible : visible.filter((r) => r.kind === filter);
+  const filtered: StoredItem[] =
+    filter === "all" ? rows : rows.filter((r) => r.kind === filter);
 
   async function togglePin(id: string, isPinned: boolean) {
-    setLocalPins((s) => ({ ...s, [id]: !isPinned }));
-    startTransition(async () => {
-      await fetch(`/api/items/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ isPinned: !isPinned }),
-      });
-      toast.success(!isPinned ? "Pinned" : "Unpinned");
-      router.refresh();
-    });
+    await updateItem(id, { isPinned: !isPinned });
+    toast.success(!isPinned ? "Pinned" : "Unpinned");
   }
 
-  function archive(id: string) {
-    setHidden((s) => new Set(s).add(id));
-    startTransition(async () => {
-      await fetch(`/api/items/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status: "archived" }),
-      });
-      toast.success("Archived");
-      router.refresh();
-    });
+  async function archive(id: string) {
+    await updateItem(id, { status: "archived" });
+    toast.success("Archived");
   }
 
-  function del(id: string) {
+  async function del(id: string) {
     if (!confirm("Delete this item? This can't be undone.")) return;
-    setHidden((s) => new Set(s).add(id));
-    startTransition(async () => {
-      await fetch(`/api/items/${id}`, { method: "DELETE" });
-      toast.success("Deleted");
-      router.refresh();
-    });
+    await deleteItem(id);
+    toast.success("Deleted");
   }
 
   return (
@@ -69,7 +49,7 @@ export function InboxList({ rows }: { rows: Item[] }) {
           </li>
         )}
         {filtered.map((it) => {
-          const pinned = localPins[it.id] ?? it.isPinned;
+          const pinned = it.isPinned;
           return (
             <li
               key={it.id}
@@ -129,20 +109,17 @@ export function InboxList({ rows }: { rows: Item[] }) {
               <div className="absolute top-2.5 right-2.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition pointer-events-none group-hover:pointer-events-auto">
                 <ActionBtn
                   onClick={() => togglePin(it.id, pinned)}
-                  disabled={pending}
                   label={pinned ? "Unpin" : "Pin"}
                   icon={Pin}
                   active={pinned}
                 />
                 <ActionBtn
                   onClick={() => archive(it.id)}
-                  disabled={pending}
                   label="Archive"
                   icon={Archive}
                 />
                 <ActionBtn
                   onClick={() => del(it.id)}
-                  disabled={pending}
                   label="Delete"
                   icon={Trash2}
                   danger

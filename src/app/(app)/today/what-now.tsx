@@ -1,4 +1,4 @@
-import type { Item } from "@/db/schema";
+import type { StoredItem as Item } from "@/lib/store/items";
 import Link from "next/link";
 import {
   AlertCircle,

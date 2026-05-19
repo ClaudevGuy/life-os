@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   AlertCircle,
   Inbox,
@@ -11,8 +10,9 @@ import {
   Bookmark,
   Lightbulb,
   Sparkles,
-  CornerDownRight,
 } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/store/db";
 import { SidebarToggle } from "@/components/sidebar-toggle";
 import { SearchTrigger } from "@/components/search-trigger";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -42,8 +42,6 @@ const EMPTY: Stats = {
 };
 
 export function TopBar() {
-  const pathname = usePathname();
-  const [stats, setStats] = useState<Stats>(EMPTY);
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -52,18 +50,7 @@ export function TopBar() {
     return () => clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/topbar/stats")
-      .then((r) => r.json())
-      .then((d: Stats) => {
-        if (alive) setStats(d);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [pathname]);
+  const stats = useLiveQuery(async () => computeStats(await db.items.toArray())) ?? EMPTY;
 
   const timeLabel = now
     ? now.toLocaleTimeString(undefined, {
@@ -189,21 +176,104 @@ function Pill({
 }) {
   const toneClass =
     tone === "warn"
-      ? "bg-red-500/10 text-red-300 border-red-500/20 hover:bg-red-500/15"
+      ? "bg-red-500/15 text-red-600 dark:text-red-300 border-red-500/40 hover:bg-red-500/20"
       : tone === "accent"
-      ? "bg-[var(--accent-glow)] text-[var(--accent)] border-[var(--accent-soft)] hover:bg-[var(--accent-soft)]"
+      ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/40 hover:brightness-105"
       : tone === "fire"
-      ? "bg-orange-500/10 text-orange-300 border-orange-500/20 hover:bg-orange-500/15"
-      : "bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-soft)] hover:text-[var(--text)] hover:border-[var(--border-strong)]";
+      ? "bg-orange-500/15 text-orange-600 dark:text-orange-300 border-orange-500/40 hover:bg-orange-500/20"
+      : "bg-[var(--bg-card)] text-[var(--text)] border-[var(--border-strong)] hover:border-[var(--accent)] hover:text-[var(--accent)]";
 
   return (
     <Link
       href={href}
       title={title}
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] tabular-nums transition whitespace-nowrap ${toneClass}`}
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] tabular-nums transition whitespace-nowrap shadow-sm ${toneClass}`}
     >
       <Icon size={11} />
       {label}
     </Link>
   );
+}
+
+function computeStats(rows: Array<{
+  kind: string;
+  status: string;
+  metadata: Record<string, unknown>;
+}>): Stats {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+  const today = startOfToday.toISOString().slice(0, 10);
+
+  let openTasks = 0;
+  let overdueTasks = 0;
+  let dueToday = 0;
+  let toRead = 0;
+  let pendingDecisions = 0;
+  let habitsDone = 0;
+  let habitsTotal = 0;
+  let inboxCount = 0;
+  let bestStreak = 0;
+
+  for (const r of rows) {
+    const meta = (r.metadata ?? {}) as Record<string, unknown>;
+
+    if (r.status === "inbox") inboxCount++;
+
+    if (r.kind === "task") {
+      const completed = meta.completedAt as string | null | undefined;
+      if (!completed && r.status !== "archived") {
+        openTasks++;
+        const due = meta.dueDate as string | undefined;
+        if (due) {
+          const d = new Date(due);
+          if (d < startOfToday) overdueTasks++;
+          else if (d >= startOfToday && d < endOfToday) dueToday++;
+        }
+      }
+    }
+
+    if (r.kind === "bookmark") {
+      const state = meta.readState as string | undefined;
+      if (!state || state === "to-read") toRead++;
+    }
+
+    if (r.kind === "decision") {
+      const outcome = (meta.outcome as string | undefined) ?? "pending";
+      const reviewAt = meta.reviewAt as string | undefined;
+      if (outcome === "pending" && reviewAt && new Date(reviewAt) <= new Date()) {
+        pendingDecisions++;
+      }
+    }
+
+    if (r.kind === "habit") {
+      habitsTotal++;
+      const checkins = (meta.checkins as string[] | undefined) ?? [];
+      if (checkins.includes(today)) habitsDone++;
+      let streak = 0;
+      const set = new Set(checkins);
+      for (let i = 0; i < 365; i++) {
+        const d = new Date(Date.now() - i * 86_400_000)
+          .toISOString()
+          .slice(0, 10);
+        if (set.has(d)) streak++;
+        else if (i === 0) continue;
+        else break;
+      }
+      if (streak > bestStreak) bestStreak = streak;
+    }
+  }
+
+  return {
+    openTasks,
+    overdueTasks,
+    dueToday,
+    toRead,
+    pendingDecisions,
+    habitsDone,
+    habitsTotal,
+    inboxCount,
+    bestStreak,
+  };
 }

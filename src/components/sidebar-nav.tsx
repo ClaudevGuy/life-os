@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/store/db";
 import {
   Inbox,
   Sun,
@@ -127,20 +128,8 @@ const EMPTY: Stats = {
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const [stats, setStats] = useState<Stats>(EMPTY);
-
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/topbar/stats")
-      .then((r) => r.json())
-      .then((d: Stats) => {
-        if (alive) setStats(d);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [pathname]);
+  const stats =
+    useLiveQuery(async () => computeStats(await db.items.toArray())) ?? EMPTY;
 
   return (
     <>
@@ -209,4 +198,63 @@ export function SidebarNav() {
       ))}
     </>
   );
+}
+
+function computeStats(rows: Array<{
+  kind: string;
+  status: string;
+  metadata: Record<string, unknown>;
+}>): Stats {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+  const now = new Date();
+
+  let openTasks = 0;
+  let overdueTasks = 0;
+  let dueToday = 0;
+  let toRead = 0;
+  let pendingDecisions = 0;
+  let inboxCount = 0;
+
+  for (const r of rows) {
+    const meta = (r.metadata ?? {}) as Record<string, unknown>;
+    if (r.status === "inbox") inboxCount++;
+
+    if (r.kind === "task") {
+      const completed = meta.completedAt as string | null | undefined;
+      if (!completed && r.status !== "archived") {
+        openTasks++;
+        const due = meta.dueDate as string | undefined;
+        if (due) {
+          const d = new Date(due);
+          if (d < startOfToday) overdueTasks++;
+          else if (d >= startOfToday && d < endOfToday) dueToday++;
+        }
+      }
+    }
+
+    if (r.kind === "bookmark") {
+      const state = meta.readState as string | undefined;
+      if (!state || state === "to-read") toRead++;
+    }
+
+    if (r.kind === "decision") {
+      const outcome = (meta.outcome as string | undefined) ?? "pending";
+      const reviewAt = meta.reviewAt as string | undefined;
+      if (outcome === "pending" && reviewAt && new Date(reviewAt) <= now) {
+        pendingDecisions++;
+      }
+    }
+  }
+
+  return {
+    openTasks,
+    overdueTasks,
+    dueToday,
+    toRead,
+    pendingDecisions,
+    inboxCount,
+  };
 }

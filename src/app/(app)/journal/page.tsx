@@ -1,27 +1,12 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
-import { getViewerId, safeQuery } from "@/lib/viewer";
-import { demoForKind } from "@/lib/demo-data";
+"use client";
+
+import { useItemsOfKind } from "@/lib/store/items";
 import { Sun } from "lucide-react";
 import Link from "next/link";
+import { BlobImg } from "@/components/blob-img";
 
-export const metadata = { title: "Journal · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function JournalPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(and(eq(items.userId, userId), eq(items.kind, "journal")))
-        .orderBy(desc(items.capturedAt))
-        .limit(200),
-    [],
-  );
-  if (rows.length === 0) rows = demoForKind("journal");
+export default function JournalPage() {
+  const rows = useItemsOfKind("journal") ?? [];
 
   return (
     <div className="p-8 max-w-3xl">
@@ -36,7 +21,11 @@ export default async function JournalPage() {
       <ul className="mt-8 space-y-3">
         {rows.length === 0 && (
           <li className="text-sm text-[var(--text-faint)]">
-            Write your first entry from <Link href="/today" className="text-[var(--accent)]">Today</Link>.
+            Write your first entry from{" "}
+            <Link href="/today" className="text-[var(--accent)]">
+              Today
+            </Link>
+            .
           </li>
         )}
         {rows.map((j) => {
@@ -51,10 +40,8 @@ export default async function JournalPage() {
               <Link href={`/items/${j.id}`} className="block p-5">
                 <div className="flex gap-4">
                   {firstPhoto && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={`/api/blobs/${firstPhoto}`}
-                      alt=""
+                    <BlobImg
+                      id={firstPhoto}
                       className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover shrink-0 border border-[var(--border-soft)]"
                     />
                   )}

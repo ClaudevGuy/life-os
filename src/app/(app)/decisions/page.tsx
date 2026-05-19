@@ -1,29 +1,13 @@
-import { db } from "@/db/client";
-import { items } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
-import { getViewerId, safeQuery } from "@/lib/viewer";
-import { demoForKind } from "@/lib/demo-data";
+"use client";
+
+import { useItemsOfKind } from "@/lib/store/items";
 import { Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { NewDecision } from "./new-decision";
 import { EmptyState } from "@/components/empty-state";
 
-export const metadata = { title: "Decisions · Life OS" };
-export const dynamic = "force-dynamic";
-
-export default async function DecisionsPage() {
-  const userId = await getViewerId();
-  let rows = await safeQuery(
-    () =>
-      db
-        .select()
-        .from(items)
-        .where(and(eq(items.userId, userId), eq(items.kind, "decision")))
-        .orderBy(desc(items.capturedAt))
-        .limit(100),
-    [],
-  );
-  if (rows.length === 0) rows = demoForKind("decision");
+export default function DecisionsPage() {
+  const rows = useItemsOfKind("decision") ?? [];
 
   return (
     <div className="p-8 max-w-3xl">

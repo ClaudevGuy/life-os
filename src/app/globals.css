@@ -153,17 +153,17 @@ html:not([data-theme]) .life-card {
 html[data-theme="light"] .life-card {
   --card-bg: #ffffff;
   --card-shadow:
-    0 1px 0 rgba(50, 40, 20, 0.03),
-    0 1px 3px rgba(160, 130, 70, 0.06),
-    0 8px 24px -12px rgba(120, 90, 30, 0.08);
+    0 1px 0 rgba(50, 40, 20, 0.05),
+    0 2px 6px rgba(120, 90, 30, 0.08),
+    0 12px 28px -14px rgba(90, 65, 15, 0.14);
   --card-shadow-hover:
-    0 1px 0 rgba(50, 40, 20, 0.04),
-    0 2px 6px rgba(160, 130, 70, 0.10),
-    0 14px 36px -12px rgba(120, 90, 30, 0.14);
-  border-color: #eee5cf;
+    0 1px 0 rgba(50, 40, 20, 0.06),
+    0 3px 8px rgba(120, 90, 30, 0.12),
+    0 18px 40px -14px rgba(90, 65, 15, 0.20);
+  border-color: #d8c89e;
 }
 html[data-theme="light"] .life-card-hover:hover {
-  border-color: #d8c89e;
+  border-color: #b9a166;
   background: #fffdf7;
 }
 
@@ -171,17 +171,17 @@ html[data-theme="light"] .life-card-hover:hover {
   html[data-theme="system"] .life-card {
     --card-bg: #ffffff;
     --card-shadow:
-      0 1px 0 rgba(50, 40, 20, 0.03),
-      0 1px 3px rgba(160, 130, 70, 0.06),
-      0 8px 24px -12px rgba(120, 90, 30, 0.08);
+      0 1px 0 rgba(50, 40, 20, 0.05),
+      0 2px 6px rgba(120, 90, 30, 0.08),
+      0 12px 28px -14px rgba(90, 65, 15, 0.14);
     --card-shadow-hover:
-      0 1px 0 rgba(50, 40, 20, 0.04),
-      0 2px 6px rgba(160, 130, 70, 0.10),
-      0 14px 36px -12px rgba(120, 90, 30, 0.14);
-    border-color: #eee5cf;
+      0 1px 0 rgba(50, 40, 20, 0.06),
+      0 3px 8px rgba(120, 90, 30, 0.12),
+      0 18px 40px -14px rgba(90, 65, 15, 0.20);
+    border-color: #d8c89e;
   }
   html[data-theme="system"] .life-card-hover:hover {
-    border-color: #d8c89e;
+    border-color: #b9a166;
     background: #fffdf7;
   }
 }

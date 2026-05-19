@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Plus, Target } from "lucide-react";
+import { captureItem } from "@/lib/store/items";
 
 export function NewGoal() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -31,27 +30,23 @@ export function NewGoal() {
       return;
     }
     startTransition(async () => {
-      const res = await fetch("/api/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await captureItem({
           kind: "goal",
           title: title.trim(),
-          body: summary.trim() || undefined,
+          body: summary.trim() || null,
           metadata: {
             progress,
             targetDate: new Date(`${targetDate}T09:00:00`).toISOString(),
             milestones: [],
           },
-        }),
-      });
-      if (!res.ok) {
+        });
+      } catch {
         toast.error("Couldn't save");
         return;
       }
       toast.success("Goal set");
       reset();
-      router.refresh();
     });
   }
 
