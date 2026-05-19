@@ -17,8 +17,7 @@ import {
   Quote,
   Mic,
   Folder,
-  ChevronDown,
-  ChevronUp,
+  MoreHorizontal,
   Link as LinkIcon,
   CornerDownLeft,
 } from "lucide-react";
@@ -234,90 +233,97 @@ export function QuickCapture() {
             className="w-full max-w-lg rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-card)] shadow-2xl overflow-hidden life-rise"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Atmospheric tinted header, mirrors the welcome modal */}
-            <div
-              className="relative h-28 overflow-hidden transition-[background] duration-500"
-              style={{
-                background: `linear-gradient(135deg,
-                  color-mix(in oklch, ${activeMeta.tint} 55%, #2a1d3a) 0%,
-                  color-mix(in oklch, ${activeMeta.tint} 28%, #1a1330) 55%,
-                  color-mix(in oklch, ${activeMeta.tint} 12%, #0c0c0f) 100%)`,
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] to-transparent" />
+            {/* Aurora header — base evening gradient + kind-tinted radial wash */}
+            <div className="relative h-32 overflow-hidden">
+              <div className="absolute inset-0 tod-evening" />
+              <div
+                className="absolute inset-0 transition-[background] duration-500"
+                style={{
+                  background: `radial-gradient(ellipse 75% 65% at 50% 45%, color-mix(in oklch, ${activeMeta.tint} 70%, transparent) 0%, transparent 70%)`,
+                }}
+              />
+              <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[var(--bg-card)] via-[var(--bg-card)]/40 to-transparent" />
               <div className="absolute inset-0 grid place-items-center">
-                <div className="grid place-items-center w-14 h-14 rounded-full bg-white/10 backdrop-blur border border-white/15 shadow-lg">
-                  <ActiveIcon size={22} className="text-white" />
+                <div
+                  className="grid place-items-center w-16 h-16 rounded-full bg-white/10 backdrop-blur-md transition-[box-shadow,border-color] duration-500"
+                  style={{
+                    border: `2px solid ${activeMeta.tint}b3`,
+                    boxShadow: `0 10px 30px -8px ${activeMeta.tint}cc, inset 0 1px 0 rgba(255,255,255,0.15)`,
+                  }}
+                >
+                  <ActiveIcon size={24} className="text-white" />
                 </div>
               </div>
             </div>
 
-            {/* Centered kind label + more toggle */}
-            <div className="px-7 pt-1 pb-3 text-center relative">
+            {/* Centered kind label */}
+            <div className="pt-3 pb-4 text-center">
               <div
-                className="text-[11px] uppercase tracking-[0.18em] font-semibold"
+                className="text-[11px] uppercase tracking-[0.22em] font-semibold transition-colors"
                 style={{ color: activeMeta.tint }}
               >
                 New {activeMeta.label.toLowerCase()}
               </div>
-              <button
-                type="button"
-                onClick={() => setShowAll((v) => !v)}
-                className="absolute right-5 top-0 inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--text-faint)] hover:text-[var(--text-muted)] transition px-1.5 py-0.5 rounded"
-              >
-                {showAll ? (
-                  <>
-                    Fewer <ChevronUp size={10} />
-                  </>
-                ) : (
-                  <>
-                    More <ChevronDown size={10} />
-                  </>
-                )}
-              </button>
             </div>
 
-            {/* Kind tabs — centered, pill style */}
-            <div className="px-5 pb-2 flex items-center justify-center gap-1 flex-wrap">
-              {PRIMARY.map((k, i) => (
-                <KindTab
-                  key={k}
-                  kind={k}
-                  active={kind === k}
-                  onClick={() => setKind(k)}
-                  shortcut={i + 1}
-                />
-              ))}
-            </div>
-            {showAll && (
-              <div className="px-5 pb-2 flex items-center justify-center gap-1 flex-wrap">
-                {SECONDARY.map((k) => (
+            {/* Kind tabs — segmented pill */}
+            <div className="px-6 pb-3 flex justify-center">
+              <div className="inline-flex items-center gap-0.5 rounded-full bg-[var(--bg-rail)] border border-[var(--border-soft)] p-1 shadow-inner">
+                {PRIMARY.map((k, i) => (
                   <KindTab
                     key={k}
                     kind={k}
                     active={kind === k}
                     onClick={() => setKind(k)}
-                    small
+                    shortcut={i + 1}
                   />
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setShowAll((v) => !v)}
+                  className={`grid place-items-center w-7 h-7 rounded-full transition ${
+                    showAll
+                      ? "bg-white/5 text-[var(--text)]"
+                      : "text-[var(--text-faint)] hover:text-[var(--text-muted)] hover:bg-white/5"
+                  }`}
+                  title={showAll ? "Fewer kinds" : "More kinds"}
+                  aria-label="More kinds"
+                >
+                  <MoreHorizontal size={13} />
+                </button>
+              </div>
+            </div>
+            {showAll && (
+              <div className="px-6 pb-3 flex justify-center">
+                <div className="inline-flex items-center gap-0.5 rounded-full bg-[var(--bg-rail)]/60 border border-[var(--border-soft)] p-1 flex-wrap">
+                  {SECONDARY.map((k) => (
+                    <KindTab
+                      key={k}
+                      kind={k}
+                      active={kind === k}
+                      onClick={() => setKind(k)}
+                      small
+                    />
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Title */}
-            <div className="px-7 pt-3">
+            <div className="px-7 pt-4">
               <div className="relative">
                 <input
                   autoFocus
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={placeholderForKind(kind)}
-                  className="qc-title peer w-full bg-transparent text-[20px] tracking-tight leading-snug placeholder:text-[var(--text-faint)]/60 outline-none font-medium py-2 text-[var(--text)]"
+                  className="qc-title peer w-full bg-transparent text-[19px] tracking-tight leading-snug placeholder:text-[var(--text-faint)]/50 outline-none font-medium py-1.5 text-[var(--text)]"
                 />
                 <span
                   className="pointer-events-none absolute left-0 right-0 -bottom-px h-px bg-[var(--border-soft)] peer-focus:bg-[var(--accent)] transition-colors"
                 />
               </div>
-              <div className="mt-1.5 flex items-center gap-3 text-[11px] text-[var(--text-faint)] min-h-[16px]">
+              <div className="mt-2 flex items-center gap-3 text-[11px] text-[var(--text-faint)] min-h-[16px]">
                 {parsed && (
                   <span className="inline-flex items-center gap-1 text-[var(--accent)]">
                     📅 due {dateLabel(parsed.date)}
@@ -331,20 +337,20 @@ export function QuickCapture() {
                 )}
                 {!parsed && !isBookmarkUrl && kind === "task" && (
                   <span className="italic">
-                    Hint: end with “friday”, “tomorrow”, “in 3 days” to auto-set due date
+                    Try “review proposal friday”, “call mom tomorrow”, “ship in 3 days”
                   </span>
                 )}
               </div>
             </div>
 
             {/* Body */}
-            <div className="px-7 pt-2 pb-3">
+            <div className="px-7 pt-3 pb-4">
               <textarea
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                rows={5}
+                rows={4}
                 placeholder={bodyPlaceholderForKind(kind)}
-                className="qc-body w-full bg-transparent text-[14px] leading-relaxed placeholder:text-[var(--text-faint)]/60 outline-none resize-none py-1 text-[var(--text)]"
+                className="qc-body w-full bg-transparent text-[13.5px] leading-relaxed placeholder:text-[var(--text-faint)]/45 outline-none resize-none text-[var(--text)]"
               />
             </div>
 
@@ -356,7 +362,7 @@ export function QuickCapture() {
                     <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
                       Priority
                     </span>
-                    <div className="inline-flex items-center gap-0.5 rounded-full bg-[var(--bg-rail)] p-0.5">
+                    <div className="inline-flex items-center gap-0.5 rounded-full bg-[var(--bg-rail)] border border-[var(--border-soft)] p-0.5">
                       {(["low", "medium", "high"] as const).map((p) => (
                         <button
                           key={p}
@@ -396,13 +402,11 @@ export function QuickCapture() {
               </div>
             )}
 
-            {/* Footer — matches welcome modal: faint Skip / pill CTA */}
-            <div className="px-6 py-4 flex items-center justify-between border-t border-[var(--border-soft)]">
-              <div className="flex items-center gap-3 text-[10px] text-[var(--text-faint)]">
-                <span className="inline-flex items-center gap-1.5">
-                  <Sparkles size={11} className="text-[var(--accent)]" />
-                  AI enriches in the background
-                </span>
+            {/* Footer */}
+            <div className="px-6 py-3.5 flex items-center justify-between border-t border-[var(--border-soft)]">
+              <div className="inline-flex items-center gap-1.5 text-[10px] text-[var(--text-faint)]">
+                <Sparkles size={11} className="text-[var(--accent)]" />
+                AI enriches in the background
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -416,7 +420,7 @@ export function QuickCapture() {
                   type="button"
                   onClick={save}
                   disabled={pending}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-5 py-2 text-sm font-medium hover:brightness-110 transition disabled:opacity-50 shadow-lg"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-5 py-2 text-sm font-medium hover:brightness-110 transition disabled:opacity-50 shadow-[0_8px_24px_-8px_rgba(212,168,102,0.55)]"
                 >
                   Save
                   <kbd className="text-[10px] opacity-70 inline-flex items-center">
@@ -456,29 +460,27 @@ function KindTab({
           ? `${KIND_META[kind].label} · alt+${shortcut}`
           : KIND_META[kind].label
       }
-      className={`relative inline-flex items-center gap-1.5 rounded-md transition ${
-        small ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-[13px]"
+      className={`relative inline-flex items-center gap-1.5 rounded-full transition-all ${
+        small ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-[12.5px] font-medium"
       } ${
         active
-          ? "text-[var(--text)]"
-          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/5"
+          ? "text-zinc-950"
+          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/[0.04]"
       }`}
       style={
         active
           ? {
-              background: `color-mix(in oklch, ${tint} 14%, transparent)`,
-              boxShadow: `inset 0 -2px 0 0 ${tint}`,
+              background: tint,
+              boxShadow: `0 4px 14px -4px ${tint}80`,
             }
           : undefined
       }
     >
-      <Icon size={small ? 11 : 13} style={{ color: active ? tint : undefined }} />
+      <Icon
+        size={small ? 11 : 13}
+        style={{ color: active ? undefined : tint }}
+      />
       {KIND_META[kind].label}
-      {shortcut && !active && (
-        <kbd className="ml-0.5 text-[9px] text-[var(--text-faint)] border border-[var(--border-soft)] rounded px-1 font-mono tabular-nums">
-          {shortcut}
-        </kbd>
-      )}
     </button>
   );
 }
