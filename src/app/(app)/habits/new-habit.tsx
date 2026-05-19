@@ -1,0 +1,130 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { Plus, Flame } from "lucide-react";
+
+export function NewHabit() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [cadence, setCadence] = useState<"daily" | "weekdays" | "weekly">("daily");
+  const [pending, startTransition] = useTransition();
+
+  function reset() {
+    setTitle("");
+    setSummary("");
+    setCadence("daily");
+    setOpen(false);
+  }
+
+  async function save() {
+    if (!title.trim()) {
+      toast.error("Name required");
+      return;
+    }
+    startTransition(async () => {
+      const res = await fetch("/api/capture", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "habit",
+          title: title.trim(),
+          body: summary.trim() || undefined,
+          metadata: { cadence, checkins: [] },
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Couldn't save");
+        return;
+      }
+      toast.success("Habit added");
+      reset();
+      router.refresh();
+    });
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 rounded-md bg-[var(--accent)] text-zinc-950 text-xs px-3 py-1.5 hover:brightness-110 transition"
+      >
+        <Plus size={12} /> New habit
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh] bg-black/60 backdrop-blur-sm"
+      onClick={reset}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-card)] p-6 life-rise"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="inline-flex items-center gap-2 text-sm font-medium mb-4">
+          <Flame size={14} className="text-[var(--accent)]" />
+          New habit
+        </h2>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Habit name (e.g. Morning walk)"
+          autoFocus
+          className="w-full rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+        />
+        <input
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="Why (optional)"
+          className="mt-2 w-full rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+        />
+
+        <div className="mt-3">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-1.5">
+            Cadence
+          </div>
+          <div className="inline-flex items-center gap-0.5 rounded-md bg-[var(--bg-rail)] p-0.5">
+            {(["daily", "weekdays", "weekly"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCadence(c)}
+                className={`text-xs capitalize px-3 py-1 rounded transition ${
+                  cadence === c
+                    ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                    : "text-[var(--text-muted)]"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={reset}
+            className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] px-2"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={pending}
+            className="rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-1.5 text-xs font-medium hover:brightness-110 transition disabled:opacity-50"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -5,19 +5,41 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "db:setup": "tsx scripts/db-setup.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.78",
+    "@ai-sdk/openai": "^3.0.64",
+    "@auth/drizzle-adapter": "^1.11.2",
+    "@neondatabase/serverless": "^1.1.0",
+    "ai": "^6.0.185",
+    "cmdk": "^1.1.1",
+    "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.16.0",
+    "nanoid": "^5.1.11",
     "next": "16.2.6",
+    "next-auth": "^5.0.0-beta.31",
+    "next-themes": "^0.4.6",
+    "pg": "^8.21.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "resend": "^6.12.3",
+    "sonner": "^2.0.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4",
+    "tsx": "^4.22.2",
     "typescript": "^5"
   }
 }

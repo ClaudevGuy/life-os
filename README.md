@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Life OS
 
-## Getting Started
+Capture, organize, and recall everything you care about — bookmarks, notes, decisions, people, daily journals — in one polymorphic store, with an open API so Claude Code and other tools can plug in.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js 16 (App Router, Turbopack, React 19)
+- Postgres (Neon serverless) + Drizzle ORM + pgvector
+- Auth.js v5 — magic-link email via Resend
+- Vercel AI SDK + AI Gateway (Anthropic + OpenAI by default)
+- Tailwind v4 + cmdk command palette + Sonner
+
+## Setup
+
+### 1. Environment
+
+```powershell
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Fill in:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `DATABASE_URL` — Neon Postgres URL (see [Vercel Marketplace](https://vercel.com/marketplace) or [neon.tech](https://neon.tech))
+- `AUTH_SECRET` — `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`
+- `AUTH_RESEND_KEY` + `EMAIL_FROM` — for magic-link sign-in
+- `AI_GATEWAY_API_KEY` — Vercel AI Gateway key (or skip and let `vercel env pull` provision OIDC)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Database
 
-## Learn More
+```powershell
+npm install
+npm run db:setup       # enables pgvector extension
+npm run db:push        # creates tables from schema
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Run
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```powershell
+$env:ComSpec='C:\Windows\System32\cmd.exe'; $env:SHELL='C:\Windows\System32\cmd.exe'
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open <http://localhost:3000>, sign in via magic link, then go to **Settings → API Keys** to mint a bearer token.
 
-## Deploy on Vercel
+## Capture from anywhere
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Once you have a key:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+curl -X POST http://localhost:3000/api/v1/capture \
+  -H "Authorization: Bearer lifeos_..." \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"bookmark","sourceUrl":"https://useworkflow.dev"}'
+```
+
+See [`docs/api.md`](./docs/api.md) for the full API contract.
+
+## What's here (1-week MVP)
+
+| Slice | Path | Status |
+| --- | --- | --- |
+| Capture API | `/api/v1/capture` | Bearer auth, dedupe by URL |
+| Inbox | `/inbox` | All captures awaiting triage |
+| Today | `/today` | Brief, journal, quick decision |
+| People | `/people` | Add + list, conversations link via connections |
+| Decisions | `/decisions` | List with review-due flagging |
+| Timeline | `/timeline` | Grouped by day |
+| Graph | `/graph` | Clustered by topic (force-directed in phase 2) |
+| Search | ⌘K | Hybrid pgvector + ILIKE |
+| API Keys | `/settings/keys` | Mint, revoke, last-used tracking |
+
+## What's next (phase 2)
+
+See the plan at `~/.claude/plans/i-d-like-to-build-calm-hollerith.md`:
+
+1. MCP server wrapping the REST API
+2. Browser extension
+3. Cron-driven daily brief + email
+4. Smart resurfacing v2 (the `pickResurfaceCandidates` helper is already in [`src/lib/resurface.ts`](./src/lib/resurface.ts))
+5. Agent fleet (Workflow DevKit)
+6. Voice capture via iOS Shortcut
+7. Context bundles (markdown export for AI tools)
+8. Design pass — pick between dark+gold and Linear-minimal
+9. Mobile PWA
+10. Habit/energy analytics
