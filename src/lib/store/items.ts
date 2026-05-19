@@ -8,6 +8,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { nanoid } from "nanoid";
 import { db, type StoredItem, type ItemKind, type ItemStatus } from "./db";
+import { schedulePushIfConfigured } from "@/lib/sync/gist";
 
 export type { StoredItem, ItemKind, ItemStatus } from "./db";
 
@@ -50,6 +51,7 @@ export async function captureItem(input: NewItemInput): Promise<StoredItem> {
     updatedAt: now,
   };
   await db.items.add(item);
+  schedulePushIfConfigured();
   return item;
 }
 
@@ -58,20 +60,29 @@ export async function updateItem(
   patch: Partial<Omit<StoredItem, "id" | "createdAt">>,
 ): Promise<void> {
   await db.items.update(id, { ...patch, updatedAt: new Date() });
+  schedulePushIfConfigured();
 }
 
+/**
+ * Sequential writes (not a multi-table transaction). dexie-react-hooks'
+ * useLiveQuery has a known cache-corruption issue when a transaction touches
+ * two tables that both have live subscribers — the error surfaces as
+ * "Cannot use 'in' operator to search for 'headCacheNode' in null". The
+ * tombstone write is "eventually correct"; a partial failure (delete OK,
+ * tombstone fails) just means the delete doesn't propagate to other devices
+ * on the next sync — recoverable.
+ */
 export async function deleteItem(id: string): Promise<void> {
-  const now = new Date();
-  await db.transaction("rw", db.items, db.tombstones, async () => {
-    await db.items.delete(id);
-    await db.tombstones.put({ id, deletedAt: now });
-  });
+  await db.items.delete(id);
+  await db.tombstones.put({ id, deletedAt: new Date() });
+  schedulePushIfConfigured();
 }
 
 export async function togglePin(id: string): Promise<void> {
   const item = await db.items.get(id);
   if (!item) return;
   await db.items.update(id, { isPinned: !item.isPinned, updatedAt: new Date() });
+  schedulePushIfConfigured();
 }
 
 // ---------- Reads (one-shot) ----------

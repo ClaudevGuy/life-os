@@ -332,6 +332,27 @@ export async function syncNow(): Promise<SyncResult> {
   }
 }
 
+// ---------- debounced push, called from store mutations ----------
+
+const PUSH_DEBOUNCE_MS = 5_000;
+let pushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Called by every store write. If sync is configured, schedules a syncNow()
+ * a few seconds after the last write — batches a burst of edits into one
+ * push to GitHub. Safe to call from anywhere; no-op if not configured or
+ * during SSR.
+ */
+export function schedulePushIfConfigured(): void {
+  if (typeof window === "undefined") return;
+  if (!getSyncToken()) return;
+  if (pushTimer) clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    pushTimer = null;
+    void syncNow();
+  }, PUSH_DEBOUNCE_MS);
+}
+
 // ---------- lightweight pull-only path used by the auto-sync loop ----------
 
 /**
