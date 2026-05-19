@@ -71,9 +71,20 @@ export type StoredBlob = {
   createdAt: Date;
 };
 
+/**
+ * Soft-delete marker. When an item is deleted we also write one of these so
+ * the deletion can propagate during sync. Without tombstones, a remote stale
+ * copy of an item would resurrect it on next pull.
+ */
+export type StoredTombstone = {
+  id: string;
+  deletedAt: Date;
+};
+
 class LifeOSDB extends Dexie {
   items!: EntityTable<StoredItem, "id">;
   blobs!: EntityTable<StoredBlob, "id">;
+  tombstones!: EntityTable<StoredTombstone, "id">;
 
   constructor() {
     super("life-os");
@@ -82,6 +93,12 @@ class LifeOSDB extends Dexie {
       // covers the common "all tasks not yet done" style query.
       items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
       blobs: "id, createdAt",
+    });
+    // v2: add tombstones for sync deletes.
+    this.version(2).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
     });
   }
 }

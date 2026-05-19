@@ -9,6 +9,7 @@ import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { TopBar } from "@/components/top-bar";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { PersistBootstrap } from "@/components/persist-bootstrap";
+import { SyncBootstrap } from "@/components/sync-bootstrap";
 
 export default function AppLayout({
   children,
@@ -82,6 +83,7 @@ export default function AppLayout({
       <WelcomeModal />
       <KeyboardShortcuts />
       <PersistBootstrap />
+      <SyncBootstrap />
     </div>
   );
 }

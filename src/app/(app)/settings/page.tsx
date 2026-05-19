@@ -2,6 +2,7 @@ import { Settings as SettingsIcon } from "lucide-react";
 import { SettingsClient } from "./settings-client";
 import { DataSection } from "./data-section";
 import { AiKeySection } from "./ai-key-section";
+import { SyncSection } from "./sync-section";
 
 export const metadata = { title: "Settings · Life OS" };
 
@@ -28,6 +29,13 @@ export default function SettingsPage() {
           AI
         </h2>
         <AiKeySection />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3">
+          Sync
+        </h2>
+        <SyncSection />
       </section>
 
       <section className="mt-10">

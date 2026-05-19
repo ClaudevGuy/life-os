@@ -61,7 +61,11 @@ export async function updateItem(
 }
 
 export async function deleteItem(id: string): Promise<void> {
-  await db.items.delete(id);
+  const now = new Date();
+  await db.transaction("rw", db.items, db.tombstones, async () => {
+    await db.items.delete(id);
+    await db.tombstones.put({ id, deletedAt: now });
+  });
 }
 
 export async function togglePin(id: string): Promise<void> {
