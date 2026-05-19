@@ -75,8 +75,9 @@ export function TopBar() {
         <SearchTrigger />
       </div>
 
-      {/* Live pills */}
-      <div className="hidden md:flex items-center gap-1.5">
+      {/* Live pills — `ml-auto` absorbs all remaining horizontal space so the
+          pills + the right cluster after them sit flush against the corner. */}
+      <div className="ml-auto hidden md:flex items-center gap-1.5">
         {stats.overdueTasks > 0 && (
           <Pill
             href="/tasks"
@@ -136,8 +137,10 @@ export function TopBar() {
       </div>
 
       {/* Right: quick ask + theme toggle + clock — all anchored to the corner,
-          unified height (30px) so they read as one row of controls. */}
-      <div className="flex items-center gap-2 shrink-0">
+          unified height (30px) so they read as one row of controls.
+          ml-auto on small screens (when live pills are hidden) so it still
+          hugs the edge. md:ml-0 hands the auto margin off to live pills. */}
+      <div className="ml-auto md:ml-0 flex items-center gap-2 shrink-0">
         <Link
           href="/ask"
           className="inline-flex items-center gap-1.5 h-[30px] px-3 rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] text-xs text-[var(--text)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm"
