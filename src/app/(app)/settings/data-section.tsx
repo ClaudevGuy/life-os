@@ -1,13 +1,40 @@
 "use client";
 
-import { useState } from "react";
-import { Download, Database, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Download,
+  Database,
+  Trash2,
+  Shield,
+  ShieldCheck,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { db } from "@/lib/store/db";
+import {
+  isStoragePersisted,
+  requestPersistentStorage,
+  getStorageEstimate,
+  formatBytes,
+  type StorageEstimate,
+} from "@/lib/persist";
 
 export function DataSection() {
   const [exporting, setExporting] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [persisted, setPersisted] = useState<boolean | null>(null);
+  const [requesting, setRequesting] = useState(false);
+  const [estimate, setEstimate] = useState<StorageEstimate | null>(null);
+
+  async function refreshStorageStatus() {
+    const [p, e] = await Promise.all([isStoragePersisted(), getStorageEstimate()]);
+    setPersisted(p);
+    setEstimate(e);
+  }
+
+  useEffect(() => {
+    void refreshStorageStatus();
+  }, []);
 
   async function exportJson() {
     setExporting(true);
@@ -40,6 +67,23 @@ export function DataSection() {
     }
   }
 
+  async function requestPersist() {
+    setRequesting(true);
+    try {
+      const granted = await requestPersistentStorage();
+      await refreshStorageStatus();
+      if (granted) {
+        toast.success("Persistent storage granted");
+      } else {
+        toast.error(
+          "Browser declined. Keep using Life OS — engagement signals (frequent visits, bookmarking the page) make most browsers auto-grant later.",
+        );
+      }
+    } finally {
+      setRequesting(false);
+    }
+  }
+
   async function clearAll() {
     if (
       !confirm(
@@ -53,6 +97,7 @@ export function DataSection() {
       await db.items.clear();
       await db.blobs.clear();
       toast.success("All data cleared");
+      await refreshStorageStatus();
     } finally {
       setClearing(false);
     }
@@ -78,16 +123,89 @@ export function DataSection() {
         </span>
       </button>
 
+      {/* Persistent storage status + opt-in */}
       <div className="px-4 py-3">
-        <div className="flex items-center gap-3 text-sm">
-          <Database size={14} className="text-[var(--accent)]" />
-          <span className="font-medium">Storage</span>
+        <div className="flex items-start gap-3">
+          {persisted ? (
+            <ShieldCheck size={14} className="text-emerald-400 mt-0.5 shrink-0" />
+          ) : (
+            <Shield size={14} className="text-[var(--text-faint)] mt-0.5 shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium">Persistent storage</span>
+              {persisted === null ? (
+                <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-wide">
+                  checking…
+                </span>
+              ) : persisted ? (
+                <span className="text-[10px] text-emerald-400 uppercase tracking-wide">
+                  ✓ Granted
+                </span>
+              ) : (
+                <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-wide">
+                  Not granted
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              {persisted
+                ? "The browser has promised not to evict your Life OS data under storage pressure. Only an explicit “clear site data” can wipe it now."
+                : "Ask the browser to mark Life OS as persistent. Once granted, your data won’t be auto-evicted if disk space runs low. Some browsers prompt; others auto-grant after a few visits."}
+            </p>
+            {!persisted && persisted !== null && (
+              <button
+                type="button"
+                onClick={requestPersist}
+                disabled={requesting}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] px-3 py-1 text-xs text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition disabled:opacity-50"
+              >
+                {requesting ? (
+                  <Loader2 size={11} className="animate-spin" />
+                ) : (
+                  <Shield size={11} />
+                )}
+                Request persistent storage
+              </button>
+            )}
+          </div>
         </div>
-        <p className="mt-1 text-xs text-[var(--text-muted)] ml-7">
-          Your data lives in your browser&apos;s IndexedDB. Nothing is sent to
-          a server. Clearing browser data wipes it — export periodically if
-          that matters to you.
-        </p>
+      </div>
+
+      <div className="px-4 py-3">
+        <div className="flex items-start gap-3">
+          <Database size={14} className="text-[var(--accent)] mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium">Storage</span>
+              {estimate && estimate.quota > 0 && (
+                <span className="text-[10px] text-[var(--text-faint)] tabular-nums">
+                  {formatBytes(estimate.usage)} of {formatBytes(estimate.quota)} ·{" "}
+                  {Math.max(
+                    0,
+                    Math.round((estimate.usage / estimate.quota) * 100),
+                  )}
+                  %
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              Your data lives in your browser&apos;s IndexedDB. Nothing is sent
+              to a server. Export periodically if you want a backup off this
+              machine.
+            </p>
+            {estimate && estimate.quota > 0 && (
+              <div className="mt-2 h-1 rounded-full bg-[var(--border-soft)] overflow-hidden">
+                <div
+                  className="h-full bg-[var(--accent)] rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(100, Math.max(0.5, (estimate.usage / estimate.quota) * 100))}%`,
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <button

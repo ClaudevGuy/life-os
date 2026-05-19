@@ -8,6 +8,7 @@ import { RecentlyViewed } from "@/components/recently-viewed";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { TopBar } from "@/components/top-bar";
 import { SidebarNav } from "@/components/sidebar-nav";
+import { PersistBootstrap } from "@/components/persist-bootstrap";
 
 export default function AppLayout({
   children,
@@ -80,6 +81,7 @@ export default function AppLayout({
       <CommandPalette />
       <WelcomeModal />
       <KeyboardShortcuts />
+      <PersistBootstrap />
     </div>
   );
 }
