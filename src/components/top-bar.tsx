@@ -7,7 +7,6 @@ import {
   Inbox,
   Flame,
   ListTodo,
-  Lightbulb,
   Sparkles,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -21,7 +20,6 @@ type Stats = {
   openTasks: number;
   overdueTasks: number;
   dueToday: number;
-  pendingDecisions: number;
   habitsDone: number;
   habitsTotal: number;
   inboxCount: number;
@@ -32,7 +30,6 @@ const EMPTY: Stats = {
   openTasks: 0,
   overdueTasks: 0,
   dueToday: 0,
-  pendingDecisions: 0,
   habitsDone: 0,
   habitsTotal: 0,
   inboxCount: 0,
@@ -92,15 +89,6 @@ export function TopBar() {
             icon={ListTodo}
             label={`${stats.dueToday} due today`}
             title="Tasks due today"
-          />
-        )}
-        {stats.pendingDecisions > 0 && (
-          <Pill
-            href="/decisions"
-            tone="accent"
-            icon={Lightbulb}
-            label={`${stats.pendingDecisions} to review`}
-            title="Decisions due for review"
           />
         )}
         {stats.inboxCount > 0 && (
@@ -208,7 +196,6 @@ function computeStats(rows: Array<{
   let openTasks = 0;
   let overdueTasks = 0;
   let dueToday = 0;
-  let pendingDecisions = 0;
   let habitsDone = 0;
   let habitsTotal = 0;
   let inboxCount = 0;
@@ -229,14 +216,6 @@ function computeStats(rows: Array<{
           if (d < startOfToday) overdueTasks++;
           else if (d >= startOfToday && d < endOfToday) dueToday++;
         }
-      }
-    }
-
-    if (r.kind === "decision") {
-      const outcome = (meta.outcome as string | undefined) ?? "pending";
-      const reviewAt = meta.reviewAt as string | undefined;
-      if (outcome === "pending" && reviewAt && new Date(reviewAt) <= new Date()) {
-        pendingDecisions++;
       }
     }
 
@@ -262,7 +241,6 @@ function computeStats(rows: Array<{
     openTasks,
     overdueTasks,
     dueToday,
-    pendingDecisions,
     habitsDone,
     habitsTotal,
     inboxCount,

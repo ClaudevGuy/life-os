@@ -7,10 +7,8 @@ import {
   Plus,
   NotebookPen,
   ListTodo,
-  Lightbulb,
   Sparkles,
   Users,
-  Target,
   Flame,
   Sun,
   Quote,
@@ -26,12 +24,10 @@ import { db } from "@/lib/store/db";
 type Kind =
   | "note"
   | "task"
-  | "decision"
   | "person"
   | "highlight"
   | "journal"
   | "habit"
-  | "goal"
   | "voice"
   | "project";
 
@@ -45,30 +41,17 @@ const KIND_META: Record<
 > = {
   note: { label: "Note", icon: NotebookPen, tint: "var(--kind-note)" },
   task: { label: "Task", icon: ListTodo, tint: "var(--kind-task)" },
-  decision: { label: "Decision", icon: Lightbulb, tint: "var(--kind-decision)" },
   person: { label: "Person", icon: Users, tint: "var(--kind-person)" },
   highlight: { label: "Highlight", icon: Quote, tint: "var(--kind-highlight)" },
   journal: { label: "Journal", icon: Sun, tint: "var(--kind-journal)" },
   habit: { label: "Habit", icon: Flame, tint: "var(--kind-habit)" },
-  goal: { label: "Goal", icon: Target, tint: "var(--kind-goal)" },
   voice: { label: "Voice", icon: Mic, tint: "var(--kind-voice)" },
   project: { label: "Project", icon: Folder, tint: "var(--kind-project)" },
 };
 
-const PRIMARY: Kind[] = ["note", "task", "highlight", "decision"];
-const SECONDARY: Kind[] = [
-  "person",
-  "journal",
-  "habit",
-  "goal",
-  "project",
-];
-const KIND_CAN_BE_LINKED: Kind[] = [
-  "task",
-  "note",
-  "decision",
-  "highlight",
-];
+const PRIMARY: Kind[] = ["note", "task", "highlight", "project"];
+const SECONDARY: Kind[] = ["person", "journal", "habit"];
+const KIND_CAN_BE_LINKED: Kind[] = ["task", "note", "highlight"];
 
 type ProjectOption = { id: string; title: string | null };
 
@@ -156,7 +139,6 @@ export function QuickCapture() {
         metadata.cadence = "daily";
         metadata.checkins = [];
       }
-      if (kind === "decision") metadata.outcome = "pending";
       if (projectId && KIND_CAN_BE_LINKED.includes(kind)) {
         metadata.projectId = projectId;
       }
@@ -450,8 +432,6 @@ function placeholderForKind(kind: Kind): string {
       return "Title (or skip and just write below)";
     case "task":
       return "What needs doing? Try “review proposal friday”";
-    case "decision":
-      return "What are you deciding?";
     case "person":
       return "Their name";
     case "highlight":
@@ -460,8 +440,6 @@ function placeholderForKind(kind: Kind): string {
       return "Today's headline";
     case "habit":
       return "Habit name (e.g. Morning walk)";
-    case "goal":
-      return "What are you aiming at?";
     case "voice":
       return "Voice memo title";
     case "project":
@@ -475,14 +453,10 @@ function bodyPlaceholderForKind(kind: Kind): string {
       return "The quote, word-for-word…";
     case "journal":
       return "How was the day? What's on your mind?";
-    case "decision":
-      return "Reasoning, alternatives, how you'll know it was right…";
     case "task":
       return "Definition of done, context, links…";
     case "person":
       return "Notes about them, last conversation…";
-    case "goal":
-      return "Why does this matter? What's the metric?";
     case "habit":
       return "Why you want to build it";
     case "project":

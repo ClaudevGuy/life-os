@@ -10,9 +10,7 @@ import {
   NotebookPen,
   ListTodo,
   Flame,
-  Target,
   Users,
-  Lightbulb,
   BarChart3,
   CalendarDays,
   MessageSquare,
@@ -31,7 +29,6 @@ type BadgeKey =
   | "openTasks"
   | "overdueTasks"
   | "dueToday"
-  | "pendingDecisions"
   | "inboxCount";
 
 type RailItem = {
@@ -73,13 +70,6 @@ const SECTIONS: RailSection[] = [
     items: [
       { href: "/journal", label: "Journal", icon: BookHeart },
       { href: "/projects", label: "Projects & Areas", icon: FolderKanban },
-      { href: "/goals", label: "Goals", icon: Target },
-      {
-        href: "/decisions",
-        label: "Decisions",
-        icon: Lightbulb,
-        badgeKey: "pendingDecisions",
-      },
       { href: "/people", label: "People", icon: Users },
     ],
   },
@@ -96,7 +86,6 @@ type Stats = {
   openTasks: number;
   overdueTasks: number;
   dueToday: number;
-  pendingDecisions: number;
   inboxCount: number;
 };
 
@@ -104,7 +93,6 @@ const EMPTY: Stats = {
   openTasks: 0,
   overdueTasks: 0,
   dueToday: 0,
-  pendingDecisions: 0,
   inboxCount: 0,
 };
 
@@ -185,12 +173,10 @@ function computeStats(rows: Array<{
   startOfToday.setHours(0, 0, 0, 0);
   const endOfToday = new Date(startOfToday);
   endOfToday.setDate(endOfToday.getDate() + 1);
-  const now = new Date();
 
   let openTasks = 0;
   let overdueTasks = 0;
   let dueToday = 0;
-  let pendingDecisions = 0;
   let inboxCount = 0;
 
   for (const r of rows) {
@@ -209,21 +195,12 @@ function computeStats(rows: Array<{
         }
       }
     }
-
-    if (r.kind === "decision") {
-      const outcome = (meta.outcome as string | undefined) ?? "pending";
-      const reviewAt = meta.reviewAt as string | undefined;
-      if (outcome === "pending" && reviewAt && new Date(reviewAt) <= now) {
-        pendingDecisions++;
-      }
-    }
   }
 
   return {
     openTasks,
     overdueTasks,
     dueToday,
-    pendingDecisions,
     inboxCount,
   };
 }

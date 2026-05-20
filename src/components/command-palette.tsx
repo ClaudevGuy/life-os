@@ -8,7 +8,6 @@ import {
   Inbox,
   Sun,
   Users,
-  Lightbulb,
   Network,
   Settings,
 } from "lucide-react";
@@ -30,7 +29,6 @@ const NAV: Array<{
   { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/today", label: "Today", icon: Sun },
   { href: "/people", label: "People", icon: Users },
-  { href: "/decisions", label: "Decisions", icon: Lightbulb },
   { href: "/graph", label: "Graph", icon: Network },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

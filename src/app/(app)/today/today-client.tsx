@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ListTodo, Flame, Lightbulb, CalendarDays, Bell } from "lucide-react";
+import { ListTodo, Flame, CalendarDays, Bell } from "lucide-react";
 import {
   useRecentItems,
   useItemsOfKind,
   useJournalToday,
-  useDecisionsDue,
   useOldHighlights,
   useOnThisDay,
   useWeekCounts,
@@ -14,7 +13,6 @@ import {
 } from "@/lib/store/items";
 import { Brief } from "./brief";
 import { JournalForm } from "./journal-form";
-import { QuickDecision } from "./quick-decision";
 import { TodayHero } from "./hero";
 import { WeekStrip } from "./week-strip";
 import { OnThisDay } from "./on-this-day";
@@ -50,7 +48,6 @@ function calcStreak(checkins: Set<string>) {
 
 export function TodayClient() {
   const recent = useRecentItems(24) ?? [];
-  const decisionsForToday = useDecisionsDue() ?? [];
   const journalToday = useJournalToday() ?? null;
   const allTasks = useItemsOfKind("task") ?? [];
   const habits = useItemsOfKind("habit") ?? [];
@@ -59,7 +56,7 @@ export function TodayClient() {
   const weekCounts = useWeekCounts(7) ?? new Array(7).fill(0);
   const allItems = useAllItems() ?? [];
 
-  // Upcoming agenda for the next 7 days: any task/decision with a date, plus
+  // Upcoming agenda for the next 7 days: any task with a date, plus
   // reminders. Today first, then chronological.
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
@@ -77,20 +74,12 @@ export function TodayClient() {
   for (const r of allItems) {
     const meta = (r.metadata ?? {}) as {
       dueDate?: string;
-      reviewAt?: string;
       reminder?: boolean;
       completedAt?: string | null;
-      outcome?: string;
     };
     let when: Date | null = null;
     if (r.kind === "task" && meta.dueDate && !meta.completedAt) {
       when = new Date(meta.dueDate);
-    } else if (
-      r.kind === "decision" &&
-      meta.reviewAt &&
-      (meta.outcome ?? "pending") === "pending"
-    ) {
-      when = new Date(meta.reviewAt);
     }
     if (!when) continue;
     if (when < startOfToday || when >= endOfWindow) continue;
@@ -104,8 +93,6 @@ export function TodayClient() {
   }
   upcoming.sort((a, b) => a.when.getTime() - b.when.getTime());
 
-  // Top-tasks list needs decisions of any state, but the dashboard card here
-  // shows only open ones. Same shape as the old query.
   const openTasks = allTasks.filter((t) => {
     const m = (t.metadata ?? {}) as { completedAt?: string | null };
     return !m.completedAt;
@@ -136,7 +123,7 @@ export function TodayClient() {
 
       <WeekStrip />
 
-      <WhatNow tasks={allTasks} habits={habits} decisions={decisionsForToday} />
+      <WhatNow tasks={allTasks} habits={habits} decisions={[]} />
 
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5">
         <div className="space-y-5">
@@ -252,26 +239,6 @@ export function TodayClient() {
             )}
           </Card>
 
-          <Card icon={Lightbulb} title="Decisions due" href="/decisions" tint="var(--kind-decision)">
-            {decisionsForToday.length === 0 ? (
-              <p className="text-sm text-[var(--text-faint)]">Nothing waiting.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {decisionsForToday.map((d) => (
-                  <li key={d.id}>
-                    <Link
-                      href={`/items/${d.id}`}
-                      className="text-sm hover:text-[var(--accent)]"
-                    >
-                      {d.title}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
-          <QuickDecision />
         </div>
       </div>
     </div>

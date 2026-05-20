@@ -244,11 +244,9 @@ function backFor(kind: string) {
     {
       note: "/notes",
       task: "/tasks",
-      decision: "/decisions",
       person: "/people",
       journal: "/today",
       habit: "/habits",
-      goal: "/goals",
       highlight: "/highlights",
       voice: "/inbox",
       file: "/files",
@@ -274,11 +272,9 @@ function backForLabel(kind: string) {
     {
       note: "Notes",
       task: "Tasks",
-      decision: "Decisions",
       person: "People",
       journal: "Today",
       habit: "Habits",
-      goal: "Goals",
       highlight: "Highlights",
       voice: "Inbox",
       file: "Files",
