@@ -398,7 +398,7 @@ function NoteGridCard({ note: n }: { note: StoredItem }) {
   const tag = n.topic ?? statusTag(n.status);
   return (
     <Link
-      href={`/notes?id=${n.id}`}
+      href={`/items/${n.id}`}
       className="life-card life-card-hover flex flex-col min-h-[240px] p-5 transition"
     >
       <h3 className="text-[16px] font-semibold text-[var(--ink)] leading-snug line-clamp-2">
