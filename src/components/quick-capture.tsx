@@ -309,21 +309,26 @@ export function QuickCapture() {
               </div>
             )}
 
-            {/* Title */}
-            <div className="px-7 pt-4">
-              <div className="relative">
+            {/* Title + Body combined input surface */}
+            <div className="px-6 pt-2 pb-4">
+              <div className="rounded-xl bg-[var(--bg-rail)] border border-[var(--border-soft)] focus-within:border-[var(--accent)] focus-within:shadow-[0_0_0_3px_var(--accent-glow)] transition-all overflow-hidden">
                 <input
                   autoFocus
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={placeholderForKind(kind)}
-                  className="qc-title peer w-full bg-transparent text-[19px] tracking-tight leading-snug placeholder:text-[var(--text-faint)]/50 outline-none font-medium py-1.5 text-[var(--text)]"
+                  className="qc-title w-full bg-transparent text-[18px] tracking-tight leading-snug placeholder:text-[var(--text-faint)] outline-none font-medium px-4 pt-3 pb-2 text-[var(--text)]"
                 />
-                <span
-                  className="pointer-events-none absolute left-0 right-0 -bottom-px h-px bg-[var(--border-soft)] peer-focus:bg-[var(--accent)] transition-colors"
+                <div className="h-px bg-[var(--border-soft)]/60 mx-4" />
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={4}
+                  placeholder={bodyPlaceholderForKind(kind)}
+                  className="qc-body w-full bg-transparent text-[13.5px] leading-relaxed placeholder:text-[var(--text-faint)] outline-none resize-none text-[var(--text)] px-4 pt-2.5 pb-3"
                 />
               </div>
-              <div className="mt-2 flex items-center gap-3 text-[11px] text-[var(--text-faint)] min-h-[16px]">
+              <div className="mt-2 px-1 flex items-center gap-3 text-[11px] text-[var(--text-faint)] min-h-[16px]">
                 {parsed && (
                   <span className="inline-flex items-center gap-1 text-[var(--accent)]">
                     📅 due {dateLabel(parsed.date)}
@@ -341,17 +346,6 @@ export function QuickCapture() {
                   </span>
                 )}
               </div>
-            </div>
-
-            {/* Body */}
-            <div className="px-7 pt-3 pb-4">
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={4}
-                placeholder={bodyPlaceholderForKind(kind)}
-                className="qc-body w-full bg-transparent text-[13.5px] leading-relaxed placeholder:text-[var(--text-faint)]/45 outline-none resize-none text-[var(--text)]"
-              />
             </div>
 
             {(kind === "task" ||
