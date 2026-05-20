@@ -2,7 +2,12 @@
  * Thin proxy. Browser sends the question plus the items it wants the model
  * to consult; we stream the answer back. No data persists server-side.
  *
- * Auth precedence: same as /api/ai/brief (Authorization header → env → OIDC).
+ * Auth precedence:
+ *   1. Authorization: Bearer <key>  — user pasted their own key in /settings
+ *   2. process.env.AI_GATEWAY_API_KEY — local fallback
+ *
+ * ⚠ Same deployment caveat as /api/ai/brief — local use only unless you
+ * add rate limiting / per-request auth before exposing this URL publicly.
  */
 import { streamText } from "ai";
 import { z } from "zod";

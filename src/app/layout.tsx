@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -16,8 +16,27 @@ const mono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Life OS",
-  description: "Capture, organize, and recall everything you care about.",
+  title: {
+    default: "Life OS",
+    template: "%s · Life OS",
+  },
+  description:
+    "Capture, organize, and recall everything you care about — local-first.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "Life OS",
+  appleWebApp: {
+    capable: true,
+    title: "Life OS",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F6F1E8" },
+    { media: "(prefers-color-scheme: dark)", color: "#1A1612" },
+  ],
+  colorScheme: "light dark",
 };
 
 // Run before paint to avoid flash. Reads theme from localStorage and sets

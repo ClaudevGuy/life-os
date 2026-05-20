@@ -20,14 +20,6 @@ export function Brief({ recentCount }: { recentCount: number }) {
         .reverse()
         .sortBy("capturedAt");
 
-      const allDecisions = await db.items.where("kind").equals("decision").toArray();
-      const now = Date.now();
-      const dueDecisions = allDecisions.filter((d) => {
-        const m = (d.metadata ?? {}) as { reviewAt?: string; outcome?: string };
-        if ((m.outcome ?? "pending") !== "pending") return false;
-        return m.reviewAt ? new Date(m.reviewAt).getTime() <= now : false;
-      });
-
       const res = await fetch("/api/ai/brief", {
         method: "POST",
         headers: aiHeaders(),
@@ -38,10 +30,6 @@ export function Brief({ recentCount }: { recentCount: number }) {
             topic: i.topic,
             summary: i.summary,
             body: i.body?.slice(0, 400) ?? null,
-          })),
-          dueDecisions: dueDecisions.map((d) => ({
-            title: d.title,
-            body: d.body?.slice(0, 200) ?? null,
           })),
         }),
       });

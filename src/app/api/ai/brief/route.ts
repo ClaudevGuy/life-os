@@ -1,11 +1,15 @@
 /**
- * Thin proxy. Browser sends the items it wants summarised; we forward to the
- * AI Gateway and return the response. No data persists server-side.
+ * Thin proxy. Browser sends recent items; we forward to the AI Gateway and
+ * return the response. No data persists server-side.
  *
  * Auth precedence:
  *   1. Authorization: Bearer <key>  — user pasted their own key in /settings
- *   2. process.env.AI_GATEWAY_API_KEY — deployment-wide default
- *   3. Vercel's auto-injected OIDC token (only on Vercel)
+ *   2. process.env.AI_GATEWAY_API_KEY — local fallback
+ *
+ * ⚠ Deployment note: Life OS is designed to run locally. If you ever expose
+ * this route publicly with AI_GATEWAY_API_KEY set, anyone hitting the URL
+ * can spend your quota. Add IP-based rate limiting (e.g. Upstash Redis) or
+ * require Authorization on every request before exposing.
  */
 import { generateText } from "ai";
 import { z } from "zod";
@@ -26,15 +30,6 @@ const bodySchema = z.object({
       }),
     )
     .max(50),
-  dueDecisions: z
-    .array(
-      z.object({
-        title: z.string().nullable(),
-        body: z.string().nullable().optional(),
-      }),
-    )
-    .max(20)
-    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -43,9 +38,9 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "invalid_body" }, { status: 400 });
   }
-  const { recent, dueDecisions = [] } = parsed.data;
+  const { recent } = parsed.data;
 
-  if (recent.length === 0 && dueDecisions.length === 0) {
+  if (recent.length === 0) {
     return Response.json({ brief: "Nothing new to summarise yet." });
   }
 
@@ -57,14 +52,9 @@ export async function POST(req: Request) {
           i.summary ?? i.body?.slice(0, 200) ?? ""
         }`,
     ),
-    "",
-    "DECISIONS DUE FOR REVIEW:",
-    ...dueDecisions.map(
-      (d) => `- ${d.title ?? "untitled"}: ${d.body?.slice(0, 200) ?? ""}`,
-    ),
   ].join("\n");
 
-  const prompt = `Write a tight morning brief for the user based on their last 24h of captures and pending decisions. 2-4 short paragraphs. Mention the most interesting themes, point out anything to act on today, and call attention to decisions due for review. Plain prose, no headers, no bullet points.
+  const prompt = `Write a tight morning brief for the user based on their last 24h of captures. 2-4 short paragraphs. Mention the most interesting themes and point out anything worth acting on today. Plain prose, no headers, no bullet points.
 
 ${lines}`;
 
