@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { captureItem } from "@/lib/store/items";
+import { Portal } from "@/components/portal";
 
 const RELATIONSHIPS = [
   "Family",
@@ -107,15 +108,16 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
   const canSave = name.trim().length > 0;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[80px] pb-6 bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <Portal>
       <div
-        className="w-full max-w-lg max-h-[calc(100vh-104px)] flex flex-col rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
-        style={{ boxShadow: "var(--shadow-3)" }}
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[80px] pb-6 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
       >
+        <div
+          className="w-full max-w-lg max-h-[calc(100vh-104px)] flex flex-col rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
+          style={{ boxShadow: "var(--shadow-3)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="p-6 flex items-start gap-4 border-b border-[var(--line)] shrink-0">
           <div
@@ -287,8 +289,9 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }
 

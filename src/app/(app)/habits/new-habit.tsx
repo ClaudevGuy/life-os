@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Plus, Flame } from "lucide-react";
 import { captureItem, updateItem, type StoredItem } from "@/lib/store/items";
+import { Portal } from "@/components/portal";
 
 type Cadence = "daily" | "weekdays" | "weekly";
 
@@ -85,15 +86,16 @@ export function HabitFormModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh] bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <Portal>
       <div
-        className="w-full max-w-sm rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] p-6 life-rise"
-        style={{ boxShadow: "var(--shadow-3)" }}
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh] bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
       >
+        <div
+          className="w-full max-w-sm rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] p-6 life-rise"
+          style={{ boxShadow: "var(--shadow-3)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
         <h2 className="inline-flex items-center gap-2 text-[14px] font-semibold mb-4 text-[var(--ink)]">
           <Flame
             size={15}
@@ -158,7 +160,8 @@ export function HabitFormModal({
             {existing ? "Save" : "Add"}
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }
