@@ -23,6 +23,7 @@ type CalItem = {
   summary: string | null;
   isoDate: string; // YYYY-MM-DD the item sits on
   via: "captured" | "due" | "review"; // why it shows up
+  status: string; // "active" | "archived" | … — archived renders struck-through
 };
 
 type ViewMode = "month" | "week" | "agenda";
@@ -299,17 +300,30 @@ function MonthGrid({
                 )}
               </div>
               <ul className="mt-1 space-y-0.5">
-                {dayItems.slice(0, 3).map((it) => (
-                  <li key={`${it.id}-${it.via}`} className="flex items-center gap-1.5">
-                    <span
-                      className="w-1 h-1 rounded-full shrink-0"
-                      style={{ background: `var(--kind-${it.kind})` }}
-                    />
-                    <span className="text-[10px] text-[var(--text-muted)] truncate">
-                      {it.title ?? "untitled"}
-                    </span>
-                  </li>
-                ))}
+                {dayItems.slice(0, 3).map((it) => {
+                  const archived = it.status === "archived";
+                  return (
+                    <li key={`${it.id}-${it.via}`} className="flex items-center gap-1.5">
+                      <span
+                        className="w-1 h-1 rounded-full shrink-0"
+                        style={{
+                          background: archived
+                            ? "var(--muted-2)"
+                            : `var(--kind-${it.kind})`,
+                        }}
+                      />
+                      <span
+                        className={`text-[10px] truncate ${
+                          archived
+                            ? "line-through text-[var(--muted-2)]"
+                            : "text-[var(--text-muted)]"
+                        }`}
+                      >
+                        {it.title ?? "untitled"}
+                      </span>
+                    </li>
+                  );
+                })}
                 {dayItems.length > 3 && (
                   <li className="text-[10px] text-[var(--text-faint)]">
                     +{dayItems.length - 3} more
@@ -373,17 +387,30 @@ function WeekStrip({
               {d.getDate()}
             </div>
             <ul className="mt-2 space-y-1">
-              {dayItems.map((it) => (
-                <li key={`${it.id}-${it.via}`} className="flex items-start gap-1.5">
-                  <span
-                    className="mt-1 w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: `var(--kind-${it.kind})` }}
-                  />
-                  <span className="text-[11px] text-[var(--text-muted)] truncate">
-                    {it.title ?? "untitled"}
-                  </span>
-                </li>
-              ))}
+              {dayItems.map((it) => {
+                const archived = it.status === "archived";
+                return (
+                  <li key={`${it.id}-${it.via}`} className="flex items-start gap-1.5">
+                    <span
+                      className="mt-1 w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{
+                        background: archived
+                          ? "var(--muted-2)"
+                          : `var(--kind-${it.kind})`,
+                      }}
+                    />
+                    <span
+                      className={`text-[11px] truncate ${
+                        archived
+                          ? "line-through text-[var(--muted-2)]"
+                          : "text-[var(--text-muted)]"
+                      }`}
+                    >
+                      {it.title ?? "untitled"}
+                    </span>
+                  </li>
+                );
+              })}
               {dayItems.length === 0 && (
                 <li className="text-[10px] text-[var(--text-faint)]">—</li>
               )}
@@ -459,22 +486,40 @@ function Agenda({
               </span>
             </div>
             <ul className="mt-3 space-y-1">
-              {items.map((it) => (
-                <li key={`${it.id}-${it.via}`} className="flex items-center gap-2">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: `var(--kind-${it.kind})` }}
-                  />
-                  <span className="text-sm text-[var(--text)] truncate">
-                    {it.title ?? "untitled"}
-                  </span>
-                  {it.via !== "captured" && (
-                    <span className="text-[10px] uppercase tracking-wide text-[var(--accent)]">
-                      · {it.via}
+              {items.map((it) => {
+                const archived = it.status === "archived";
+                return (
+                  <li key={`${it.id}-${it.via}`} className="flex items-center gap-2">
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{
+                        background: archived
+                          ? "var(--muted-2)"
+                          : `var(--kind-${it.kind})`,
+                      }}
+                    />
+                    <span
+                      className={`text-sm truncate ${
+                        archived
+                          ? "line-through text-[var(--muted)]"
+                          : "text-[var(--text)]"
+                      }`}
+                    >
+                      {it.title ?? "untitled"}
                     </span>
-                  )}
-                </li>
-              ))}
+                    {it.via !== "captured" && !archived && (
+                      <span className="text-[10px] uppercase tracking-wide text-[var(--accent)]">
+                        · {it.via}
+                      </span>
+                    )}
+                    {archived && (
+                      <span className="text-[10px] uppercase tracking-wide text-[var(--muted-2)]">
+                        · archived
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </button>
         );
@@ -585,6 +630,7 @@ function DayDrawer({
             <ul className="space-y-1.5">
               {items.map((it) => {
                 const isReminder = it.kind === "task" && it.via === "due";
+                const archived = it.status === "archived";
                 return (
                   <li key={`${it.id}-${it.via}`}>
                     <Link
@@ -594,20 +640,42 @@ function DayDrawer({
                       <div className="flex items-center gap-2">
                         <span
                           className="w-1.5 h-1.5 rounded-full shrink-0"
-                          style={{ background: `var(--kind-${it.kind})` }}
+                          style={{
+                            background: archived
+                              ? "var(--muted-2)"
+                              : `var(--kind-${it.kind})`,
+                          }}
                         />
-                        <span className="text-sm text-[var(--text)] truncate">
+                        <span
+                          className={`text-sm truncate ${
+                            archived
+                              ? "line-through text-[var(--muted)]"
+                              : "text-[var(--text)]"
+                          }`}
+                        >
                           {it.title ?? "untitled"}
                         </span>
-                        {it.via !== "captured" && (
-                          <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--accent)]">
-                            {isReminder && <Bell size={9} />}
-                            {it.via}
+                        {archived ? (
+                          <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--muted-2)]">
+                            archived
                           </span>
+                        ) : (
+                          it.via !== "captured" && (
+                            <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--accent)]">
+                              {isReminder && <Bell size={9} />}
+                              {it.via}
+                            </span>
+                          )
                         )}
                       </div>
                       {it.summary && (
-                        <p className="mt-0.5 ml-3.5 text-xs text-[var(--text-muted)] line-clamp-1">
+                        <p
+                          className={`mt-0.5 ml-3.5 text-xs line-clamp-1 ${
+                            archived
+                              ? "line-through text-[var(--muted-2)]"
+                              : "text-[var(--text-muted)]"
+                          }`}
+                        >
                           {it.summary}
                         </p>
                       )}

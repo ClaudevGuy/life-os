@@ -14,6 +14,7 @@ export default function CalendarPage() {
     summary: string | null;
     isoDate: string;
     via: "captured" | "due" | "review";
+    status: string;
   }> = [];
 
   for (const r of rows) {
@@ -32,6 +33,7 @@ export default function CalendarPage() {
         summary: r.summary,
         isoDate: meta.dueDate.slice(0, 10),
         via: "due",
+        status: r.status,
       });
     }
   }
