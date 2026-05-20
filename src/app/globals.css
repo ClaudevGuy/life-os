@@ -338,6 +338,17 @@ html[data-theme="system"] .life-shine {
 }
 
 input, textarea, select, button { font: inherit; }
+
+/* cmdk command palette — section headings + caret hint */
+[cmdk-group-heading] {
+  padding: 14px 16px 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+[cmdk-group]:first-child > [cmdk-group-heading] { padding-top: 8px; }
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.15);
 }

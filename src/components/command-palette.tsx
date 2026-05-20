@@ -8,10 +8,21 @@ import {
   Inbox,
   Sun,
   Users,
-  Network,
   Settings,
+  NotebookPen,
+  ListTodo,
+  Flame,
+  CalendarDays,
+  FolderKanban,
+  BookHeart,
+  Files,
+  MessageSquare,
+  Quote,
+  Mic,
+  Compass,
 } from "lucide-react";
 import { db } from "@/lib/store/db";
+import { Portal } from "@/components/portal";
 
 type Hit = {
   id: string;
@@ -24,14 +35,41 @@ type Hit = {
 const NAV: Array<{
   href: string;
   label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
 }> = [
-  { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/today", label: "Today", icon: Sun },
+  { href: "/inbox", label: "Inbox", icon: Inbox },
+  { href: "/notes", label: "Notes", icon: NotebookPen },
+  { href: "/tasks", label: "Tasks", icon: ListTodo },
+  { href: "/habits", label: "Habits", icon: Flame },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/journal", label: "Journal", icon: BookHeart },
+  { href: "/projects", label: "Projects & Areas", icon: FolderKanban },
   { href: "/people", label: "People", icon: Users },
-  { href: "/graph", label: "Graph", icon: Network },
+  { href: "/files", label: "Files", icon: Files },
+  { href: "/ask", label: "Ask my notes", icon: MessageSquare },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
+
+const KIND_META: Record<
+  string,
+  {
+    icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+    color: string;
+    tint: string;
+  }
+> = {
+  note: { icon: NotebookPen, color: "var(--muted)", tint: "var(--bg-2)" },
+  task: { icon: ListTodo, color: "var(--terra)", tint: "var(--terra-tint)" },
+  habit: { icon: Flame, color: "var(--sage)", tint: "var(--sage-tint)" },
+  journal: { icon: BookHeart, color: "var(--sage)", tint: "var(--sage-tint)" },
+  highlight: { icon: Quote, color: "var(--gold)", tint: "var(--gold-tint)" },
+  person: { icon: Users, color: "var(--plum)", tint: "var(--plum-tint)" },
+  project: { icon: FolderKanban, color: "var(--sky)", tint: "var(--sky-tint)" },
+  area: { icon: Compass, color: "var(--plum)", tint: "var(--plum-tint)" },
+  voice: { icon: Mic, color: "var(--plum)", tint: "var(--plum-tint)" },
+  file: { icon: Files, color: "var(--sky)", tint: "var(--sky-tint)" },
+};
 
 export function CommandPalette() {
   const router = useRouter();
@@ -96,82 +134,149 @@ export function CommandPalette() {
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] bg-black/60 backdrop-blur-sm"
-      onClick={() => setOpen(false)}
-    >
-      <Command
-        shouldFilter={false}
-        className="w-full max-w-xl rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+    <Portal>
+      <div
+        className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4 bg-black/50 backdrop-blur-sm"
+        onClick={() => setOpen(false)}
       >
-        <div className="flex items-center gap-2 px-3 border-b border-zinc-900">
-          <Search size={14} className="text-zinc-500" />
-          <Command.Input
-            value={q}
-            onValueChange={setQ}
-            placeholder="Search captures, jump to pages…"
-            className="flex-1 bg-transparent py-3 text-sm placeholder:text-zinc-600 focus:outline-none"
-            autoFocus
-          />
-          <kbd className="text-[10px] text-zinc-600 border border-zinc-800 rounded px-1.5 py-0.5">
-            esc
-          </kbd>
-        </div>
+        <Command
+          shouldFilter={false}
+          className="w-full max-w-xl rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
+          style={{ boxShadow: "var(--shadow-3)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Search input */}
+          <div className="flex items-center gap-2.5 px-4 border-b border-[var(--line)]">
+            <Search
+              size={15}
+              strokeWidth={1.6}
+              className="text-[var(--muted)]"
+            />
+            <Command.Input
+              value={q}
+              onValueChange={setQ}
+              placeholder="Search captures, jump to pages…"
+              className="flex-1 bg-transparent py-3.5 text-[14px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none"
+              autoFocus
+            />
+            <kbd className="text-[10.5px] font-mono tracking-[0.04em] text-[var(--muted-2)] border border-[var(--line)] rounded-[5px] px-1.5 py-0.5">
+              esc
+            </kbd>
+          </div>
 
-        <Command.List className="max-h-[60vh] overflow-y-auto py-1">
-          <Command.Empty className="px-3 py-6 text-center text-sm text-zinc-600">
-            {q.trim() ? "No results." : "Start typing to search…"}
-          </Command.Empty>
+          <Command.List className="max-h-[60vh] overflow-y-auto py-2">
+            <Command.Empty className="px-4 py-8 text-center text-[13px] text-[var(--muted)]">
+              {q.trim() ? "No results." : "Start typing to search…"}
+            </Command.Empty>
 
-          {!q.trim() && (
-            <Command.Group
-              heading="Jump to"
-              className="text-[10px] text-zinc-600 uppercase tracking-wide px-3 mt-1"
-            >
-              {NAV.map(({ href, label, icon: Icon }) => (
-                <Command.Item
-                  key={href}
-                  value={`nav-${label}`}
-                  onSelect={() => go(href)}
-                  className="flex items-center gap-2.5 px-3 py-2 mx-1 my-0.5 rounded-md text-sm text-zinc-300 aria-selected:bg-zinc-900 cursor-pointer"
-                >
-                  <Icon size={14} className="text-zinc-500" />
-                  {label}
-                </Command.Item>
-              ))}
-            </Command.Group>
-          )}
+            {!q.trim() && (
+              <Command.Group
+                heading="Jump to"
+                className="paletteGroup"
+              >
+                {NAV.map(({ href, label, icon: Icon }) => (
+                  <Command.Item
+                    key={href}
+                    value={`nav-${label}`}
+                    onSelect={() => go(href)}
+                    className="flex items-center gap-3 px-3 py-2 mx-2 rounded-[9px] text-[13.5px] text-[var(--ink-2)] aria-selected:bg-[var(--paper-2)] aria-selected:text-[var(--ink)] cursor-pointer transition"
+                  >
+                    <Icon
+                      size={15}
+                      strokeWidth={1.6}
+                      className="text-[var(--muted)] shrink-0"
+                    />
+                    {label}
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
 
-          {hits.length > 0 && (
-            <Command.Group
-              heading="Items"
-              className="text-[10px] text-zinc-600 uppercase tracking-wide px-3 mt-2"
-            >
-              {hits.map((h) => (
-                <Command.Item
-                  key={h.id}
-                  value={`item-${h.id}`}
-                  onSelect={() => go(`/items/${h.id}`)}
-                  className="flex flex-col items-start gap-0.5 px-3 py-2 mx-1 my-0.5 rounded-md text-sm aria-selected:bg-zinc-900 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-wide text-zinc-600">
-                      {h.kind}
-                    </span>
-                    <span className="text-zinc-200">{h.title ?? "untitled"}</span>
-                  </div>
-                  {h.summary && (
-                    <p className="text-xs text-zinc-500 line-clamp-1 ml-[3.25rem]">
-                      {h.summary}
-                    </p>
-                  )}
-                </Command.Item>
-              ))}
-            </Command.Group>
-          )}
-        </Command.List>
-      </Command>
-    </div>
+            {hits.length > 0 && (
+              <Command.Group
+                heading="Items"
+                className="paletteGroup"
+              >
+                {hits.map((h) => {
+                  const meta =
+                    KIND_META[h.kind] ?? {
+                      icon: NotebookPen,
+                      color: "var(--muted)",
+                      tint: "var(--bg-2)",
+                    };
+                  const Icon = meta.icon;
+                  return (
+                    <Command.Item
+                      key={h.id}
+                      value={`item-${h.id}`}
+                      onSelect={() => go(`/items/${h.id}`)}
+                      className="flex items-start gap-3 px-3 py-2.5 mx-2 rounded-[9px] aria-selected:bg-[var(--paper-2)] cursor-pointer transition"
+                    >
+                      <div
+                        className="grid place-items-center w-7 h-7 rounded-[8px] shrink-0 mt-px"
+                        style={{
+                          background: meta.tint,
+                          color: meta.color,
+                        }}
+                      >
+                        <Icon size={13} strokeWidth={1.6} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13.5px] text-[var(--ink)] truncate">
+                            {h.title?.trim() || (
+                              <em className="text-[var(--muted-2)] not-italic">
+                                untitled
+                              </em>
+                            )}
+                          </span>
+                          <span
+                            className="text-[9.5px] uppercase tracking-[0.12em] font-semibold shrink-0"
+                            style={{ color: meta.color }}
+                          >
+                            {h.kind}
+                          </span>
+                        </div>
+                        {h.summary && (
+                          <p className="text-[11.5px] text-[var(--muted)] line-clamp-1 mt-0.5">
+                            {h.summary}
+                          </p>
+                        )}
+                      </div>
+                    </Command.Item>
+                  );
+                })}
+              </Command.Group>
+            )}
+          </Command.List>
+
+          {/* Footer hint */}
+          <div className="px-4 py-2.5 border-t border-[var(--line)] bg-[var(--paper-2)] flex items-center justify-between text-[10.5px] text-[var(--muted-2)]">
+            <span className="inline-flex items-center gap-3">
+              <Hint label="navigate" keys={["↑", "↓"]} />
+              <Hint label="open" keys={["↵"]} />
+              <Hint label="close" keys={["esc"]} />
+            </span>
+            <span className="font-mono tracking-[0.04em]">⌘K</span>
+          </div>
+        </Command>
+      </div>
+    </Portal>
+  );
+}
+
+function Hint({ label, keys }: { label: string; keys: string[] }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {keys.map((k) => (
+        <kbd
+          key={k}
+          className="font-mono text-[10px] border border-[var(--line)] bg-[var(--paper)] rounded-[4px] px-1 min-w-[16px] text-center"
+        >
+          {k}
+        </kbd>
+      ))}
+      <span>{label}</span>
+    </span>
   );
 }

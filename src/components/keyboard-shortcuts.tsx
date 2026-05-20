@@ -18,11 +18,8 @@ import { Keyboard } from "lucide-react";
  * g s  → Stats
  * g r  → Reviews
  * g l  → Highlights
- * g o  → Goals
- * g d  → Decisions
  * g m  → Templates
  * g f  → Projects
- * g g  → Graph
  *
  *  ? → open this help
  *  c → quick capture (handled in QuickCapture)
@@ -40,11 +37,8 @@ const MAP: Record<string, { href: string; label: string }> = {
   s: { href: "/stats", label: "Stats" },
   r: { href: "/reviews", label: "Reviews" },
   l: { href: "/highlights", label: "Highlights" },
-  o: { href: "/goals", label: "Goals" },
-  d: { href: "/decisions", label: "Decisions" },
   m: { href: "/templates", label: "Templates" },
   f: { href: "/projects", label: "Projects" },
-  g: { href: "/graph", label: "Graph" },
 };
 
 export function KeyboardShortcuts() {
