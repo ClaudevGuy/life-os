@@ -1,6 +1,6 @@
 # Life OS
 
-> Capture, organize, and recall everything you care about — bookmarks, notes, decisions, people, daily journals — in one place. **Local-first**: every byte lives in your browser, never on someone else's server.
+> Capture, organize, and recall everything you care about — notes, tasks, decisions, people, daily journals — in one place. **Local-first**: every byte lives in your browser, never on someone else's server.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black) ![React](https://img.shields.io/badge/React-19-149eca) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6) ![IndexedDB](https://img.shields.io/badge/storage-IndexedDB-f0a868)
 
@@ -27,7 +27,6 @@ The only thing that ever leaves your machine is a single AI call — and only wh
 | `/goals` | Targets with progress bars and milestones |
 | `/projects` | PARA-style projects and areas |
 | `/people` | Conversations, last-contacted, what was discussed |
-| `/reading` | Bookmarks, sorted by reading state |
 | `/calendar` | Monthly grid showing captures, due dates, review dates |
 | `/timeline` | Everything you've captured, grouped by day |
 | `/graph` | Items clustered by topic + wiki-link connections |
@@ -91,12 +90,12 @@ If you'd rather **self-host**, anything that can serve a Next.js standalone buil
 
 ### Items
 
-Every captured object — note, task, bookmark, journal entry, habit, decision, highlight, goal, person, project, area — is stored as a single polymorphic record in the `items` table:
+Every captured object — note, task, journal entry, habit, decision, highlight, goal, person, project, area — is stored as a single polymorphic record in the `items` table:
 
 ```ts
 type StoredItem = {
   id: string;
-  kind: "bookmark" | "note" | "task" | ... ;
+  kind: "note" | "task" | "decision" | ... ;
   title: string | null;
   body: string | null;
   sourceUrl: string | null;

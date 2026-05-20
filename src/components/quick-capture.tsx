@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
   Plus,
-  Bookmark,
   NotebookPen,
   ListTodo,
   Lightbulb,
@@ -18,7 +17,6 @@ import {
   Mic,
   Folder,
   MoreHorizontal,
-  Link as LinkIcon,
   CornerDownLeft,
 } from "lucide-react";
 import { parseNaturalDate, dateLabel } from "@/lib/natural-date";
@@ -26,10 +24,8 @@ import { captureItem } from "@/lib/store/items";
 import { db } from "@/lib/store/db";
 
 type Kind =
-  | "bookmark"
   | "note"
   | "task"
-  | "idea"
   | "decision"
   | "person"
   | "highlight"
@@ -47,10 +43,8 @@ const KIND_META: Record<
     tint: string;
   }
 > = {
-  bookmark: { label: "Bookmark", icon: Bookmark, tint: "var(--kind-bookmark)" },
   note: { label: "Note", icon: NotebookPen, tint: "var(--kind-note)" },
   task: { label: "Task", icon: ListTodo, tint: "var(--kind-task)" },
-  idea: { label: "Idea", icon: Lightbulb, tint: "var(--kind-idea)" },
   decision: { label: "Decision", icon: Lightbulb, tint: "var(--kind-decision)" },
   person: { label: "Person", icon: Users, tint: "var(--kind-person)" },
   highlight: { label: "Highlight", icon: Quote, tint: "var(--kind-highlight)" },
@@ -61,11 +55,9 @@ const KIND_META: Record<
   project: { label: "Project", icon: Folder, tint: "var(--kind-project)" },
 };
 
-const PRIMARY: Kind[] = ["bookmark", "note", "task", "idea"];
+const PRIMARY: Kind[] = ["note", "task", "highlight", "decision"];
 const SECONDARY: Kind[] = [
-  "decision",
   "person",
-  "highlight",
   "journal",
   "habit",
   "goal",
@@ -75,14 +67,8 @@ const KIND_CAN_BE_LINKED: Kind[] = [
   "task",
   "note",
   "decision",
-  "idea",
   "highlight",
-  "bookmark",
 ];
-
-function looksLikeUrl(s: string) {
-  return /^https?:\/\//i.test(s.trim());
-}
 
 type ProjectOption = { id: string; title: string | null };
 
@@ -126,12 +112,6 @@ export function QuickCapture() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, title, body, kind, priority]);
 
-  useEffect(() => {
-    if (kind !== "bookmark" && looksLikeUrl(title) && title.length > 8) {
-      setKind("bookmark");
-    }
-  }, [title, kind]);
-
   // Lazy-load project options from the local store
   useEffect(() => {
     if (!open || projects.length > 0) return;
@@ -159,7 +139,6 @@ export function QuickCapture() {
     [title, kind],
   );
   const cleanTitle = parsed ? parsed.title : title.trim();
-  const isBookmarkUrl = kind === "bookmark" && looksLikeUrl(title);
 
   async function save() {
     if (!title.trim() && !body.trim()) {
@@ -184,21 +163,12 @@ export function QuickCapture() {
 
       const finalTitle = cleanTitle || title.trim();
       try {
-        await captureItem(
-          isBookmarkUrl
-            ? {
-                kind,
-                sourceUrl: finalTitle,
-                body: body.trim() || null,
-                metadata,
-              }
-            : {
-                kind,
-                title: finalTitle || null,
-                body: body.trim() || null,
-                metadata,
-              },
-        );
+        await captureItem({
+          kind,
+          title: finalTitle || null,
+          body: body.trim() || null,
+          metadata,
+        });
       } catch {
         toast.error("Couldn't save");
         return;
@@ -334,13 +304,7 @@ export function QuickCapture() {
                     📅 due {dateLabel(parsed.date)}
                   </span>
                 )}
-                {isBookmarkUrl && (
-                  <span className="inline-flex items-center gap-1 text-[var(--kind-bookmark)]">
-                    <LinkIcon size={10} />
-                    URL detected
-                  </span>
-                )}
-                {!parsed && !isBookmarkUrl && kind === "task" && (
+                {!parsed && kind === "task" && (
                   <span className="italic">
                     Try “review proposal friday”, “call mom tomorrow”, “ship in 3 days”
                   </span>
@@ -481,14 +445,10 @@ function KindTab({
 
 function placeholderForKind(kind: Kind): string {
   switch (kind) {
-    case "bookmark":
-      return "Paste a URL or write a title…";
     case "note":
       return "Title (or skip and just write below)";
     case "task":
       return "What needs doing? Try “review proposal friday”";
-    case "idea":
-      return "What if…";
     case "decision":
       return "What are you deciding?";
     case "person":

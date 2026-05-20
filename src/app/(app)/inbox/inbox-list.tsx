@@ -13,7 +13,7 @@ import {
   type StoredItem,
 } from "@/lib/store/items";
 
-type Kind = "all" | "bookmark" | "note" | "task" | "idea" | "highlight";
+type Kind = "all" | "note" | "task" | "highlight";
 
 export function InboxList() {
   const rows = useInboxItems() ?? [];
@@ -53,7 +53,7 @@ export function InboxList() {
           title={totalEmpty ? "Inbox zero." : "Nothing in this filter."}
           body={
             totalEmpty
-              ? "Capture anything — a bookmark, a thought, a task. It lands here first, then you triage."
+              ? "Capture anything — a thought, a task, a highlight. It lands here first, then you triage."
               : "Try another kind or capture something new."
           }
           actions={

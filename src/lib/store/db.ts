@@ -8,14 +8,12 @@
 import Dexie, { type EntityTable } from "dexie";
 
 export type ItemKind =
-  | "bookmark"
   | "note"
   | "decision"
   | "person"
   | "journal"
   | "voice"
   | "task"
-  | "idea"
   | "habit"
   | "goal"
   | "highlight"

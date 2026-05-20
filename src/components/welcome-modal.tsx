@@ -28,13 +28,13 @@ export function WelcomeModal() {
       icon: Sparkles,
       title: "Welcome to Life OS",
       body:
-        "One quiet place for everything you want to remember — bookmarks, notes, decisions, people, daily journals, tasks, habits, goals.",
+        "One quiet place for everything you want to remember — notes, tasks, decisions, people, daily journals, habits, goals, highlights.",
     },
     {
       icon: Plus,
       title: "Capture in two keystrokes",
       body:
-        "Press c anywhere to open quick capture. Paste a URL, jot an idea, or set a task. AI fills in the details after.",
+        "Press c anywhere to open quick capture. Jot a note, log a decision, or set a task. AI fills in the details after.",
     },
     {
       icon: Command,

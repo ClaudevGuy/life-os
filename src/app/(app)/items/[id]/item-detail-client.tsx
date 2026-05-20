@@ -10,7 +10,6 @@ import { InlineTitle, InlineBody } from "@/components/inline-edit";
 import {
   DecisionOutcomeEditor,
   GoalProgressEditor,
-  BookmarkStateEditor,
 } from "@/components/kind-editors";
 import { RecentTracker } from "@/components/recently-viewed";
 import { ProjectRollUp } from "@/components/project-roll-up";
@@ -146,7 +145,6 @@ export function ItemDetailClient({ id }: { id: string }) {
 function backFor(kind: string) {
   return (
     {
-      bookmark: "/inbox",
       note: "/notes",
       task: "/tasks",
       decision: "/decisions",
@@ -155,7 +153,6 @@ function backFor(kind: string) {
       habit: "/habits",
       goal: "/goals",
       highlight: "/highlights",
-      idea: "/inbox",
       voice: "/inbox",
     } as Record<string, string>
   )[kind] ?? "/inbox";
@@ -168,8 +165,6 @@ function emptyHintForKind(kind: string): string {
       return "Drop an avatar or click to upload";
     case "highlight":
       return "Photo of the page, book cover, or context";
-    case "bookmark":
-      return "Save a preview image";
     default:
       return "Drop an image, click, or paste (⌘V)";
   }
@@ -178,7 +173,6 @@ function emptyHintForKind(kind: string): string {
 function backForLabel(kind: string) {
   return (
     {
-      bookmark: "Inbox",
       note: "Notes",
       task: "Tasks",
       decision: "Decisions",
@@ -187,7 +181,6 @@ function backForLabel(kind: string) {
       habit: "Habits",
       goal: "Goals",
       highlight: "Highlights",
-      idea: "Inbox",
       voice: "Inbox",
     } as Record<string, string>
   )[kind] ?? "Inbox";
@@ -205,9 +198,6 @@ function KindSpecific({
   }
   if (item.kind === "goal") {
     return <GoalProgressEditor id={item.id} metadata={meta} />;
-  }
-  if (item.kind === "bookmark") {
-    return <BookmarkStateEditor id={item.id} metadata={meta} />;
   }
   if (item.kind === "habit") {
     const checkins = (meta.checkins as string[]) ?? [];

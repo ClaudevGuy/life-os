@@ -163,12 +163,7 @@ export function useInboxItems(): StoredItem[] | undefined {
       // never in the triage inbox.
       const meta = (i.metadata ?? {}) as { reminder?: boolean };
       if (i.kind === "task" && meta.reminder === true) return false;
-      return (
-        i.status === "inbox" ||
-        i.kind === "bookmark" ||
-        i.kind === "highlight" ||
-        i.kind === "idea"
-      );
+      return i.status === "inbox" || i.kind === "highlight";
     });
   });
 }

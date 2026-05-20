@@ -7,7 +7,6 @@ import {
   Inbox,
   Flame,
   ListTodo,
-  Bookmark,
   Lightbulb,
   Sparkles,
 } from "lucide-react";
@@ -22,7 +21,6 @@ type Stats = {
   openTasks: number;
   overdueTasks: number;
   dueToday: number;
-  toRead: number;
   pendingDecisions: number;
   habitsDone: number;
   habitsTotal: number;
@@ -34,7 +32,6 @@ const EMPTY: Stats = {
   openTasks: 0,
   overdueTasks: 0,
   dueToday: 0,
-  toRead: 0,
   pendingDecisions: 0,
   habitsDone: 0,
   habitsTotal: 0,
@@ -113,15 +110,6 @@ export function TopBar() {
             icon={Inbox}
             label={`${stats.inboxCount}`}
             title={`${stats.inboxCount} in inbox`}
-          />
-        )}
-        {stats.toRead > 0 && (
-          <Pill
-            href="/inbox"
-            tone="default"
-            icon={Bookmark}
-            label={`${stats.toRead}`}
-            title={`${stats.toRead} to read`}
           />
         )}
         {stats.habitsTotal > 0 && (
@@ -215,7 +203,6 @@ function computeStats(rows: Array<{
   let openTasks = 0;
   let overdueTasks = 0;
   let dueToday = 0;
-  let toRead = 0;
   let pendingDecisions = 0;
   let habitsDone = 0;
   let habitsTotal = 0;
@@ -238,11 +225,6 @@ function computeStats(rows: Array<{
           else if (d >= startOfToday && d < endOfToday) dueToday++;
         }
       }
-    }
-
-    if (r.kind === "bookmark") {
-      const state = meta.readState as string | undefined;
-      if (!state || state === "to-read") toRead++;
     }
 
     if (r.kind === "decision") {
@@ -275,7 +257,6 @@ function computeStats(rows: Array<{
     openTasks,
     overdueTasks,
     dueToday,
-    toRead,
     pendingDecisions,
     habitsDone,
     habitsTotal,

@@ -14,7 +14,7 @@ export function OnThisDay({ items }: { items: Item[] }) {
 
   if (matches.length === 0) return null;
 
-  const tint = "var(--kind-bookmark)";
+  const tint = "var(--accent)";
   return (
     <div className="life-card p-4 relative overflow-hidden">
       <div

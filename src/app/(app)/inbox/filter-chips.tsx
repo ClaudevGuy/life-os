@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 
-type Kind = "all" | "bookmark" | "note" | "task" | "idea" | "highlight";
+type Kind = "all" | "note" | "task" | "highlight";
 
 const TABS: Array<{ k: Kind; label: string }> = [
   { k: "all", label: "All" },
-  { k: "bookmark", label: "Bookmarks" },
   { k: "note", label: "Notes" },
   { k: "task", label: "Tasks" },
-  { k: "idea", label: "Ideas" },
   { k: "highlight", label: "Highlights" },
 ];
 

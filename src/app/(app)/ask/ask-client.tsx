@@ -8,7 +8,6 @@ import {
   RefreshCw,
   Lightbulb,
   Tag,
-  Bookmark,
   Users,
   Target,
   ListTodo,
@@ -42,7 +41,7 @@ const SUGGESTIONS: Suggestion[] = [
     category: "Synthesise",
     question: "What have I been thinking about agent UX?",
     icon: Sparkles,
-    tint: "var(--kind-idea)",
+    tint: "var(--accent)",
   },
   {
     category: "Decisions",

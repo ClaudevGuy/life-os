@@ -14,11 +14,9 @@ export type GraphItem = {
 };
 
 const KIND_ORDER = [
-  "bookmark",
   "note",
   "task",
   "decision",
-  "idea",
   "person",
   "journal",
   "highlight",

@@ -32,14 +32,12 @@ html:not([data-theme]) {
   --aurora-rose: #e57f9f;
 
   /* kinds */
-  --kind-bookmark: #6aa9ef;
   --kind-note: #c8c6c0;
   --kind-decision: #d4a866;
   --kind-person: #e57f9f;
   --kind-journal: #6dc8a1;
   --kind-voice: #b58dee;
   --kind-task: #f0a868;
-  --kind-idea: #e6d066;
   --kind-goal: #ef8b8b;
   --kind-habit: #6dc8d8;
   --kind-highlight: #d4a866;

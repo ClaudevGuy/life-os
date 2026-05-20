@@ -68,8 +68,8 @@ export function SettingsClient() {
           options={[
             { value: "note", label: "Note" },
             { value: "task", label: "Task" },
-            { value: "bookmark", label: "Bookmark" },
-            { value: "idea", label: "Idea" },
+            { value: "highlight", label: "Highlight" },
+            { value: "decision", label: "Decision" },
           ]}
           value={defaultKind}
           onChange={(v) => {
