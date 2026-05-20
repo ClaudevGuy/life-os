@@ -211,7 +211,11 @@ export function Markdown({ children }: { children: string }) {
     }
     blocks.push(
       <p key={key++} className="my-3 text-[var(--text-muted)] leading-relaxed">
-        {inline(para.join(" "))}
+        {para.flatMap((l, j) =>
+          j === 0
+            ? inline(l)
+            : [<br key={`br-${j}`} />, ...inline(l)],
+        )}
       </p>,
     );
   }
