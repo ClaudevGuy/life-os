@@ -1,360 +1,363 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { NotebookPen, Pin, Search, Hash, FileText } from "lucide-react";
-import { useItemsOfKind, type StoredItem } from "@/lib/store/items";
-import { NewNote } from "./new-note";
-import { QuickNote } from "./quick-note";
-
-type Filter = "all" | "pinned" | "week" | "month";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import {
+  NotebookPen,
+  Plus,
+  Search,
+  LayoutGrid,
+  Pencil,
+  Clock,
+} from "lucide-react";
+import {
+  useItemsOfKind,
+  captureItem,
+  type StoredItem,
+} from "@/lib/store/items";
+import { ItemActions } from "@/components/item-actions";
 
 export default function NotesPage() {
+  return (
+    <Suspense fallback={null}>
+      <NotesScreen />
+    </Suspense>
+  );
+}
+
+function NotesScreen() {
   const rows = useItemsOfKind("note") ?? [];
-  const [filter, setFilter] = useState<Filter>("all");
+  const router = useRouter();
+  const params = useSearchParams();
+  const selectedId = params.get("id");
   const [query, setQuery] = useState("");
-  const [topic, setTopic] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
-  const now = Date.now();
-  const weekAgo = now - 7 * 86_400_000;
-  const monthAgo = now - 30 * 86_400_000;
-
-  const counts = useMemo(() => {
-    let pinned = 0;
-    let week = 0;
-    let month = 0;
-    for (const r of rows) {
-      if (r.isPinned) pinned++;
-      const ts = new Date(r.updatedAt).getTime();
-      if (ts >= weekAgo) week++;
-      if (ts >= monthAgo) month++;
+  // Auto-select the first note when nothing is selected and notes exist.
+  useEffect(() => {
+    if (!selectedId && rows.length > 0) {
+      const first = rows[0];
+      const sp = new URLSearchParams(params.toString());
+      sp.set("id", first.id);
+      router.replace(`/notes?${sp.toString()}`);
     }
-    return { total: rows.length, pinned, week, month };
-  }, [rows, weekAgo, monthAgo]);
-
-  const topics = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const r of rows) {
-      if (r.topic) map.set(r.topic, (map.get(r.topic) ?? 0) + 1);
-    }
-    return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }, [rows]);
+  }, [selectedId, rows, router, params]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return rows.filter((r) => {
-      if (filter === "pinned" && !r.isPinned) return false;
-      if (filter === "week" && new Date(r.updatedAt).getTime() < weekAgo) return false;
-      if (filter === "month" && new Date(r.updatedAt).getTime() < monthAgo) return false;
-      if (topic && r.topic !== topic) return false;
-      if (q) {
-        const hay = `${r.title ?? ""}\n${r.body ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [rows, filter, query, topic, weekAgo, monthAgo]);
+    if (!q) return rows;
+    return rows.filter((r) =>
+      `${r.title ?? ""}\n${r.body ?? ""}`.toLowerCase().includes(q),
+    );
+  }, [rows, query]);
 
-  const pinnedRows = filter === "all" ? filtered.filter((r) => r.isPinned) : [];
-  const otherRows = filter === "all" ? filtered.filter((r) => !r.isPinned) : filtered;
+  const groups = useMemo(() => groupByRecency(filtered), [filtered]);
+  const selected = useMemo(
+    () => rows.find((r) => r.id === selectedId) ?? null,
+    [rows, selectedId],
+  );
+
+  function selectNote(id: string) {
+    const sp = new URLSearchParams(params.toString());
+    sp.set("id", id);
+    router.replace(`/notes?${sp.toString()}`);
+  }
+
+  function createNote() {
+    startTransition(async () => {
+      try {
+        const item = await captureItem({
+          kind: "note",
+          title: null,
+          body: null,
+        });
+        selectNote(item.id);
+        toast.success("Note created");
+      } catch {
+        toast.error("Couldn't create note");
+      }
+    });
+  }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex items-baseline justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="life-h1 inline-flex items-center gap-2">
-            <NotebookPen size={18} className="text-[var(--accent)]" />
+    <div className="flex h-[calc(100vh-61px)] min-h-0">
+      {/* Middle pane: notes list */}
+      <aside className="w-[380px] shrink-0 flex flex-col border-r border-[var(--line)] bg-[var(--paper)] min-h-0">
+        {/* Header */}
+        <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-3">
+          <h1 className="inline-flex items-center gap-2 text-[22px] font-semibold tracking-[-0.02em] text-[var(--ink)]">
+            <NotebookPen size={20} className="text-[var(--terra)]" strokeWidth={1.6} />
             Notes
+            <span className="text-[14px] font-medium text-[var(--muted)] ml-1 tabular-nums">
+              {rows.length}
+            </span>
           </h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
-            Thoughts, conversation logs, scraps you want to keep.
-          </p>
-        </div>
-        <NewNote />
-      </div>
-
-      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 life-stagger">
-        <Stat
-          label="Total"
-          value={counts.total}
-          tone="default"
-          active={filter === "all"}
-          onClick={() => setFilter("all")}
-        />
-        <Stat
-          label="Pinned"
-          value={counts.pinned}
-          tone="accent"
-          active={filter === "pinned"}
-          onClick={() => setFilter("pinned")}
-        />
-        <Stat
-          label="This week"
-          value={counts.week}
-          tone="good"
-          active={filter === "week"}
-          onClick={() => setFilter("week")}
-        />
-        <Stat
-          label="This month"
-          value={counts.month}
-          tone="default"
-          active={filter === "month"}
-          onClick={() => setFilter("month")}
-        />
-      </div>
-
-      <div className="mt-4">
-        <QuickNote />
-      </div>
-
-      <div className="mt-6 flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[220px] max-w-md">
-          <Search
-            size={13}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)] pointer-events-none"
-          />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search notes…"
-            className="w-full bg-[var(--bg-card)] border border-[var(--border-soft)] rounded-full pl-8 pr-3 py-1.5 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] transition"
-          />
-        </div>
-        {topics.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setTopic(null)}
-              className={`inline-flex items-center gap-1 text-[11px] uppercase tracking-wide px-2.5 py-1 rounded-full border transition ${
-                topic === null
-                  ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]"
-                  : "bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-soft)] hover:border-[var(--border-strong)]"
-              }`}
+              title="Coming soon"
+              className="grid place-items-center w-9 h-9 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
+              aria-label="Layout"
             >
-              All topics
+              <LayoutGrid size={15} strokeWidth={1.6} />
             </button>
-            {topics.slice(0, 8).map(([t, count]) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTopic(t === topic ? null : t)}
-                className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border transition ${
-                  topic === t
-                    ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]"
-                    : "bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-soft)] hover:border-[var(--border-strong)]"
-                }`}
-              >
-                <Hash size={10} />
-                {t}
-                <span className="text-[var(--text-faint)] tabular-nums">{count}</span>
-              </button>
-            ))}
+            <button
+              type="button"
+              onClick={createNote}
+              disabled={pending}
+              title="New note"
+              aria-label="New note"
+              className="grid place-items-center w-9 h-9 rounded-[10px] bg-[var(--ink)] text-[var(--paper)] hover:opacity-90 active:scale-95 transition disabled:opacity-50"
+            >
+              <Plus size={16} strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="px-5 pb-3">
+          <div className="relative">
+            <Search
+              size={13}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none"
+            />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search notes…"
+              className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] pl-9 pr-3 py-2 text-[13.5px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
+            />
+          </div>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto px-3 pb-6 min-h-0">
+          {filtered.length === 0 ? (
+            <div className="px-2 py-10 text-center text-[13px] text-[var(--muted)]">
+              {query
+                ? "No matching notes."
+                : "No notes yet. Tap + to start one."}
+            </div>
+          ) : (
+            groups.map((g) => (
+              <div key={g.label} className="mt-4 first:mt-1">
+                <div className="px-3 pb-2 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+                  {g.label}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {g.items.map((n) => (
+                    <NoteRow
+                      key={n.id}
+                      note={n}
+                      active={n.id === selectedId}
+                      onSelect={() => selectNote(n.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </aside>
+
+      {/* Right pane: detail */}
+      <main className="flex-1 overflow-y-auto min-w-0">
+        {selected ? (
+          <NoteDetail note={selected} />
+        ) : (
+          <div className="h-full grid place-items-center text-[13px] text-[var(--muted)]">
+            Select a note to read it.
           </div>
         )}
-      </div>
-
-      {filtered.length === 0 ? (
-        <EmptyState hasQuery={Boolean(query || topic || filter !== "all")} />
-      ) : (
-        <>
-          {pinnedRows.length > 0 && (
-            <section className="mt-8 life-rise">
-              <h2 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3 inline-flex items-center gap-2">
-                <Pin size={10} className="text-[var(--accent)] fill-[var(--accent)]" />
-                Pinned
-                <span className="text-[var(--text-faint)] font-mono">·</span>
-                <span className="tabular-nums">{pinnedRows.length}</span>
-              </h2>
-              <NoteGrid rows={pinnedRows} />
-            </section>
-          )}
-
-          <section className="mt-8 life-rise" style={{ animationDelay: "120ms" }}>
-            {pinnedRows.length > 0 && (
-              <h2 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3">
-                All notes
-                <span className="text-[var(--text-faint)] font-mono mx-2">·</span>
-                <span className="tabular-nums">{otherRows.length}</span>
-              </h2>
-            )}
-            <NoteGrid rows={otherRows} />
-          </section>
-        </>
-      )}
+      </main>
     </div>
   );
 }
 
-function Stat({
-  label,
-  value,
-  tone,
+// ---------- list row ----------
+
+function NoteRow({
+  note: n,
   active,
-  onClick,
+  onSelect,
 }: {
-  label: string;
-  value: number;
-  tone: "default" | "accent" | "good";
-  active?: boolean;
-  onClick?: () => void;
+  note: StoredItem;
+  active: boolean;
+  onSelect: () => void;
 }) {
-  const colorClass =
-    tone === "accent"
-      ? "text-[var(--accent)]"
-      : tone === "good"
-      ? "text-emerald-300"
-      : "text-[var(--text)]";
-  const accentColor =
-    tone === "accent"
-      ? "var(--accent)"
-      : tone === "good"
-      ? "#6dc8a1"
-      : "var(--text-muted)";
+  const dot = topicColor(n.topic);
+  const tag = n.topic ?? statusTag(n.status);
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={`life-card p-3.5 text-left transition relative overflow-hidden ${
+      onClick={onSelect}
+      className={`relative w-full text-left rounded-[10px] px-3 py-2.5 transition ${
         active
-          ? "border-[var(--border-strong)] bg-[var(--bg-card-hover)]"
-          : "hover:bg-[var(--bg-card-hover)] hover:border-[var(--border-strong)]"
+          ? "bg-[var(--paper-2)]"
+          : "bg-transparent hover:bg-[var(--bg-2)]"
       }`}
     >
       {active && (
         <span
           aria-hidden
-          className="absolute inset-x-0 top-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }}
+          className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full"
+          style={{ background: "var(--terra)" }}
         />
       )}
-      <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-        {label}
+      <div className="flex items-center gap-2">
+        <span
+          className="w-[6px] h-[6px] rounded-full shrink-0"
+          style={{ background: dot }}
+        />
+        <span className="text-[14px] font-medium text-[var(--ink)] truncate flex-1">
+          {n.title ?? "Untitled"}
+        </span>
       </div>
-      <div className={`mt-1 text-2xl font-semibold tabular-nums ${colorClass}`}>
-        {value}
+      <p className="mt-1 pl-[14px] text-[12.5px] text-[var(--muted)] line-clamp-2 leading-relaxed">
+        {n.body?.trim() ? n.body : "Empty"}
+      </p>
+      <div className="mt-1.5 pl-[14px] flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] font-semibold text-[var(--muted-2)]">
+        <span>{tag}</span>
+        <span>·</span>
+        <span>{relDate(n.updatedAt).toUpperCase()}</span>
       </div>
     </button>
   );
 }
 
-function EmptyState({ hasQuery }: { hasQuery: boolean }) {
-  if (hasQuery) {
-    return (
-      <div className="mt-12 life-card p-10 text-center">
-        <Search size={20} className="mx-auto text-[var(--text-faint)]" />
-        <p className="mt-3 text-sm text-[var(--text-muted)]">No matching notes.</p>
-        <p className="mt-1 text-xs text-[var(--text-faint)]">
-          Try a different filter or clear the search.
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div className="mt-12 relative overflow-hidden life-card p-12 text-center">
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-30 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle at 50% 30%, var(--accent-glow), transparent 60%)",
-        }}
-      />
-      <div className="relative">
-        <div className="mx-auto grid place-items-center w-14 h-14 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-          <FileText size={22} />
-        </div>
-        <h3 className="mt-4 text-base font-semibold tracking-tight life-shine">
-          Your first note is one keystroke away
-        </h3>
-        <p className="mt-2 text-sm text-[var(--text-muted)] max-w-sm mx-auto">
-          Capture a thought, paste a conversation, sketch an idea. Markdown is welcome
-          and <code className="text-[var(--accent)]">[[wiki links]]</code> connect them.
-        </p>
-        <div className="mt-5 inline-flex items-center gap-3 text-[11px] text-[var(--text-faint)]">
-          <kbd className="rounded bg-[var(--bg-rail)] border border-[var(--border-soft)] px-1.5 py-0.5">
-            c
-          </kbd>
-          <span>anywhere to quick-capture</span>
-        </div>
-      </div>
-    </div>
-  );
-}
+// ---------- detail pane ----------
 
-function NoteGrid({ rows }: { rows: StoredItem[] }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 life-stagger">
-      {rows.map((n) => (
-        <NoteCard key={n.id} note={n} />
-      ))}
-    </div>
-  );
-}
+function NoteDetail({ note: n }: { note: StoredItem }) {
+  const words = (n.body?.trim().match(/\S+/g) ?? []).length;
+  const minRead = Math.max(1, Math.round(words / 220));
+  const dot = topicColor(n.topic);
+  const tag = n.topic ?? statusTag(n.status);
+  const capturedRel = relDate(n.capturedAt);
+  const editedRel = relDate(n.updatedAt);
 
-function NoteCard({ note: n }: { note: StoredItem }) {
-  const accent = topicColor(n.topic);
   return (
-    <Link
-      href={`/items/${n.id}`}
-      className="group life-card life-card-hover p-4 transition flex flex-col min-h-[160px] relative overflow-hidden"
-      style={
-        n.isPinned
-          ? {
-              boxShadow:
-                "0 1px 2px rgba(0,0,0,0.3), 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent)",
-            }
-          : undefined
-      }
-    >
-      <span
-        aria-hidden
-        className="absolute left-0 top-3 bottom-3 w-[2px] rounded-r opacity-50 group-hover:opacity-90 transition"
-        style={{ background: accent }}
-      />
-      <div className="flex items-start gap-2 pl-2">
-        <span className="text-[13.5px] font-medium text-[var(--text)] line-clamp-2 flex-1 leading-snug">
-          {n.title ?? "Untitled"}
-        </span>
-        {n.isPinned && (
-          <Pin
-            size={11}
-            className="mt-1 shrink-0 text-[var(--accent)] fill-[var(--accent)]"
-          />
-        )}
-      </div>
-      {n.body && (
-        <p className="mt-2 pl-2 text-[12px] text-[var(--text-muted)] line-clamp-5 leading-relaxed whitespace-pre-line">
-          {n.body}
-        </p>
-      )}
-      <div className="mt-auto pt-3 pl-2 flex items-center gap-2 text-[10px] text-[var(--text-faint)] uppercase tracking-wide">
-        {n.topic && (
-          <span
-            className="inline-flex items-center gap-1"
-            style={{ color: accent }}
-          >
-            <Hash size={9} />
-            {n.topic}
+    <div className="px-8 pt-6 pb-12 max-w-3xl mx-auto pg-enter">
+      {/* Top row: breadcrumb + actions */}
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="inline-flex items-center gap-2 text-[12.5px] text-[var(--muted)]">
+          <NotebookPen size={14} strokeWidth={1.6} className="text-[var(--muted)]" />
+          <Link href="/notes" className="hover:text-[var(--ink)] transition">
+            Notes
+          </Link>
+          <span className="text-[var(--muted-2)]">›</span>
+          <span className="text-[var(--ink)] font-medium truncate max-w-[280px]">
+            {n.title ?? "Untitled"}
           </span>
-        )}
-        <span className="ml-auto">{relDate(n.updatedAt)}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <ItemActions
+            id={n.id}
+            isPinned={n.isPinned}
+            status={n.status}
+            backHref="/notes"
+          />
+          <Link
+            href={`/items/${n.id}`}
+            className="life-btn life-btn-sm life-btn-secondary"
+          >
+            <Pencil size={12} strokeWidth={1.6} />
+            Edit
+          </Link>
+        </div>
       </div>
-    </Link>
+
+      {/* Meta row */}
+      <div className="flex items-center gap-3 flex-wrap mb-4 text-[11.5px]">
+        <span
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold uppercase tracking-[0.1em] text-[10.5px]"
+          style={{
+            color: dot,
+            background: `color-mix(in oklch, ${dot} 14%, transparent)`,
+          }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: dot }}
+          />
+          {tag}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-[var(--muted)]">
+          <Clock size={12} strokeWidth={1.6} />
+          {capturedRel === editedRel
+            ? `${capturedRel}`
+            : `${capturedRel} · edited ${editedRel}`}
+        </span>
+        <span className="text-[var(--muted)] tabular-nums">
+          · {words} word{words === 1 ? "" : "s"} · {minRead} min read
+        </span>
+      </div>
+
+      {/* Title */}
+      <h1 className="text-[40px] sm:text-[44px] leading-[1.05] font-semibold tracking-[-0.025em] text-[var(--ink)]">
+        {n.title ?? "Untitled"}
+      </h1>
+
+      {/* Body */}
+      <div className="mt-6">
+        {n.body?.trim() ? (
+          <p className="text-[15px] leading-[1.7] text-[var(--ink-2)] whitespace-pre-wrap">
+            {n.body}
+          </p>
+        ) : (
+          <p className="text-[15px] text-[var(--muted)]">
+            Empty. Click Edit to start writing.
+          </p>
+        )}
+      </div>
+    </div>
   );
+}
+
+// ---------- helpers ----------
+
+function groupByRecency(rows: StoredItem[]) {
+  const now = Date.now();
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const today = startOfToday.getTime();
+  const weekAgo = now - 7 * 86_400_000;
+  const monthAgo = now - 30 * 86_400_000;
+
+  const todayItems: StoredItem[] = [];
+  const weekItems: StoredItem[] = [];
+  const earlierItems: StoredItem[] = [];
+
+  // Pinned items always go to the top of "today" so they're easy to find.
+  const sorted = [...rows].sort((a, b) => {
+    if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
+
+  for (const r of sorted) {
+    const ts = new Date(r.updatedAt).getTime();
+    if (r.isPinned || ts >= today) todayItems.push(r);
+    else if (ts >= weekAgo) weekItems.push(r);
+    else if (ts >= monthAgo) earlierItems.push(r);
+    else earlierItems.push(r);
+  }
+
+  const groups: { label: string; items: StoredItem[] }[] = [];
+  if (todayItems.length) groups.push({ label: "Today", items: todayItems });
+  if (weekItems.length) groups.push({ label: "This week", items: weekItems });
+  if (earlierItems.length) groups.push({ label: "Earlier", items: earlierItems });
+  return groups;
 }
 
 function topicColor(topic: string | null | undefined): string {
-  if (!topic) return "var(--text-faint)";
+  if (!topic) return "var(--muted-2)";
   const palette = [
-    "#d4a866",
-    "#6dc8a1",
-    "#6aa9ef",
-    "#e57f9f",
-    "#c79bff",
-    "#f1c27d",
-    "#7fb3ad",
-    "#ef8b8b",
+    "var(--terra)",
+    "var(--gold)",
+    "var(--sage)",
+    "var(--plum)",
+    "var(--sky)",
   ];
   let hash = 0;
   for (let i = 0; i < topic.length; i++) {
@@ -364,9 +367,22 @@ function topicColor(topic: string | null | undefined): string {
   return palette[Math.abs(hash) % palette.length];
 }
 
+function statusTag(status: string): string {
+  if (status === "inbox") return "Inbox";
+  if (status === "archived") return "Archived";
+  if (status === "reference") return "Reference";
+  return "Active";
+}
+
 function relDate(d: Date) {
-  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000);
-  if (days === 0) return "today";
+  const diffMs = Date.now() - new Date(d).getTime();
+  const secs = Math.floor(diffMs / 1000);
+  if (secs < 60) return "now";
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
   if (days === 1) return "yesterday";
   if (days < 7) return `${days}d ago`;
   if (days < 30) return `${Math.floor(days / 7)}w ago`;
