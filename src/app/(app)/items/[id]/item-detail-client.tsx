@@ -25,21 +25,25 @@ export function ItemDetailClient({ id }: { id: string }) {
   }
 
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  const isReminder = item.kind === "task" && meta.reminder === true;
+  const displayKind = isReminder ? "reminder" : item.kind;
+  const backHref = isReminder ? "/calendar" : backFor(item.kind);
+  const backLabel = isReminder ? "Calendar" : backForLabel(item.kind);
 
   return (
     <div className="px-8 py-10 max-w-3xl">
       <div className="flex items-center justify-between mb-8">
         <Link
-          href={backFor(item.kind)}
+          href={backHref}
           className="inline-flex items-center gap-1.5 text-xs text-[var(--text-faint)] hover:text-[var(--text)] transition"
         >
-          <ArrowLeft size={12} /> back to {backForLabel(item.kind)}
+          <ArrowLeft size={12} /> back to {backLabel}
         </Link>
         <ItemActions
           id={item.id}
           isPinned={item.isPinned}
           status={item.status}
-          backHref={backFor(item.kind)}
+          backHref={backHref}
         />
       </div>
 
@@ -49,7 +53,7 @@ export function ItemDetailClient({ id }: { id: string }) {
           style={{ background: `var(--kind-${item.kind})` }}
         />
         <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-          {item.kind}
+          {displayKind}
         </span>
         {item.topic && (
           <Link
