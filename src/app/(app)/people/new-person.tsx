@@ -108,14 +108,15 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] pb-8 px-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm overflow-y-auto"
       onClick={onClose}
     >
-      <div
-        className="w-full max-w-lg rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
-        style={{ boxShadow: "var(--shadow-3)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="min-h-full flex items-start justify-center px-4 py-8 sm:py-12">
+        <div
+          className="w-full max-w-lg rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
+          style={{ boxShadow: "var(--shadow-3)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="p-6 flex items-start gap-4 border-b border-[var(--line)]">
           <div
@@ -286,6 +287,7 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
               Save
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>
