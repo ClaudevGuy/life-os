@@ -753,7 +753,7 @@ function QuickAddInput({
       </div>
       {isReminder && (
         <p className="text-[11px] leading-snug text-[var(--text-faint)] px-1">
-          Saved as a task with a due time — it'll show up in Tasks, Today, and on this day in the calendar.
+          Shows up in Today and on this day in the calendar — kept out of the Tasks list.
         </p>
       )}
     </div>
