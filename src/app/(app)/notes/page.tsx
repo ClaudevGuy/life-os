@@ -5,6 +5,7 @@ import Link from "next/link";
 import { NotebookPen, Pin, Search, Hash, FileText } from "lucide-react";
 import { useItemsOfKind, type StoredItem } from "@/lib/store/items";
 import { NewNote } from "./new-note";
+import { QuickNote } from "./quick-note";
 
 type Filter = "all" | "pinned" | "week" | "month";
 
@@ -101,6 +102,10 @@ export default function NotesPage() {
           active={filter === "month"}
           onClick={() => setFilter("month")}
         />
+      </div>
+
+      <div className="mt-4">
+        <QuickNote />
       </div>
 
       <div className="mt-6 flex items-center gap-3 flex-wrap">
