@@ -14,17 +14,11 @@ import {
   Users,
   Lightbulb,
   Clock,
-  Network,
-  Tag,
   BarChart3,
-  Sparkles,
-  LayoutTemplate,
   CalendarDays,
   MessageSquare,
   FolderKanban,
-  BookOpen,
   BookHeart,
-  RefreshCw,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -37,7 +31,6 @@ type BadgeKey =
   | "openTasks"
   | "overdueTasks"
   | "dueToday"
-  | "toRead"
   | "pendingDecisions"
   | "inboxCount";
 
@@ -57,9 +50,6 @@ const SECTIONS: RailSection[] = [
     items: [
       { href: "/inbox", label: "Inbox", icon: Inbox, badgeKey: "inboxCount" },
       { href: "/notes", label: "Notes", icon: NotebookPen },
-      { href: "/highlights", label: "Highlights", icon: Sparkles },
-      { href: "/reading", label: "Reading", icon: BookOpen, badgeKey: "toRead" },
-      { href: "/templates", label: "Templates", icon: LayoutTemplate },
     ],
   },
   {
@@ -90,7 +80,6 @@ const SECTIONS: RailSection[] = [
         badgeKey: "pendingDecisions",
       },
       { href: "/people", label: "People", icon: Users },
-      { href: "/reviews", label: "Reviews", icon: RefreshCw },
     ],
   },
   {
@@ -98,8 +87,6 @@ const SECTIONS: RailSection[] = [
     items: [
       { href: "/ask", label: "Ask my notes", icon: MessageSquare },
       { href: "/timeline", label: "Timeline", icon: Clock },
-      { href: "/graph", label: "Graph", icon: Network },
-      { href: "/tags", label: "Tags", icon: Tag },
       { href: "/stats", label: "Stats", icon: BarChart3 },
     ],
   },
@@ -109,7 +96,6 @@ type Stats = {
   openTasks: number;
   overdueTasks: number;
   dueToday: number;
-  toRead: number;
   pendingDecisions: number;
   inboxCount: number;
 };
@@ -118,7 +104,6 @@ const EMPTY: Stats = {
   openTasks: 0,
   overdueTasks: 0,
   dueToday: 0,
-  toRead: 0,
   pendingDecisions: 0,
   inboxCount: 0,
 };
@@ -211,7 +196,6 @@ function computeStats(rows: Array<{
   let openTasks = 0;
   let overdueTasks = 0;
   let dueToday = 0;
-  let toRead = 0;
   let pendingDecisions = 0;
   let inboxCount = 0;
 
@@ -232,11 +216,6 @@ function computeStats(rows: Array<{
       }
     }
 
-    if (r.kind === "bookmark") {
-      const state = meta.readState as string | undefined;
-      if (!state || state === "to-read") toRead++;
-    }
-
     if (r.kind === "decision") {
       const outcome = (meta.outcome as string | undefined) ?? "pending";
       const reviewAt = meta.reviewAt as string | undefined;
@@ -250,7 +229,6 @@ function computeStats(rows: Array<{
     openTasks,
     overdueTasks,
     dueToday,
-    toRead,
     pendingDecisions,
     inboxCount,
   };
