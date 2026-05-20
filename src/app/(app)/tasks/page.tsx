@@ -7,8 +7,6 @@ import { NewTask } from "./new-task";
 import { TasksView, type Tab } from "./tasks-view";
 
 export default function TasksPage() {
-  // useItemsOfKind("task") already filters reminders out — they're stored as
-  // tasks for calendar purposes but aren't tasks from the user's perspective.
   const rows = useItemsOfKind("task") ?? [];
   const [tab, setTab] = useState<Tab>("all");
 
@@ -44,51 +42,25 @@ export default function TasksPage() {
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex items-baseline justify-between">
-        <div>
-          <h1 className="life-h1 inline-flex items-center gap-2">
-            <ListTodo size={18} className="text-[var(--accent)]" />
-            Tasks
-          </h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
-            What needs doing — with stakes, dates, and a clear definition of done.
-          </p>
-        </div>
+    <div className="p-8 max-w-7xl mx-auto pg-enter">
+      <header className="mb-6">
+        <h1 className="life-h1 inline-flex items-center gap-2">
+          <ListTodo size={20} className="text-[var(--terra)]" strokeWidth={1.6} />
+          Tasks
+        </h1>
+        <p className="text-[14.5px] text-[var(--muted)] mt-1 max-w-xl">
+          What needs doing — with stakes, dates, and a clear definition of done.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 life-stagger">
+        <Stat label="Open" value={open.length} tone="ink" />
+        <Stat label="Overdue" value={overdue.length} tone="terra" />
+        <Stat label="Due today" value={dueToday.length} tone="gold" />
+        <Stat label="Done this week" value={doneThisWeek.length} tone="sage" />
       </div>
 
-      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 life-stagger">
-        <Stat
-          label="Open"
-          value={open.length}
-          tone="default"
-          active={tab === "all"}
-          onClick={() => setTab("all")}
-        />
-        <Stat
-          label="Overdue"
-          value={overdue.length}
-          tone="warn"
-          active={tab === "overdue"}
-          onClick={() => setTab("overdue")}
-        />
-        <Stat
-          label="Due today"
-          value={dueToday.length}
-          tone="accent"
-          active={tab === "today"}
-          onClick={() => setTab("today")}
-        />
-        <Stat
-          label="Done this week"
-          value={doneThisWeek.length}
-          tone="good"
-          active={tab === "done"}
-          onClick={() => setTab("done")}
-        />
-      </div>
-
-      <div className="mt-6">
+      <div className="mt-4">
         <NewTask />
       </div>
 
@@ -101,54 +73,30 @@ function Stat({
   label,
   value,
   tone,
-  active,
-  onClick,
 }: {
   label: string;
   value: number;
-  tone: "default" | "warn" | "accent" | "good";
-  active?: boolean;
-  onClick?: () => void;
+  tone: "ink" | "terra" | "gold" | "sage";
 }) {
-  const colorClass =
-    tone === "warn"
-      ? "text-[#ef8b8b]"
-      : tone === "accent"
-      ? "text-[var(--accent)]"
-      : tone === "good"
-      ? "text-emerald-300"
-      : "text-[var(--text)]";
-  const accentColor =
-    tone === "warn"
-      ? "#ef8b8b"
-      : tone === "accent"
-      ? "var(--accent)"
-      : tone === "good"
-      ? "#6dc8a1"
-      : "var(--text-muted)";
+  const color =
+    tone === "terra"
+      ? "var(--terra)"
+      : tone === "gold"
+      ? "var(--gold)"
+      : tone === "sage"
+      ? "var(--sage)"
+      : "var(--ink)";
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`life-card p-3.5 text-left transition relative overflow-hidden ${
-        active
-          ? "border-[var(--border-strong)] bg-[var(--bg-card-hover)]"
-          : "hover:bg-[var(--bg-card-hover)] hover:border-[var(--border-strong)]"
-      }`}
-    >
-      {active && (
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }}
-        />
-      )}
-      <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+    <div className="life-card p-5">
+      <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
         {label}
       </div>
-      <div className={`mt-1 text-2xl font-semibold tabular-nums ${colorClass}`}>
+      <div
+        className="mt-2 text-[34px] font-semibold tabular-nums tracking-[-0.02em] leading-none"
+        style={{ color }}
+      >
         {value}
       </div>
-    </button>
+    </div>
   );
 }
