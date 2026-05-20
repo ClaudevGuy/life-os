@@ -16,7 +16,6 @@ import { JournalForm } from "./journal-form";
 import { TodayHero } from "./hero";
 import { WeekStrip } from "./week-strip";
 import { OnThisDay } from "./on-this-day";
-import { EveningReflection } from "./evening-reflection";
 import { SrsHighlight } from "./srs-highlight";
 import { WhatNow } from "./what-now";
 
@@ -129,7 +128,6 @@ export function TodayClient() {
         <div className="space-y-5">
           <Brief recentCount={recent.length} />
           <JournalForm existing={journalToday} />
-          <EveningReflection />
           <SrsHighlight pool={oldHighlights} />
           <OnThisDay items={onThisDayRows} />
         </div>

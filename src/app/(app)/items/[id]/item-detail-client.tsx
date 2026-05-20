@@ -15,6 +15,7 @@ import { RecentTracker } from "@/components/recently-viewed";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { FileAttachment } from "@/components/file-attachment";
 import { ProjectDetail } from "@/app/(app)/projects/project-detail";
+import { PersonDetail } from "@/app/(app)/people/person-detail";
 
 export function ItemDetailClient({ id }: { id: string }) {
   const item = useItem(id);
@@ -24,9 +25,12 @@ export function ItemDetailClient({ id }: { id: string }) {
     notFound();
   }
 
-  // Project gets its own Studio-direction layout (Tasks list, KPIs, milestones).
+  // Kind-specific Studio layouts.
   if (item.kind === "project") {
     return <ProjectDetail project={item} />;
+  }
+  if (item.kind === "person") {
+    return <PersonDetail person={item} />;
   }
 
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
