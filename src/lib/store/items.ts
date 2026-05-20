@@ -112,18 +112,46 @@ export function useItem(id: string | undefined): StoredItem | null | undefined {
   }, [id]);
 }
 
-/** Items of a specific kind, newest first. */
+/**
+ * Items of a specific kind, newest first.
+ *
+ * Reminders are stored under `kind: "task"` (with `metadata.reminder = true`)
+ * so the calendar can show them with a due time. They are NOT tasks from the
+ * user's perspective — exclude them from this hook so they don't pollute
+ * task counts, the Tasks page, Today's "What now", etc.
+ */
 export function useItemsOfKind(kind: ItemKind): StoredItem[] | undefined {
   return useLiveQuery(
-    () =>
-      db.items
+    async () => {
+      const rows = await db.items
         .where("kind")
         .equals(kind)
         .reverse()
-        .sortBy("capturedAt")
-        .then((rows) => rows.reverse()),
+        .sortBy("capturedAt");
+      const ordered = rows.reverse();
+      if (kind !== "task") return ordered;
+      return ordered.filter((it) => {
+        const m = (it.metadata ?? {}) as { reminder?: boolean };
+        return m.reminder !== true;
+      });
+    },
     [kind],
   );
+}
+
+/** All reminders (stored as tasks with metadata.reminder = true), newest first. */
+export function useReminders(): StoredItem[] | undefined {
+  return useLiveQuery(async () => {
+    const rows = await db.items
+      .where("kind")
+      .equals("task")
+      .reverse()
+      .sortBy("capturedAt");
+    return rows.reverse().filter((it) => {
+      const m = (it.metadata ?? {}) as { reminder?: boolean };
+      return m.reminder === true;
+    });
+  });
 }
 
 /** Inbox: things still in `status === "inbox"` plus quick-capture kinds. */

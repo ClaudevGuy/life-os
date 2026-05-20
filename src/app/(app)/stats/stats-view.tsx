@@ -47,7 +47,11 @@ export function StatsView({ items }: { items: StatsItem[] }) {
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [inRange]);
 
-  const tasks = inRange.filter((i) => i.kind === "task");
+  const tasks = inRange.filter(
+    (i) =>
+      i.kind === "task" &&
+      (i.metadata as { reminder?: boolean }).reminder !== true,
+  );
   const completedTasks = tasks.filter(
     (t) => (t.metadata as { completedAt?: string }).completedAt,
   );

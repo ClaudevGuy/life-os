@@ -203,7 +203,7 @@ function computeStats(rows: Array<{
     const meta = (r.metadata ?? {}) as Record<string, unknown>;
     if (r.status === "inbox") inboxCount++;
 
-    if (r.kind === "task") {
+    if (r.kind === "task" && meta.reminder !== true) {
       const completed = meta.completedAt as string | null | undefined;
       if (!completed && r.status !== "archived") {
         openTasks++;

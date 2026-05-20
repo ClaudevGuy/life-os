@@ -7,13 +7,9 @@ import { NewTask } from "./new-task";
 import { TasksView, type Tab } from "./tasks-view";
 
 export default function TasksPage() {
-  const allTasks = useItemsOfKind("task") ?? [];
-  // Reminders are stored as tasks (metadata.reminder = true) so they appear in
-  // Today and the calendar, but they shouldn't clutter the Tasks page.
-  const rows = allTasks.filter((t) => {
-    const m = (t.metadata ?? {}) as { reminder?: boolean };
-    return !m.reminder;
-  });
+  // useItemsOfKind("task") already filters reminders out — they're stored as
+  // tasks for calendar purposes but aren't tasks from the user's perspective.
+  const rows = useItemsOfKind("task") ?? [];
   const [tab, setTab] = useState<Tab>("all");
 
   const now = new Date();
