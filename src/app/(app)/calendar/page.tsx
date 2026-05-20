@@ -19,10 +19,12 @@ export default function CalendarPage() {
   for (const r of rows) {
     const meta = (r.metadata ?? {}) as {
       dueDate?: string;
-      reviewAt?: string;
-      completedAt?: string | null;
+      reminder?: boolean;
     };
-    if (r.kind === "task" && meta.dueDate) {
+    // Only reminders surface on the calendar. Everything else (notes, tasks,
+    // decisions, captures) lives on its own page — the calendar is a pure
+    // reminder/time-block view.
+    if (r.kind === "task" && meta.reminder === true && meta.dueDate) {
       calItems.push({
         id: r.id,
         kind: r.kind,
@@ -31,26 +33,7 @@ export default function CalendarPage() {
         isoDate: meta.dueDate.slice(0, 10),
         via: "due",
       });
-      continue;
     }
-    if (r.kind === "decision" && meta.reviewAt) {
-      calItems.push({
-        id: r.id,
-        kind: r.kind,
-        title: r.title,
-        summary: r.summary,
-        isoDate: meta.reviewAt.slice(0, 10),
-        via: "review",
-      });
-    }
-    calItems.push({
-      id: r.id,
-      kind: r.kind,
-      title: r.title,
-      summary: r.summary,
-      isoDate: new Date(r.capturedAt).toISOString().slice(0, 10),
-      via: "captured",
-    });
   }
 
   return (
@@ -62,7 +45,7 @@ export default function CalendarPage() {
             Calendar
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            Tasks land on their due date, decisions on their review date, everything else on the day you saved it.
+            Reminders, one screen. Add them inline — kept out of your task list.
           </p>
         </div>
       </div>

@@ -13,9 +13,6 @@ import {
   Columns3,
   X,
   Plus,
-  ListTodo,
-  StickyNote,
-  Lightbulb,
   Bell,
 } from "lucide-react";
 
@@ -580,7 +577,7 @@ function DayDrawer({
 
         <div className="px-5 py-4">
           <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-2">
-            On this day · {items.length}
+            Reminders · {items.length}
           </h4>
           {items.length === 0 ? (
             <p className="text-sm text-[var(--text-faint)]">Nothing yet.</p>
@@ -623,83 +620,24 @@ function DayDrawer({
         </div>
 
         <div className="px-5 py-4 border-t border-[var(--border-soft)]">
-          <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3">
-            Quick add for this day
+          <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3 inline-flex items-center gap-1.5">
+            <Bell size={11} className="text-[var(--accent)]" />
+            Add a reminder
           </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <QuickAddBtn
-              icon={Bell}
-              label="Reminder"
-              onClick={() => setOpen("reminder")}
-              active={open === "reminder"}
-              accent
-            />
-            <QuickAddBtn
-              icon={ListTodo}
-              label="Task"
-              onClick={() => setOpen("task")}
-              active={open === "task"}
-            />
-            <QuickAddBtn
-              icon={StickyNote}
-              label="Note"
-              onClick={() => setOpen("note")}
-              active={open === "note"}
-            />
-            <QuickAddBtn
-              icon={Lightbulb}
-              label="Decision"
-              onClick={() => setOpen("decision")}
-              active={open === "decision"}
-            />
-          </div>
-
-          {open && (
-            <QuickAddInput
-              kind={open}
-              pending={pending}
-              onSubmit={(t) => quickCreate(open, t)}
-              onCancel={() => setOpen(null)}
-              reminderTime={reminderTime}
-              onReminderTimeChange={setReminderTime}
-            />
-          )}
+          <QuickAddInput
+            kind="reminder"
+            pending={pending}
+            onSubmit={(t) => quickCreate("reminder", t)}
+            onCancel={() => setOpen(null)}
+            reminderTime={reminderTime}
+            onReminderTimeChange={setReminderTime}
+          />
         </div>
       </div>
     </div>
   );
 }
 
-function QuickAddBtn({
-  icon: Icon,
-  label,
-  onClick,
-  active,
-  accent,
-}: {
-  icon: React.ComponentType<{ size?: number }>;
-  label: string;
-  onClick: () => void;
-  active?: boolean;
-  accent?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-medium border transition ${
-        active
-          ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-          : accent
-          ? "bg-[var(--bg-card)] text-[var(--text)] border-[var(--border-strong)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
-          : "bg-[var(--bg-rail)] text-[var(--text-muted)] border-[var(--border-soft)] hover:text-[var(--text)] hover:border-[var(--border-strong)]"
-      }`}
-    >
-      <Icon size={13} />
-      {label}
-    </button>
-  );
-}
 
 function QuickAddInput({
   kind,
