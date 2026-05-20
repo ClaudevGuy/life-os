@@ -24,11 +24,11 @@ The only thing that ever leaves your machine is a single AI call — and only wh
 | `/habits` | Daily / weekly check-ins, 30-day heatmap, streaks |
 | `/decisions` | Log a decision with reasoning, set a review date, mark the outcome later |
 | `/highlights` | Lines worth re-reading, surfaced again after a week |
-| `/journal` | Past journal entries, sorted by date |
+| `/journal` | Inline write-today editor (5-circle energy scale, rotating prompts, autosave) with past entries listed alongside |
 | `/goals` | Targets with progress bars and milestones |
 | `/projects` | PARA-style projects and areas |
 | `/people` | Conversations, last-contacted, what was discussed |
-| `/calendar` | Monthly grid showing captures, due dates, review dates |
+| `/calendar` | Month / week / agenda views of reminders; archived ones show struck-through |
 | `/graph` | Items clustered by topic + wiki-link connections |
 | `/tags` | Topics across your captures, weighted by frequency |
 | `/reviews` | Weekly review — 3 prompts, auto-saves |
@@ -235,6 +235,12 @@ No license file yet — treat this as personal-use only unless that changes.
 
 ---
 
+## Design
+
+Life OS uses the **Studio** visual direction — warm-paper surfaces (`#F6F1E8` cream in light, near-black in dark), a terra (`#D45A3F`) primary accent, sage / gold / plum / sky as category tints, 12px card corners, and 10px rounded-rect controls. Typography is **Geist** / **Geist Mono**. Tokens live in [src/app/globals.css](src/app/globals.css); legacy token names alias onto the Studio palette so older components retint automatically.
+
+---
+
 ## Acknowledgements
 
-The architecture is a direct riff on [Hangar](https://github.com/ClaudevGuy/hangar), which proved this pattern works. The category-tinted UI vocabulary (the gold accent, the warm-paper light mode, the per-card top accents) is original to Life OS.
+The architecture is a direct riff on [Hangar](https://github.com/ClaudevGuy/hangar), which proved the local-first-with-Dexie pattern works. The Studio visual direction — warm paper, terra accent, sans typography — is its own thing.
