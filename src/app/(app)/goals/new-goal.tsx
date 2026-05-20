@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Plus, Target } from "lucide-react";
 import { captureItem } from "@/lib/store/items";
@@ -16,6 +16,15 @@ export function NewGoal() {
   });
   const [progress, setProgress] = useState(0);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") reset();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   function reset() {
     setTitle("");
@@ -55,25 +64,30 @@ export function NewGoal() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="life-btn life-btn-primary"
+        className="life-btn life-btn-sm life-btn-primary"
       >
-        <Plus size={12} strokeWidth={3} />
-        New goal
+        <Plus size={13} strokeWidth={2} />
+        Add goal
       </button>
     );
   }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[16vh] bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[16vh] bg-black/40 backdrop-blur-sm"
       onClick={reset}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-card)] p-6 life-rise"
+        className="w-full max-w-md rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] p-6 life-rise"
+        style={{ boxShadow: "var(--shadow-3)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="inline-flex items-center gap-2 text-sm font-medium mb-4">
-          <Target size={14} className="text-[var(--accent)]" />
+        <h2 className="inline-flex items-center gap-2 text-[14px] font-semibold mb-4 text-[var(--ink)]">
+          <Target
+            size={15}
+            strokeWidth={1.6}
+            className="text-[var(--terra)]"
+          />
           New goal
         </h2>
 
@@ -82,28 +96,32 @@ export function NewGoal() {
           onChange={(e) => setTitle(e.target.value)}
           placeholder="What are you aiming at?"
           autoFocus
-          className="w-full rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-[14px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
         />
         <textarea
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           rows={3}
           placeholder="Why does this matter? What's the success metric?"
-          className="mt-2 w-full rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] resize-none"
+          className="mt-2 w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-[14px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] resize-none transition"
         />
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className="text-xs text-[var(--text-muted)] flex flex-col gap-1.5">
-            Target date
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+              Target date
+            </span>
             <input
               type="date"
               value={targetDate}
               onChange={(e) => setTargetDate(e.target.value)}
-              className="rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              className="rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-2.5 py-2 text-[13.5px] text-[var(--ink)] focus:outline-none focus:border-[var(--terra)] transition tabular-nums"
             />
           </label>
-          <label className="text-xs text-[var(--text-muted)] flex flex-col gap-1.5">
-            Starting progress
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+              Starting progress
+            </span>
             <div className="flex items-center gap-2">
               <input
                 type="range"
@@ -111,9 +129,9 @@ export function NewGoal() {
                 max={100}
                 value={progress}
                 onChange={(e) => setProgress(Number(e.target.value))}
-                className="flex-1 accent-[var(--accent)]"
+                className="flex-1 accent-[var(--terra)]"
               />
-              <span className="text-xs text-[var(--text)] tabular-nums w-9 text-right">
+              <span className="font-mono text-[12px] text-[var(--ink)] tabular-nums w-9 text-right">
                 {progress}%
               </span>
             </div>
