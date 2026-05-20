@@ -16,6 +16,7 @@ import {
   ListTodo,
   StickyNote,
   Lightbulb,
+  Bell,
 } from "lucide-react";
 
 type CalItem = {
@@ -487,6 +488,8 @@ function Agenda({
 
 // ---------- day drawer ----------
 
+type QuickKind = "reminder" | "task" | "note" | "decision";
+
 function DayDrawer({
   day,
   items,
@@ -497,7 +500,8 @@ function DayDrawer({
   onClose: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [open, setOpen] = useState<"task" | "note" | "decision" | null>(null);
+  const [open, setOpen] = useState<QuickKind | null>("reminder");
+  const [reminderTime, setReminderTime] = useState("09:00");
 
   const date = new Date(`${day}T12:00:00`);
   const label = date.toLocaleDateString(undefined, {
@@ -509,11 +513,21 @@ function DayDrawer({
   const isToday = day === ymd(new Date());
   const isPast = date < new Date() && !isToday;
 
-  function quickCreate(kind: "task" | "note" | "decision", title: string) {
+  function quickCreate(kind: QuickKind, title: string) {
     if (!title.trim()) return;
     startTransition(async () => {
       const metadata: Record<string, unknown> = {};
-      if (kind === "task") {
+      // Reminders are stored as tasks with reminder:true and a specific time.
+      const storeKind: "task" | "note" | "decision" =
+        kind === "reminder" ? "task" : kind;
+      if (kind === "reminder") {
+        const [h, m] = reminderTime.split(":");
+        const due = new Date(`${day}T${h.padStart(2, "0")}:${(m ?? "00").padStart(2, "0")}:00`);
+        metadata.dueDate = due.toISOString();
+        metadata.priority = "medium";
+        metadata.completedAt = null;
+        metadata.reminder = true;
+      } else if (kind === "task") {
         metadata.dueDate = new Date(`${day}T09:00:00`).toISOString();
         metadata.priority = "medium";
         metadata.completedAt = null;
@@ -522,12 +536,12 @@ function DayDrawer({
         metadata.outcome = "pending";
       }
       try {
-        await captureItem({ kind, title: title.trim(), metadata });
+        await captureItem({ kind: storeKind, title: title.trim(), metadata });
       } catch {
         toast.error("Couldn't save");
         return;
       }
-      toast.success("Added");
+      toast.success(kind === "reminder" ? "Reminder set" : "Added");
       setOpen(null);
     });
   }
@@ -564,34 +578,38 @@ function DayDrawer({
             <p className="text-sm text-[var(--text-faint)]">Nothing yet.</p>
           ) : (
             <ul className="space-y-1.5">
-              {items.map((it) => (
-                <li key={`${it.id}-${it.via}`}>
-                  <Link
-                    href={`/items/${it.id}`}
-                    className="block rounded-md p-2 hover:bg-[var(--bg-card-hover)] transition"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ background: `var(--kind-${it.kind})` }}
-                      />
-                      <span className="text-sm text-[var(--text)] truncate">
-                        {it.title ?? "untitled"}
-                      </span>
-                      {it.via !== "captured" && (
-                        <span className="ml-auto text-[10px] uppercase tracking-wide text-[var(--accent)]">
-                          {it.via}
+              {items.map((it) => {
+                const isReminder = it.kind === "task" && it.via === "due";
+                return (
+                  <li key={`${it.id}-${it.via}`}>
+                    <Link
+                      href={`/items/${it.id}`}
+                      className="block rounded-md p-2 hover:bg-[var(--bg-card-hover)] transition"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ background: `var(--kind-${it.kind})` }}
+                        />
+                        <span className="text-sm text-[var(--text)] truncate">
+                          {it.title ?? "untitled"}
                         </span>
+                        {it.via !== "captured" && (
+                          <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--accent)]">
+                            {isReminder && <Bell size={9} />}
+                            {it.via}
+                          </span>
+                        )}
+                      </div>
+                      {it.summary && (
+                        <p className="mt-0.5 ml-3.5 text-xs text-[var(--text-muted)] line-clamp-1">
+                          {it.summary}
+                        </p>
                       )}
-                    </div>
-                    {it.summary && (
-                      <p className="mt-0.5 ml-3.5 text-xs text-[var(--text-muted)] line-clamp-1">
-                        {it.summary}
-                      </p>
-                    )}
-                  </Link>
-                </li>
-              ))}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -600,7 +618,14 @@ function DayDrawer({
           <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3">
             Quick add for this day
           </h4>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <QuickAddBtn
+              icon={Bell}
+              label="Reminder"
+              onClick={() => setOpen("reminder")}
+              active={open === "reminder"}
+              accent
+            />
             <QuickAddBtn
               icon={ListTodo}
               label="Task"
@@ -627,6 +652,8 @@ function DayDrawer({
               pending={pending}
               onSubmit={(t) => quickCreate(open, t)}
               onCancel={() => setOpen(null)}
+              reminderTime={reminderTime}
+              onReminderTimeChange={setReminderTime}
             />
           )}
         </div>
@@ -640,23 +667,27 @@ function QuickAddBtn({
   label,
   onClick,
   active,
+  accent,
 }: {
   icon: React.ComponentType<{ size?: number }>;
   label: string;
   onClick: () => void;
   active?: boolean;
+  accent?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md py-2 text-xs transition ${
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-medium border transition ${
         active
-          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-          : "bg-[var(--bg-rail)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-card-hover)]"
+          ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+          : accent
+          ? "bg-[var(--bg-card)] text-[var(--text)] border-[var(--border-strong)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          : "bg-[var(--bg-rail)] text-[var(--text-muted)] border-[var(--border-soft)] hover:text-[var(--text)] hover:border-[var(--border-strong)]"
       }`}
     >
-      <Icon size={12} />
+      <Icon size={13} />
       {label}
     </button>
   );
@@ -667,41 +698,64 @@ function QuickAddInput({
   pending,
   onSubmit,
   onCancel,
+  reminderTime,
+  onReminderTimeChange,
 }: {
-  kind: "task" | "note" | "decision";
+  kind: QuickKind;
   pending: boolean;
   onSubmit: (title: string) => void;
   onCancel: () => void;
+  reminderTime: string;
+  onReminderTimeChange: (t: string) => void;
 }) {
   const [text, setText] = useState("");
+  const isReminder = kind === "reminder";
   return (
-    <div className="mt-3 flex items-center gap-2">
-      <input
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") onSubmit(text);
-          if (e.key === "Escape") onCancel();
-        }}
-        placeholder={
-          kind === "task"
-            ? "Task due that day…"
-            : kind === "decision"
-            ? "Decision to review that day…"
-            : "Note title…"
-        }
-        className="flex-1 rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-      />
-      <button
-        type="button"
-        disabled={pending || !text.trim()}
-        onClick={() => onSubmit(text)}
-        className="inline-flex items-center gap-1.5 rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-2 text-xs font-medium hover:brightness-110 transition disabled:opacity-30"
-      >
-        <Plus size={12} />
-        Add
-      </button>
+    <div className="mt-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <input
+          autoFocus
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSubmit(text);
+            if (e.key === "Escape") onCancel();
+          }}
+          placeholder={
+            isReminder
+              ? "Remind me to…"
+              : kind === "task"
+              ? "Task due that day…"
+              : kind === "decision"
+              ? "Decision to review that day…"
+              : "Note title…"
+          }
+          className="flex-1 rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition"
+        />
+        {isReminder && (
+          <input
+            type="time"
+            value={reminderTime}
+            onChange={(e) => onReminderTimeChange(e.target.value)}
+            className="rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-2 py-2 text-sm focus:outline-none focus:border-[var(--accent)] transition tabular-nums"
+            title="Time for the reminder"
+          />
+        )}
+        <button
+          type="button"
+          disabled={pending || !text.trim()}
+          onClick={() => onSubmit(text)}
+          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 hover:shadow-[0_2px_12px_var(--accent-glow)] active:translate-y-px transition disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed"
+        >
+          <Plus size={12} strokeWidth={3} />
+          {isReminder ? "Set" : "Add"}
+        </button>
+      </div>
+      {isReminder && (
+        <p className="text-[10px] text-[var(--text-faint)] px-1">
+          Saved as a task with a due time — it'll show up in Tasks, Today, and on this day in the calendar.
+        </p>
+      )}
     </div>
   );
 }
