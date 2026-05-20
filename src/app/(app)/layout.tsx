@@ -68,7 +68,7 @@ export default function AppLayout({
             className="px-2.5 pt-1 text-[10px] text-[var(--text-faint)] uppercase tracking-wider"
             data-rail-text
           >
-            demo · v0.1
+            local · v1.0
           </div>
         </div>
       </aside>

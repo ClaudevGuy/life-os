@@ -46,7 +46,7 @@ export function WelcomeModal() {
       icon: Inbox,
       title: "Your data is yours",
       body:
-        "Self-hostable. Open REST API. Plug Claude Code, iOS Shortcuts, or any tool into your second brain.",
+        "Everything lives in your browser. Connect a private GitHub gist in Settings to sync across devices — no server, no account.",
     },
   ];
 
