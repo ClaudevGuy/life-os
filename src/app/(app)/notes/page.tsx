@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   Pencil,
   Clock,
+  Menu,
 } from "lucide-react";
 import {
   useItemsOfKind,
@@ -18,6 +19,8 @@ import {
   type StoredItem,
 } from "@/lib/store/items";
 import { ItemActions } from "@/components/item-actions";
+
+type View = "editor" | "grid";
 
 export default function NotesPage() {
   return (
@@ -31,19 +34,21 @@ function NotesScreen() {
   const rows = useItemsOfKind("note") ?? [];
   const router = useRouter();
   const params = useSearchParams();
+  const view: View = params.get("view") === "grid" ? "grid" : "editor";
   const selectedId = params.get("id");
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
 
-  // Auto-select the first note when nothing is selected and notes exist.
+  // Auto-select the first note in editor view when nothing is selected.
   useEffect(() => {
+    if (view !== "editor") return;
     if (!selectedId && rows.length > 0) {
       const first = rows[0];
       const sp = new URLSearchParams(params.toString());
       sp.set("id", first.id);
       router.replace(`/notes?${sp.toString()}`);
     }
-  }, [selectedId, rows, router, params]);
+  }, [view, selectedId, rows, router, params]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -53,11 +58,12 @@ function NotesScreen() {
     );
   }, [rows, query]);
 
-  const groups = useMemo(() => groupByRecency(filtered), [filtered]);
-  const selected = useMemo(
-    () => rows.find((r) => r.id === selectedId) ?? null,
-    [rows, selectedId],
-  );
+  function setView(next: View) {
+    const sp = new URLSearchParams(params.toString());
+    if (next === "grid") sp.set("view", "grid");
+    else sp.delete("view");
+    router.replace(`/notes${sp.toString() ? `?${sp.toString()}` : ""}`);
+  }
 
   function selectNote(id: string) {
     const sp = new URLSearchParams(params.toString());
@@ -73,7 +79,11 @@ function NotesScreen() {
           title: null,
           body: null,
         });
-        selectNote(item.id);
+        // Drop into editor view so the new note opens immediately.
+        const sp = new URLSearchParams(params.toString());
+        sp.delete("view");
+        sp.set("id", item.id);
+        router.replace(`/notes?${sp.toString()}`);
         toast.success("Note created");
       } catch {
         toast.error("Couldn't create note");
@@ -81,11 +91,69 @@ function NotesScreen() {
     });
   }
 
+  if (view === "grid") {
+    return (
+      <GridView
+        rows={rows}
+        filtered={filtered}
+        query={query}
+        onQuery={setQuery}
+        onSwitchToEditor={() => setView("editor")}
+        onCreate={createNote}
+        creating={pending}
+      />
+    );
+  }
+
+  return (
+    <EditorView
+      rows={rows}
+      filtered={filtered}
+      query={query}
+      onQuery={setQuery}
+      selectedId={selectedId}
+      onSelect={selectNote}
+      onSwitchToGrid={() => setView("grid")}
+      onCreate={createNote}
+      creating={pending}
+    />
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// EDITOR (master-detail) view
+// ──────────────────────────────────────────────────────────────────────
+
+function EditorView({
+  rows,
+  filtered,
+  query,
+  onQuery,
+  selectedId,
+  onSelect,
+  onSwitchToGrid,
+  onCreate,
+  creating,
+}: {
+  rows: StoredItem[];
+  filtered: StoredItem[];
+  query: string;
+  onQuery: (q: string) => void;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onSwitchToGrid: () => void;
+  onCreate: () => void;
+  creating: boolean;
+}) {
+  const groups = useMemo(() => groupByRecency(filtered), [filtered]);
+  const selected = useMemo(
+    () => rows.find((r) => r.id === selectedId) ?? null,
+    [rows, selectedId],
+  );
+
   return (
     <div className="flex h-[calc(100vh-61px)] min-h-0">
-      {/* Middle pane: notes list */}
       <aside className="w-[380px] shrink-0 flex flex-col border-r border-[var(--line)] bg-[var(--paper)] min-h-0">
-        {/* Header */}
         <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-3">
           <h1 className="inline-flex items-center gap-2 text-[22px] font-semibold tracking-[-0.02em] text-[var(--ink)]">
             <NotebookPen size={20} className="text-[var(--terra)]" strokeWidth={1.6} />
@@ -97,16 +165,17 @@ function NotesScreen() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              title="Coming soon"
+              onClick={onSwitchToGrid}
+              title="Grid view"
+              aria-label="Switch to grid view"
               className="grid place-items-center w-9 h-9 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
-              aria-label="Layout"
             >
               <LayoutGrid size={15} strokeWidth={1.6} />
             </button>
             <button
               type="button"
-              onClick={createNote}
-              disabled={pending}
+              onClick={onCreate}
+              disabled={creating}
               title="New note"
               aria-label="New note"
               className="grid place-items-center w-9 h-9 rounded-[10px] bg-[var(--ink)] text-[var(--paper)] hover:opacity-90 active:scale-95 transition disabled:opacity-50"
@@ -116,7 +185,6 @@ function NotesScreen() {
           </div>
         </div>
 
-        {/* Search */}
         <div className="px-5 pb-3">
           <div className="relative">
             <Search
@@ -125,14 +193,13 @@ function NotesScreen() {
             />
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => onQuery(e.target.value)}
               placeholder="Search notes…"
               className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] pl-9 pr-3 py-2 text-[13.5px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
             />
           </div>
         </div>
 
-        {/* List */}
         <div className="flex-1 overflow-y-auto px-3 pb-6 min-h-0">
           {filtered.length === 0 ? (
             <div className="px-2 py-10 text-center text-[13px] text-[var(--muted)]">
@@ -152,7 +219,7 @@ function NotesScreen() {
                       key={n.id}
                       note={n}
                       active={n.id === selectedId}
-                      onSelect={() => selectNote(n.id)}
+                      onSelect={() => onSelect(n.id)}
                     />
                   ))}
                 </div>
@@ -162,7 +229,6 @@ function NotesScreen() {
         </div>
       </aside>
 
-      {/* Right pane: detail */}
       <main className="flex-1 overflow-y-auto min-w-0">
         {selected ? (
           <NoteDetail note={selected} />
@@ -176,7 +242,179 @@ function NotesScreen() {
   );
 }
 
-// ---------- list row ----------
+// ──────────────────────────────────────────────────────────────────────
+// GRID view
+// ──────────────────────────────────────────────────────────────────────
+
+function GridView({
+  rows,
+  filtered,
+  query,
+  onQuery,
+  onSwitchToEditor,
+  onCreate,
+  creating,
+}: {
+  rows: StoredItem[];
+  filtered: StoredItem[];
+  query: string;
+  onQuery: (q: string) => void;
+  onSwitchToEditor: () => void;
+  onCreate: () => void;
+  creating: boolean;
+}) {
+  const now = Date.now();
+  const weekAgo = now - 7 * 86_400_000;
+  const monthAgo = now - 30 * 86_400_000;
+
+  let pinned = 0;
+  let week = 0;
+  let month = 0;
+  for (const r of rows) {
+    if (r.isPinned) pinned++;
+    const ts = new Date(r.updatedAt).getTime();
+    if (ts >= weekAgo) week++;
+    if (ts >= monthAgo) month++;
+  }
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto pg-enter">
+      <header className="flex items-baseline justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="life-h1 inline-flex items-center gap-2">
+            <NotebookPen size={20} className="text-[var(--terra)]" strokeWidth={1.6} />
+            Notes
+          </h1>
+          <p className="text-[14.5px] text-[var(--muted)] mt-1">
+            Thoughts, conversation logs, scraps you want to keep.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onSwitchToEditor}
+            title="Editor view"
+            className="life-btn life-btn-sm life-btn-secondary"
+          >
+            <Menu size={13} strokeWidth={1.6} />
+            Editor
+          </button>
+          <button
+            type="button"
+            onClick={onCreate}
+            disabled={creating}
+            className="life-btn life-btn-sm life-btn-primary"
+          >
+            <Plus size={13} strokeWidth={2} />
+            New note
+          </button>
+        </div>
+      </header>
+
+      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 life-stagger">
+        <Stat label="Total" value={rows.length} tone="ink" />
+        <Stat label="Pinned" value={pinned} tone="gold" />
+        <Stat label="This week" value={week} tone="sage" />
+        <Stat label="This month" value={month} tone="ink" />
+      </div>
+
+      <div className="mt-4">
+        <div className="relative">
+          <Search
+            size={14}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none"
+          />
+          <input
+            value={query}
+            onChange={(e) => onQuery(e.target.value)}
+            placeholder="Search notes…"
+            className="w-full rounded-[12px] bg-[var(--paper)] border border-[var(--line)] pl-10 pr-3 py-3 text-[14px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
+          />
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="mt-12 life-card p-12 text-center">
+          <p className="text-[14px] text-[var(--muted)]">
+            {query ? "No matching notes." : "No notes yet."}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 life-stagger">
+          {filtered.map((n) => (
+            <NoteGridCard key={n.id} note={n} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "ink" | "gold" | "sage";
+}) {
+  const color =
+    tone === "gold"
+      ? "var(--gold)"
+      : tone === "sage"
+      ? "var(--sage)"
+      : "var(--ink)";
+  return (
+    <div className="life-card p-5">
+      <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+        {label}
+      </div>
+      <div
+        className="mt-2 text-[34px] font-semibold tabular-nums tracking-[-0.02em] leading-none"
+        style={{ color }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function NoteGridCard({ note: n }: { note: StoredItem }) {
+  const dot = topicColor(n.topic);
+  const tag = n.topic ?? statusTag(n.status);
+  return (
+    <Link
+      href={`/notes?id=${n.id}`}
+      className="life-card life-card-hover flex flex-col min-h-[240px] p-5 transition"
+    >
+      <h3 className="text-[16px] font-semibold text-[var(--ink)] leading-snug line-clamp-2">
+        {n.title ?? "Untitled"}
+      </h3>
+      <div className="mt-2 text-[13.5px] text-[var(--ink-2)] leading-relaxed line-clamp-6 whitespace-pre-line">
+        {n.body?.trim() || <em className="text-[var(--muted)] not-italic">Empty.</em>}
+      </div>
+      <div className="mt-auto pt-4 border-t border-dashed border-[var(--line)] flex items-center justify-between gap-3">
+        <span
+          className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.12em]"
+          style={{
+            color: dot,
+            background: `color-mix(in oklch, ${dot} 14%, transparent)`,
+          }}
+        >
+          {tag}
+        </span>
+        <span className="text-[10.5px] uppercase tracking-[0.14em] text-[var(--muted-2)] font-semibold">
+          {relDate(n.updatedAt).toUpperCase()}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Shared atoms
+// ──────────────────────────────────────────────────────────────────────
 
 function NoteRow({
   note: n,
@@ -227,8 +465,6 @@ function NoteRow({
   );
 }
 
-// ---------- detail pane ----------
-
 function NoteDetail({ note: n }: { note: StoredItem }) {
   const words = (n.body?.trim().match(/\S+/g) ?? []).length;
   const minRead = Math.max(1, Math.round(words / 220));
@@ -239,7 +475,6 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
 
   return (
     <div className="px-8 pt-6 pb-12 max-w-3xl mx-auto pg-enter">
-      {/* Top row: breadcrumb + actions */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="inline-flex items-center gap-2 text-[12.5px] text-[var(--muted)]">
           <NotebookPen size={14} strokeWidth={1.6} className="text-[var(--muted)]" />
@@ -268,7 +503,6 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
         </div>
       </div>
 
-      {/* Meta row */}
       <div className="flex items-center gap-3 flex-wrap mb-4 text-[11.5px]">
         <span
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold uppercase tracking-[0.1em] text-[10.5px]"
@@ -294,12 +528,10 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
         </span>
       </div>
 
-      {/* Title */}
       <h1 className="text-[40px] sm:text-[44px] leading-[1.05] font-semibold tracking-[-0.025em] text-[var(--ink)]">
         {n.title ?? "Untitled"}
       </h1>
 
-      {/* Body */}
       <div className="mt-6">
         {n.body?.trim() ? (
           <p className="text-[15px] leading-[1.7] text-[var(--ink-2)] whitespace-pre-wrap">
@@ -315,7 +547,9 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
   );
 }
 
-// ---------- helpers ----------
+// ──────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────
 
 function groupByRecency(rows: StoredItem[]) {
   const now = Date.now();
@@ -329,7 +563,6 @@ function groupByRecency(rows: StoredItem[]) {
   const weekItems: StoredItem[] = [];
   const earlierItems: StoredItem[] = [];
 
-  // Pinned items always go to the top of "today" so they're easy to find.
   const sorted = [...rows].sort((a, b) => {
     if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
