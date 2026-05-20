@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Check, Repeat } from "lucide-react";
+import { Check, Repeat, Pencil } from "lucide-react";
 import type { StoredItem } from "@/lib/store/items";
 import { updateItem, captureItem } from "@/lib/store/items";
 
@@ -25,11 +25,13 @@ export function TaskRow({
   done,
   compact,
   indent,
+  onEdit,
 }: {
   task: StoredItem;
   done?: boolean;
   compact?: boolean;
   indent?: boolean;
+  onEdit?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [isDone, setIsDone] = useState(Boolean(done));
@@ -64,7 +66,8 @@ export function TaskRow({
     }, 700);
   }
 
-  function toggle() {
+  function toggle(e?: React.MouseEvent) {
+    e?.stopPropagation();
     const next = !isDone;
     setIsDone(next);
     if (next) fireConfetti();
@@ -93,7 +96,10 @@ export function TaskRow({
 
   return (
     <li
-      className={`flex items-start gap-3 group ${padding} ${indentClass} hover:bg-[var(--bg-card-hover)] transition`}
+      onClick={onEdit}
+      className={`flex items-start gap-3 group ${padding} ${indentClass} hover:bg-[var(--bg-card-hover)] transition ${
+        onEdit ? "cursor-pointer" : ""
+      }`}
     >
       {indent && (
         <span className="absolute -ml-5 mt-1.5 w-2 border-t border-[var(--border-strong)]" />
@@ -158,6 +164,14 @@ export function TaskRow({
         {isDone && meta.completedAt && (
           <span className="text-[11px] text-[var(--text-faint)]">
             {relTime(new Date(meta.completedAt))}
+          </span>
+        )}
+        {onEdit && (
+          <span
+            className="opacity-0 group-hover:opacity-100 transition text-[var(--text-faint)]"
+            aria-hidden
+          >
+            <Pencil size={11} />
           </span>
         )}
       </div>
