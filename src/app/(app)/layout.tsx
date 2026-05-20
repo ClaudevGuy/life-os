@@ -3,7 +3,6 @@ import { Settings } from "lucide-react";
 import { CommandPalette } from "@/components/command-palette";
 import { QuickCapture } from "@/components/quick-capture";
 import { WelcomeModal } from "@/components/welcome-modal";
-import { Pomodoro } from "@/components/pomodoro";
 import { RecentlyViewed } from "@/components/recently-viewed";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { TopBar } from "@/components/top-bar";
@@ -53,9 +52,6 @@ export default function AppLayout({
           className="px-2 py-3 space-y-2"
           style={{ borderTop: "1px solid var(--rail-border, var(--border-strong))" }}
         >
-          <div className="px-1" data-rail-text>
-            <Pomodoro />
-          </div>
           <Link
             href="/settings"
             title="Settings"

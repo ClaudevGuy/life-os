@@ -16,6 +16,7 @@ import { db } from "@/lib/store/db";
 import { SidebarToggle } from "@/components/sidebar-toggle";
 import { SearchTrigger } from "@/components/search-trigger";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PomodoroPill } from "@/components/pomodoro-pill";
 
 type Stats = {
   openTasks: number;
@@ -149,6 +150,7 @@ export function TopBar() {
           <Sparkles size={12} />
           Ask
         </Link>
+        <PomodoroPill />
         <ThemeToggle />
         {now && (
           <div className="hidden sm:flex flex-col items-end justify-center h-[30px] px-3 rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] leading-none shadow-sm">
