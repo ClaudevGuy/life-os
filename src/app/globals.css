@@ -313,168 +313,244 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
 }
 
 /* ============================================================
-   Buttons
-   life-btn          → base reset + shape (pill, height, padding)
-   life-btn-primary  → gold gradient, dark text, glow ring
-   life-btn-secondary→ surface with strong border, "ghost gold" hover
-   life-btn-ghost    → text-only, low chrome
-   life-btn-danger   → red tint, soft surface
-   life-btn-sm / -lg → size variants
-   ------------------------------------------------------------ */
-.life-btn {
+   Buttons — premium, depth-rich, fits Life OS warm-gold language
+   ------------------------------------------------------------
+   Variants:  life-btn-primary | -secondary | -ghost | -danger
+   Sizes:     life-btn-sm | life-btn-lg
+   Specificity is bumped via [class] selectors so utility-first
+   classes (Tailwind) never accidentally win the cascade.
+   ============================================================ */
+
+button.life-btn,
+a.life-btn,
+.life-btn[class] {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  height: 34px;
-  padding: 0 0.95rem;
+  gap: 0.5rem;
+  height: 38px;
+  padding: 0 1.1rem;
+  min-width: 0;
   border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
   letter-spacing: -0.005em;
   line-height: 1;
   white-space: nowrap;
+  text-decoration: none;
   border: 1px solid transparent;
   background: transparent;
   color: var(--text);
   cursor: pointer;
-  transition:
-    transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    background 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease,
-    box-shadow 200ms ease,
-    filter 180ms ease;
-  user-select: none;
+  isolation: isolate;
   -webkit-user-select: none;
+  user-select: none;
+  transition:
+    transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    box-shadow 220ms ease,
+    filter 200ms ease;
 }
-.life-btn:focus-visible {
+.life-btn[class]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-glow), 0 0 0 1px var(--accent);
+  box-shadow:
+    0 0 0 2px var(--bg-app),
+    0 0 0 4px var(--accent);
 }
-.life-btn:disabled,
-.life-btn[aria-disabled="true"] {
-  opacity: 0.45;
+.life-btn[class]:disabled,
+.life-btn[class][aria-disabled="true"] {
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none !important;
   filter: none !important;
 }
-.life-btn:not(:disabled):active {
-  transform: translateY(1px);
+.life-btn[class]:not(:disabled):active {
+  transform: translateY(1px) scale(0.985);
 }
 
 /* size variants */
-.life-btn-sm {
-  height: 28px;
-  padding: 0 0.7rem;
-  font-size: 12px;
-  gap: 0.3rem;
+.life-btn-sm[class] {
+  height: 30px;
+  padding: 0 0.85rem;
+  font-size: 12.5px;
+  gap: 0.4rem;
 }
-.life-btn-lg {
-  height: 42px;
-  padding: 0 1.25rem;
+.life-btn-lg[class] {
+  height: 46px;
+  padding: 0 1.5rem;
   font-size: 14px;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
-/* PRIMARY — warm gold gradient with inner highlight and ambient glow */
-.life-btn-primary {
-  color: #1a1408;
+/* -----------------------------------------------------------
+   PRIMARY — molten warm-gold pill with double inner highlight,
+   soft amber inner shadow, dark hairline border, ambient glow
+   ----------------------------------------------------------- */
+.life-btn-primary[class] {
+  color: #1a1308;
+  background:
+    radial-gradient(120% 80% at 50% -20%, rgba(255, 245, 220, 0.55) 0%, transparent 55%),
+    linear-gradient(180deg,
+      color-mix(in oklch, var(--accent-hot) 92%, white) 0%,
+      var(--accent-hot) 22%,
+      var(--accent) 65%,
+      color-mix(in oklch, var(--accent) 82%, black) 100%);
+  border-color: color-mix(in oklch, var(--accent) 55%, black);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 230, 0.65),
+    inset 0 -1px 0 rgba(70, 40, 5, 0.35),
+    inset 0 0 0 1px rgba(255, 220, 160, 0.18),
+    0 1px 2px rgba(20, 12, 0, 0.4),
+    0 6px 14px -6px color-mix(in oklch, var(--accent) 60%, transparent),
+    0 14px 30px -12px color-mix(in oklch, var(--accent) 50%, transparent);
+  text-shadow: 0 1px 0 rgba(255, 245, 220, 0.45);
+}
+.life-btn-primary[class]:not(:disabled):hover {
+  filter: brightness(1.05) saturate(1.05);
+  border-color: color-mix(in oklch, var(--accent) 45%, black);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 235, 0.75),
+    inset 0 -1px 0 rgba(70, 40, 5, 0.32),
+    inset 0 0 0 1px rgba(255, 230, 180, 0.24),
+    0 2px 4px rgba(20, 12, 0, 0.45),
+    0 10px 20px -6px color-mix(in oklch, var(--accent) 70%, transparent),
+    0 22px 40px -12px color-mix(in oklch, var(--accent) 60%, transparent);
+}
+.life-btn-primary[class]:not(:disabled):active {
+  filter: brightness(0.95);
+  box-shadow:
+    inset 0 2px 4px rgba(50, 28, 0, 0.35),
+    inset 0 -1px 0 rgba(255, 235, 190, 0.15),
+    0 1px 2px rgba(20, 12, 0, 0.35);
+}
+
+/* -----------------------------------------------------------
+   SECONDARY — substantial card-like surface, warm hover
+   ----------------------------------------------------------- */
+.life-btn-secondary[class] {
+  color: var(--text);
   background:
     linear-gradient(180deg,
-      color-mix(in oklch, var(--accent-hot) 80%, white 8%) 0%,
-      var(--accent) 55%,
-      color-mix(in oklch, var(--accent) 88%, black) 100%);
-  border-color: color-mix(in oklch, var(--accent) 70%, black);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1px 0 rgba(80, 50, 10, 0.18),
-    0 1px 2px rgba(0, 0, 0, 0.25),
-    0 8px 22px -10px color-mix(in oklch, var(--accent) 65%, transparent);
-}
-.life-btn-primary:not(:disabled):hover {
-  filter: brightness(1.06);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.42),
-    inset 0 -1px 0 rgba(80, 50, 10, 0.18),
-    0 2px 4px rgba(0, 0, 0, 0.28),
-    0 14px 30px -10px color-mix(in oklch, var(--accent) 75%, transparent);
-  transform: translateY(-1px);
-}
-.life-btn-primary:not(:disabled):active {
-  filter: brightness(0.96);
-  box-shadow:
-    inset 0 2px 4px rgba(60, 35, 5, 0.25),
-    0 1px 2px rgba(0, 0, 0, 0.25);
-  transform: translateY(1px);
-}
-
-/* SECONDARY — outlined surface, hovers into a soft warm fill */
-.life-btn-secondary {
-  background: var(--bg-card);
+      color-mix(in oklch, var(--bg-card) 100%, white 4%) 0%,
+      var(--bg-card) 100%);
   border-color: var(--border-strong);
-  color: var(--text);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 1px 2px rgba(0, 0, 0, 0.15);
-}
-.life-btn-secondary:not(:disabled):hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-glow);
-  transform: translateY(-1px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 4px 14px -6px color-mix(in oklch, var(--accent) 40%, transparent);
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 4px 10px -6px rgba(0, 0, 0, 0.45);
+}
+.life-btn-secondary[class]:not(:disabled):hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklch, var(--accent-glow) 60%, var(--bg-card)) 0%,
+      var(--bg-card) 100%);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 10px 22px -8px color-mix(in oklch, var(--accent) 35%, transparent);
 }
 
-/* GHOST — minimal chrome, used in dialog footers / inline actions */
-.life-btn-ghost {
+/* -----------------------------------------------------------
+   GHOST — quiet, used as the secondary action in dialogs
+   ----------------------------------------------------------- */
+.life-btn-ghost[class] {
   background: transparent;
   border-color: transparent;
   color: var(--text-muted);
+  font-weight: 500;
 }
-.life-btn-ghost:not(:disabled):hover {
+.life-btn-ghost[class]:not(:disabled):hover {
   color: var(--text);
   background: var(--bg-card-hover);
 }
 
-/* DANGER — soft red surface, never shouts */
-.life-btn-danger {
-  background: color-mix(in oklch, #ef4444 10%, var(--bg-card));
-  border-color: color-mix(in oklch, #ef4444 35%, var(--border-soft));
+/* -----------------------------------------------------------
+   DANGER — soft red surface, restrained
+   ----------------------------------------------------------- */
+.life-btn-danger[class] {
   color: #fca5a5;
-}
-.life-btn-danger:not(:disabled):hover {
-  background: color-mix(in oklch, #ef4444 18%, var(--bg-card));
-  border-color: #ef4444;
-  color: #fecaca;
-  transform: translateY(-1px);
-}
-
-/* Icon inside a button — slightly muted unless the button is primary */
-.life-btn :is(svg) {
-  flex-shrink: 0;
-  opacity: 0.95;
-}
-.life-btn-primary :is(svg) { opacity: 1; }
-
-/* Light theme nudges — gold gets a touch darker so the text-on-gold reads */
-html[data-theme="light"] .life-btn-primary {
-  color: #21170a;
-  border-color: color-mix(in oklch, var(--accent) 55%, #5a3d10);
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklch, #ef4444 12%, var(--bg-card)) 0%,
+      color-mix(in oklch, #ef4444 6%, var(--bg-card)) 100%);
+  border-color: color-mix(in oklch, #ef4444 40%, var(--border-soft));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -1px 0 rgba(100, 65, 15, 0.22),
-    0 1px 2px rgba(120, 90, 30, 0.18),
-    0 10px 24px -10px color-mix(in oklch, var(--accent) 60%, transparent);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.25);
 }
-html[data-theme="light"] .life-btn-secondary {
-  background: #ffffff;
+.life-btn-danger[class]:not(:disabled):hover {
+  color: #fecaca;
+  border-color: #ef4444;
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklch, #ef4444 22%, var(--bg-card)) 0%,
+      color-mix(in oklch, #ef4444 14%, var(--bg-card)) 100%);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 18px -8px rgba(239, 68, 68, 0.35);
+}
+
+/* Icons inside buttons */
+.life-btn[class] :is(svg) {
+  flex-shrink: 0;
+  opacity: 1;
+  width: 14px;
+  height: 14px;
+}
+.life-btn-sm[class] :is(svg) { width: 12px; height: 12px; }
+.life-btn-lg[class] :is(svg) { width: 15px; height: 15px; }
+
+/* Decorative top sheen on primary (sits above bg, below content) */
+.life-btn-primary[class]::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 45%;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(180deg,
+    rgba(255, 250, 235, 0.45) 0%,
+    rgba(255, 245, 220, 0.12) 60%,
+    transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* -----------------------------------------------------------
+   Light theme — tune contrast so gold pill still reads
+   ----------------------------------------------------------- */
+html[data-theme="light"] .life-btn-primary[class] {
+  color: #1f1408;
+  border-color: color-mix(in oklch, var(--accent) 40%, #4a2f08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 235, 0.7),
+    inset 0 -1px 0 rgba(90, 55, 10, 0.28),
+    inset 0 0 0 1px rgba(255, 230, 180, 0.25),
+    0 1px 2px rgba(90, 55, 10, 0.2),
+    0 8px 18px -8px color-mix(in oklch, var(--accent) 55%, transparent),
+    0 16px 32px -14px color-mix(in oklch, var(--accent) 45%, transparent);
+}
+html[data-theme="light"] .life-btn-secondary[class] {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbf8f0 100%);
   border-color: #d8c89e;
-  box-shadow: 0 1px 2px rgba(120, 90, 30, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(120, 90, 30, 0.1),
+    0 4px 10px -6px rgba(120, 90, 30, 0.18);
 }
-html[data-theme="light"] .life-btn-secondary:not(:disabled):hover {
-  background: color-mix(in oklch, var(--accent) 8%, #ffffff);
+html[data-theme="light"] .life-btn-secondary[class]:not(:disabled):hover {
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklch, var(--accent) 8%, #ffffff) 0%,
+      #ffffff 100%);
   border-color: var(--accent);
 }
