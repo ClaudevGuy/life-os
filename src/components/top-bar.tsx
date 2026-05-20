@@ -65,7 +65,7 @@ export function TopBar() {
     : "";
 
   return (
-    <div className="sticky top-0 z-10 pl-3 sm:pl-6 pr-3 py-2 border-b border-[var(--border-soft)] bg-[var(--bg-app)]/85 backdrop-blur flex items-center gap-2 sm:gap-3">
+    <div className="sticky top-0 z-10 pl-3 sm:pl-[22px] pr-[14px] py-[14px] border-b border-[var(--line)] bg-[var(--paper)]/85 backdrop-blur flex items-center gap-2 sm:gap-[10px]">
       <SidebarToggle />
 
       {/* Search — flexes */}
@@ -132,10 +132,10 @@ export function TopBar() {
       <div className="ml-auto md:ml-0 flex items-center gap-2 shrink-0">
         <Link
           href="/ask"
-          className="inline-flex items-center gap-1.5 h-[30px] px-3 rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] text-[13px] font-medium leading-none text-[var(--text)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm"
+          className="focus-hide inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] text-[13px] font-medium leading-none text-[var(--ink)] hover:text-[var(--terra)] hover:border-[var(--terra)] transition"
           title="Ask my notes"
         >
-          <Sparkles size={12} />
+          <Sparkles size={13} className="text-[var(--terra)]" strokeWidth={1.6} />
           <span
             className="text-[13px] font-medium leading-none"
             style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
@@ -146,11 +146,11 @@ export function TopBar() {
         <PomodoroPill />
         <ThemeToggle />
         {now && (
-          <div className="hidden sm:flex flex-col items-end justify-center h-[30px] px-3 rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] leading-none shadow-sm">
-            <span className="text-[11px] tabular-nums text-[var(--text)] font-mono">
+          <div className="hidden sm:flex flex-col items-end justify-center h-[30px] px-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] leading-none">
+            <span className="text-[11px] tabular-nums text-[var(--ink)] font-mono tracking-[0.04em]">
               {timeLabel}
             </span>
-            <span className="mt-0.5 text-[9px] uppercase tracking-wide text-[var(--text-faint)]">
+            <span className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-[var(--muted)]">
               {dateLabel}
             </span>
           </div>
@@ -175,20 +175,20 @@ function Pill({
 }) {
   const toneClass =
     tone === "warn"
-      ? "bg-red-500/15 text-red-600 dark:text-red-300 border-red-500/40 hover:bg-red-500/20"
+      ? "bg-[var(--terra-tint)] text-[var(--bad)] border-[var(--bad)]/30 hover:brightness-[0.98]"
       : tone === "accent"
-      ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/40 hover:brightness-105"
+      ? "bg-[var(--terra-tint)] text-[var(--terra)] border-[var(--terra)]/30 hover:brightness-[0.98]"
       : tone === "fire"
-      ? "bg-orange-500/15 text-orange-600 dark:text-orange-300 border-orange-500/40 hover:bg-orange-500/20"
-      : "bg-[var(--bg-card)] text-[var(--text)] border-[var(--border-strong)] hover:border-[var(--accent)] hover:text-[var(--accent)]";
+      ? "bg-[var(--gold-tint)] text-[var(--gold)] border-[var(--gold)]/30 hover:brightness-[0.98]"
+      : "bg-[var(--paper)] text-[var(--ink-2)] border-[var(--line)] hover:border-[var(--terra)] hover:text-[var(--terra)]";
 
   return (
     <Link
       href={href}
       title={title}
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] tabular-nums transition whitespace-nowrap shadow-sm ${toneClass}`}
+      className={`inline-flex items-center gap-1.5 rounded-[10px] border px-2.5 h-[30px] text-[11.5px] font-medium tabular-nums transition whitespace-nowrap ${toneClass}`}
     >
-      <Icon size={11} />
+      <Icon size={12} />
       {label}
     </Link>
   );

@@ -115,15 +115,15 @@ export function SidebarNav() {
 
   return (
     <>
-      {SECTIONS.map((section) => (
-        <div key={section.heading} className="mt-4 first:mt-0">
+      {SECTIONS.map((section, gi) => (
+        <div key={section.heading} className={gi === 0 ? "mt-[10px]" : "mt-[18px]"}>
           <div
-            className="px-2.5 mb-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[var(--text-faint)]"
+            className="px-[10px] pb-2 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]"
             data-rail-section
           >
             {section.heading}
           </div>
-          <div className="space-y-0.5">
+          <div className="flex flex-col gap-[2px]">
             {section.items.map(({ href, label, icon: Icon, badgeKey, alertWhen }) => {
               const active =
                 pathname === href ||
@@ -136,23 +136,17 @@ export function SidebarNav() {
                   key={href}
                   href={href}
                   title={label}
-                  className={`group relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] font-medium transition-colors ${
+                  className={`group relative flex items-center gap-[10px] px-[10px] py-2 rounded-[9px] text-[13.5px] transition-colors ${
                     active
-                      ? "text-[var(--text)] bg-[var(--bg-card-hover)]"
-                      : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-card-hover)]"
+                      ? "text-[var(--ink)] bg-[var(--paper-2)] font-medium"
+                      : "text-[var(--ink-2)] hover:bg-[var(--bg-2)] font-normal"
                   }`}
                 >
-                  {active && (
-                    <span
-                      className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full"
-                      style={{ background: "var(--accent)" }}
-                    />
-                  )}
                   <Icon
-                    size={14}
-                    strokeWidth={active ? 2.25 : 2}
+                    size={17}
+                    strokeWidth={1.6}
                     className={`shrink-0 transition ${
-                      active ? "text-[var(--accent)]" : "text-[var(--text-faint)]"
+                      active ? "text-[var(--terra)]" : "text-[var(--muted)]"
                     }`}
                   />
                   <span data-rail-text className="flex-1 truncate">
@@ -161,12 +155,12 @@ export function SidebarNav() {
                   {badge > 0 && (
                     <span
                       data-rail-text
-                      className={`tabular-nums text-[10px] px-1.5 py-0.5 rounded-full ${
+                      className={`tabular-nums text-[10.5px] font-mono px-1.5 py-[2px] rounded-full ${
                         alert
-                          ? "bg-red-500/15 text-red-300"
+                          ? "bg-[var(--bad)] text-[var(--paper)]"
                           : active
-                          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                          : "bg-[var(--bg-card)] text-[var(--text-faint)] group-hover:text-[var(--text-muted)]"
+                          ? "bg-[var(--terra)] text-[var(--paper)]"
+                          : "bg-[var(--bg-2)] text-[var(--muted)]"
                       }`}
                     >
                       {badge}

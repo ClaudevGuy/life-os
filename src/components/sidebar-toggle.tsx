@@ -37,7 +37,7 @@ export function SidebarToggle({
         type="button"
         onClick={toggle}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="rounded-md p-1 text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-card-hover)] transition"
+        className="rounded-md p-1 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
       >
         {collapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}
       </button>
@@ -49,7 +49,7 @@ export function SidebarToggle({
       type="button"
       onClick={toggle}
       title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-      className="inline-flex items-center justify-center rounded-md p-1.5 text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-card-hover)] transition shrink-0"
+      className="inline-flex items-center justify-center rounded-md p-1.5 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition shrink-0"
       aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
     >
       {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}

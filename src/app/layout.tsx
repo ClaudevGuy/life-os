@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const inter = Inter({
+const sans = Geist({
   variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const mono = JetBrains_Mono({
+const mono = Geist_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -37,23 +39,23 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${mono.variable} h-full antialiased`}
+      className={`${sans.variable} ${mono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
-      <body className="min-h-full" style={{ background: "var(--bg-app)", color: "var(--text)" }}>
+      <body className="min-h-full" style={{ background: "var(--bg)", color: "var(--ink)" }}>
         {children}
         <Toaster
           position="bottom-right"
           toastOptions={{
             classNames: {
               toast:
-                "!bg-[var(--bg-card)] !text-[var(--text)] !border !border-[var(--border-strong)] !rounded-lg !shadow-xl",
-              description: "!text-[var(--text-muted)]",
-              actionButton: "!bg-[var(--accent)] !text-zinc-950",
-              cancelButton: "!bg-[var(--bg-card-hover)] !text-[var(--text-muted)]",
+                "!bg-[var(--paper)] !text-[var(--ink)] !border !border-[var(--line-2)] !rounded-xl !shadow-xl",
+              description: "!text-[var(--muted)]",
+              actionButton: "!bg-[var(--terra)] !text-[var(--paper)]",
+              cancelButton: "!bg-[var(--paper-2)] !text-[var(--muted)]",
             },
           }}
         />

@@ -187,7 +187,8 @@ export function QuickCapture() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-30 grid place-items-center w-12 h-12 rounded-full bg-[var(--accent)] text-zinc-950 life-pulse hover:scale-105 active:scale-95 transition"
+        className="focus-hide fixed bottom-6 right-6 z-30 grid place-items-center w-[54px] h-[54px] rounded-[18px] bg-[var(--ink)] text-[var(--paper)] hover:scale-105 active:scale-95 transition"
+        style={{ boxShadow: "var(--shadow-3)" }}
         aria-label="Quick capture"
         title="Quick capture (press c)"
       >

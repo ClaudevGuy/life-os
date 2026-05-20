@@ -30,42 +30,29 @@ export function ThemeToggle() {
       onClick={toggle}
       title={isDark ? "Switch to light" : "Switch to dark"}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="relative inline-flex items-center shrink-0 w-[60px] h-[30px] rounded-full transition-colors border-2"
+      className="relative inline-flex items-center justify-between shrink-0 w-[60px] h-[30px] rounded-full border transition-colors"
       style={{
-        background: isDark ? "#0f1024" : "#e9f1ff",
-        borderColor: isDark ? "#2a2d4a" : "#a8b8d8",
-        boxShadow: isDark
-          ? "inset 0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.15)"
-          : "inset 0 1px 3px rgba(120, 140, 180, 0.25), 0 1px 2px rgba(80, 100, 140, 0.12)",
+        background: isDark ? "var(--ink)" : "var(--paper)",
+        borderColor: "var(--line)",
+        padding: "0 7px",
       }}
     >
-      {/* Track icons */}
       <Sun
-        size={14}
-        className={`absolute left-[7px] transition-opacity ${
-          isDark ? "opacity-40 text-zinc-400" : "opacity-100"
-        }`}
-        style={isDark ? undefined : { color: "#e8a23a" }}
+        size={13}
+        strokeWidth={1.6}
+        style={{ color: isDark ? "var(--muted)" : "var(--gold)" }}
       />
       <Moon
-        size={14}
-        className={`absolute right-[7px] transition-opacity ${
-          isDark ? "opacity-100" : "opacity-40 text-zinc-400"
-        }`}
-        style={isDark ? { color: "#e8d3ff" } : undefined}
-        fill={isDark ? "#e8d3ff" : "none"}
+        size={13}
+        strokeWidth={1.6}
+        style={{ color: isDark ? "var(--paper)" : "var(--muted-2)" }}
       />
-
-      {/* Thumb */}
       <span
-        className="absolute top-[2px] w-[22px] h-[22px] rounded-full transition-transform duration-300 ease-out"
+        aria-hidden
+        className="absolute top-[3px] w-6 h-6 rounded-full transition-[left] duration-[220ms] ease-[cubic-bezier(0.3,0.7,0.3,1)]"
         style={{
-          transform: isDark ? "translateX(32px)" : "translateX(2px)",
-          background: isDark
-            ? "linear-gradient(180deg, #e6e3da 0%, #cbc6b7 100%)"
-            : "linear-gradient(180deg, #ffffff 0%, #f4ecd9 100%)",
-          boxShadow:
-            "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5)",
+          left: isDark ? 32 : 3,
+          background: isDark ? "var(--paper)" : "var(--ink)",
         }}
       />
     </button>

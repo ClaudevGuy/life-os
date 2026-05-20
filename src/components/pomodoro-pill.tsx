@@ -132,10 +132,10 @@ export function PomodoroPill() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-2 h-[30px] px-3 rounded-full border bg-[var(--bg-card)] text-[13px] font-medium leading-none transition shadow-sm ${
+        className={`focus-hide inline-flex items-center gap-2 h-[30px] px-3 rounded-[10px] border bg-[var(--paper)] text-[13px] font-medium leading-none transition ${
           running
-            ? "border-[var(--accent)] text-[var(--text)] shadow-[0_0_0_3px_var(--accent-glow)]"
-            : "border-[var(--border-strong)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            ? "border-[var(--terra)] text-[var(--ink)] shadow-[0_0_0_3px_var(--terra-tint)]"
+            : "border-[var(--line)] text-[var(--ink)] hover:border-[var(--terra)] hover:text-[var(--terra)]"
         }`}
         title={running ? `${mode} · ${mm}:${ss}` : "Pomodoro"}
         aria-label="Pomodoro timer"

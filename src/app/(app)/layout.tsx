@@ -19,49 +19,48 @@ export default function AppLayout({
     <div className="h-screen flex relative z-[1]">
       <aside
         data-side="rail"
-        className="w-60 shrink-0 flex flex-col relative transition-all"
+        className="w-[248px] shrink-0 flex flex-col relative transition-all"
         style={{
-          background: "var(--bg-rail)",
-          borderRight: "1px solid var(--rail-border, var(--border-strong))",
-          boxShadow: "1px 0 0 0 rgba(0,0,0,0.15)",
+          background: "var(--paper)",
+          borderRight: "1px solid var(--line)",
         }}
       >
-        <div className="px-5 pt-5 pb-4">
+        <div className="px-[18px] pt-[18px] pb-[14px]">
           <Link
             href="/today"
             className="group inline-flex items-center gap-2.5"
             aria-label="Life OS — go to Today"
           >
-            <LogoMark />
+            <LogoMark size={30} />
             <span className="flex flex-col leading-none" data-rail-text>
-              <span className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
-                Life<span className="text-[var(--accent)]">OS</span>
+              <span className="text-[17px] font-semibold tracking-[-0.015em] text-[var(--ink)]">
+                Life<span className="text-[var(--terra)]">·</span>OS
               </span>
-              <span className="mt-1 text-[9px] uppercase tracking-[0.18em] text-[var(--text-faint)] group-hover:text-[var(--accent)] transition">
+              <span className="mt-1 text-[9px] uppercase tracking-[0.18em] text-[var(--muted)] group-hover:text-[var(--terra)] transition">
                 Second brain
               </span>
             </span>
           </Link>
         </div>
 
-        <nav className="flex-1 px-2 pb-3 overflow-y-auto">
+        <nav className="flex-1 px-3 pb-3 overflow-y-auto">
           <SidebarNav />
         </nav>
 
         <div
-          className="px-2 py-3 space-y-2"
-          style={{ borderTop: "1px solid var(--rail-border, var(--border-strong))" }}
+          className="px-3 py-3 space-y-2"
+          style={{ borderTop: "1px solid var(--line)" }}
         >
           <Link
             href="/settings"
             title="Settings"
-            className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-card-hover)] transition-colors"
+            className="flex items-center gap-2.5 px-2.5 py-2 rounded-[9px] text-[13.5px] font-normal text-[var(--ink-2)] hover:bg-[var(--bg-2)] transition-colors"
           >
-            <Settings size={14} className="text-[var(--text-faint)] shrink-0" strokeWidth={2} />
+            <Settings size={16} className="text-[var(--muted)] shrink-0" strokeWidth={1.6} />
             <span data-rail-text>Settings</span>
           </Link>
           <div
-            className="px-2.5 pt-1 text-[10px] text-[var(--text-faint)] uppercase tracking-wider"
+            className="px-2.5 pt-1 text-[10px] text-[var(--muted-2)] uppercase tracking-[0.14em]"
             data-rail-text
           >
             local · v1.0

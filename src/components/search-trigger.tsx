@@ -9,10 +9,10 @@ export function SearchTrigger() {
           new KeyboardEvent("keydown", { key: "k", metaKey: true }),
         )
       }
-      className="w-full max-w-md mx-auto flex items-center gap-2 text-xs text-[var(--text-muted)] px-3 py-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--bg-card)] hover:border-[var(--accent)] hover:text-[var(--text)] transition"
+      className="w-full max-w-[720px] flex items-center gap-2.5 text-[13.5px] text-[var(--muted)] px-[14px] py-[9px] rounded-[10px] border border-[var(--line)] bg-[var(--paper)] hover:border-[var(--terra)] hover:text-[var(--ink)] transition"
     >
       Search everything…
-      <kbd className="ml-auto text-[10px] text-[var(--text-faint)]">⌘K</kbd>
+      <kbd className="ml-auto text-[10.5px] font-mono tracking-[0.04em] text-[var(--muted-2)] px-1.5 py-[2px] border border-[var(--line)] rounded-[5px]">⌘K</kbd>
     </button>
   );
 }
