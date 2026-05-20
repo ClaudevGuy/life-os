@@ -108,17 +108,16 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div className="min-h-full flex items-start justify-center px-4 py-8 sm:py-12">
-        <div
-          className="w-full max-w-lg rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
-          style={{ boxShadow: "var(--shadow-3)" }}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <div
+        className="w-full max-w-lg max-h-[min(92vh,860px)] flex flex-col rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
+        style={{ boxShadow: "var(--shadow-3)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="p-6 flex items-start gap-4 border-b border-[var(--line)]">
+        <div className="p-6 flex items-start gap-4 border-b border-[var(--line)] shrink-0">
           <div
             className="grid place-items-center w-[68px] h-[68px] rounded-full text-[20px] font-semibold tracking-[-0.01em] shrink-0 transition-colors"
             style={{
@@ -148,7 +147,7 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Form */}
-        <div className="p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
           <Field label="Name">
             <input
               value={name}
@@ -266,7 +265,7 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-[var(--line)] flex items-center justify-between gap-3 bg-[var(--paper-2)]">
+        <div className="px-6 py-4 border-t border-[var(--line)] flex items-center justify-between gap-3 bg-[var(--paper-2)] shrink-0">
           <span className="text-[12.5px] text-[var(--muted)]">
             {canSave ? "Ready to save." : "Give them a name to save."}
           </span>
@@ -287,7 +286,6 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
               Save
             </button>
           </div>
-        </div>
         </div>
       </div>
     </div>
