@@ -3,7 +3,6 @@ import { Settings } from "lucide-react";
 import { CommandPalette } from "@/components/command-palette";
 import { QuickCapture } from "@/components/quick-capture";
 import { WelcomeModal } from "@/components/welcome-modal";
-import { RecentlyViewed } from "@/components/recently-viewed";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { TopBar } from "@/components/top-bar";
 import { SidebarNav } from "@/components/sidebar-nav";
@@ -42,10 +41,6 @@ export default function AppLayout({
 
         <nav className="flex-1 px-2 pb-3 overflow-y-auto">
           <SidebarNav />
-
-          <div data-rail-text>
-            <RecentlyViewed />
-          </div>
         </nav>
 
         <div
