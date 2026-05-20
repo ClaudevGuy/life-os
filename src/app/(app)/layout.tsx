@@ -8,6 +8,7 @@ import { TopBar } from "@/components/top-bar";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { PersistBootstrap } from "@/components/persist-bootstrap";
 import { SyncBootstrap } from "@/components/sync-bootstrap";
+import { LogoMark } from "@/components/logo-mark";
 
 export default function AppLayout({
   children,
@@ -25,16 +26,20 @@ export default function AppLayout({
           boxShadow: "1px 0 0 0 rgba(0,0,0,0.15)",
         }}
       >
-        <div className="px-5 py-5">
+        <div className="px-5 pt-5 pb-4">
           <Link
             href="/today"
-            className="inline-flex items-center gap-2 font-semibold tracking-tight"
+            className="group inline-flex items-center gap-2.5"
+            aria-label="Life OS — go to Today"
           >
-            <span className="grid place-items-center w-7 h-7 rounded-md bg-[var(--accent-soft)] text-[var(--accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-              ◇
-            </span>
-            <span className="life-shine text-[16px] font-bold" data-rail-text>
-              Life OS
+            <LogoMark />
+            <span className="flex flex-col leading-none" data-rail-text>
+              <span className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
+                Life<span className="text-[var(--accent)]">OS</span>
+              </span>
+              <span className="mt-1 text-[9px] uppercase tracking-[0.18em] text-[var(--text-faint)] group-hover:text-[var(--accent)] transition">
+                Second brain
+              </span>
             </span>
           </Link>
         </div>

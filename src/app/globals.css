@@ -269,13 +269,6 @@ html[data-sidebar="collapsed"] [data-rail-section] {
 html[data-sidebar="collapsed"] aside[data-side="rail"] nav a {
   justify-content: center;
 }
-html[data-sidebar="collapsed"] aside[data-side="rail"] .life-shine {
-  font-size: 0;
-}
-html[data-sidebar="collapsed"] aside[data-side="rail"] .life-shine::before {
-  content: "◇";
-  font-size: 16px;
-}
 
 /* density (controlled from /settings) */
 html[data-density="compact"] .life-card { padding: 0.5rem !important; }
