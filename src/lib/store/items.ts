@@ -130,13 +130,18 @@ export function useItemsOfKind(kind: ItemKind): StoredItem[] | undefined {
 export function useInboxItems(): StoredItem[] | undefined {
   return useLiveQuery(async () => {
     const all = await db.items.orderBy("capturedAt").reverse().toArray();
-    return all.filter(
-      (i) =>
+    return all.filter((i) => {
+      // Reminders are tasks with a date — they live on the calendar/Today,
+      // never in the triage inbox.
+      const meta = (i.metadata ?? {}) as { reminder?: boolean };
+      if (i.kind === "task" && meta.reminder === true) return false;
+      return (
         i.status === "inbox" ||
         i.kind === "bookmark" ||
         i.kind === "highlight" ||
-        i.kind === "idea",
-    );
+        i.kind === "idea"
+      );
+    });
   });
 }
 

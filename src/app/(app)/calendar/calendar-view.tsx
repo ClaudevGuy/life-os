@@ -535,8 +535,16 @@ function DayDrawer({
         metadata.reviewAt = new Date(`${day}T09:00:00`).toISOString();
         metadata.outcome = "pending";
       }
+      // Reminders are not inbox items — they belong on the calendar/Today,
+      // not in the triage list. Tasks and decisions created here also have a
+      // concrete date, so they bypass inbox triage too.
       try {
-        await captureItem({ kind: storeKind, title: title.trim(), metadata });
+        await captureItem({
+          kind: storeKind,
+          title: title.trim(),
+          metadata,
+          status: "active",
+        });
       } catch {
         toast.error("Couldn't save");
         return;
