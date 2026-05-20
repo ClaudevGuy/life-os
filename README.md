@@ -19,6 +19,7 @@ The only thing that ever leaves your machine is a single AI call — and only wh
 | `/today` | Morning brief, journal entry, what-to-do-now nudge, quick stats |
 | `/inbox` | Triage everything you've captured |
 | `/notes` | Free-form notes, pinned ones float to the top |
+| `/files` | PDFs, Word, text, slides — uploaded and stored locally |
 | `/tasks` | What needs doing, with priorities, due dates, recurrence, kanban or list view |
 | `/habits` | Daily / weekly check-ins, 30-day heatmap, streaks |
 | `/decisions` | Log a decision with reasoning, set a review date, mark the outcome later |

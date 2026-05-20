@@ -23,6 +23,7 @@ const KIND_ORDER = [
   "habit",
   "goal",
   "project",
+  "file",
 ] as const;
 
 export function GraphView({ items }: { items: GraphItem[] }) {

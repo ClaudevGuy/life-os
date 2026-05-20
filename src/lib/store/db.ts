@@ -18,7 +18,8 @@ export type ItemKind =
   | "goal"
   | "highlight"
   | "project"
-  | "area";
+  | "area"
+  | "file";
 
 export type ItemStatus = "inbox" | "active" | "archived" | "reference";
 

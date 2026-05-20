@@ -43,6 +43,7 @@ html:not([data-theme]) {
   --kind-highlight: #d4a866;
   --kind-project: #6aa9ef;
   --kind-area: #b58dee;
+  --kind-file: #8aa9c8;
 }
 
 /* Light theme — warm paper feel */

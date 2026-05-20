@@ -19,6 +19,7 @@ import {
   MessageSquare,
   FolderKanban,
   BookHeart,
+  Files,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -50,6 +51,7 @@ const SECTIONS: RailSection[] = [
     items: [
       { href: "/inbox", label: "Inbox", icon: Inbox, badgeKey: "inboxCount" },
       { href: "/notes", label: "Notes", icon: NotebookPen },
+      { href: "/files", label: "Files", icon: Files },
     ],
   },
   {

@@ -14,6 +14,7 @@ import {
 import { RecentTracker } from "@/components/recently-viewed";
 import { ProjectRollUp } from "@/components/project-roll-up";
 import { PhotoGallery } from "@/components/photo-gallery";
+import { FileAttachment } from "@/components/file-attachment";
 
 export function ItemDetailClient({ id }: { id: string }) {
   const item = useItem(id);
@@ -124,6 +125,8 @@ export function ItemDetailClient({ id }: { id: string }) {
 
       <InlineBody id={item.id} value={item.body} />
 
+      {item.kind === "file" && <FileAttachment itemId={item.id} metadata={meta} />}
+
       <KindSpecific item={item} meta={meta} />
 
       <PhotoGallery
@@ -154,6 +157,7 @@ function backFor(kind: string) {
       goal: "/goals",
       highlight: "/highlights",
       voice: "/inbox",
+      file: "/files",
     } as Record<string, string>
   )[kind] ?? "/inbox";
 }
@@ -182,6 +186,7 @@ function backForLabel(kind: string) {
       goal: "Goals",
       highlight: "Highlights",
       voice: "Inbox",
+      file: "Files",
     } as Record<string, string>
   )[kind] ?? "Inbox";
 }
