@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Flame, Check } from "lucide-react";
+import { toast } from "sonner";
+import { Flame, Check, Pencil, Trash2 } from "lucide-react";
 import type { StoredItem as Item } from "@/lib/store/items";
-import { updateItem } from "@/lib/store/items";
+import { updateItem, deleteItem } from "@/lib/store/items";
+import { HabitFormModal } from "./new-habit";
 
 function ymd(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -40,6 +42,7 @@ export function HabitRow({
     new Set(meta.checkins ?? []),
   );
   const [pending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
   const today = ymd(new Date());
 
   const streak = useMemo(() => calcStreak(checkins), [checkins]);
@@ -59,8 +62,20 @@ export function HabitRow({
     });
   }
 
+  function remove() {
+    if (!confirm(`Delete habit "${habit.title}"? This can't be undone.`)) return;
+    startTransition(async () => {
+      try {
+        await deleteItem(habit.id);
+        toast.success("Habit deleted");
+      } catch {
+        toast.error("Couldn't delete");
+      }
+    });
+  }
+
   return (
-    <li className="px-5 py-4 grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[1fr_60px_minmax(0,200px)_minmax(0,120px)] gap-4 sm:gap-6 items-center border-b border-[var(--line)] last:border-b-0 hover:bg-[var(--paper-2)] transition">
+    <li className="group px-5 py-4 grid grid-cols-[1fr_auto_auto_auto_auto] sm:grid-cols-[1fr_60px_minmax(0,200px)_minmax(0,120px)_auto] gap-4 sm:gap-6 items-center border-b border-[var(--line)] last:border-b-0 hover:bg-[var(--paper-2)] transition relative">
       {/* Name */}
       <div className="flex items-center gap-2.5 min-w-0">
         <span
@@ -125,6 +140,36 @@ export function HabitRow({
       <div className="hidden sm:block min-w-0">
         <ThirtyDay grid={grid} checkins={checkins} color={color} />
       </div>
+
+      {/* Actions — visible on row hover (always visible on touch) */}
+      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          title="Edit"
+          aria-label="Edit habit"
+          className="grid place-items-center w-8 h-8 rounded-[8px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
+        >
+          <Pencil size={13} strokeWidth={1.6} />
+        </button>
+        <button
+          type="button"
+          onClick={remove}
+          disabled={pending}
+          title="Delete"
+          aria-label="Delete habit"
+          className="grid place-items-center w-8 h-8 rounded-[8px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:bg-[var(--terra-tint)] hover:text-[var(--bad)] hover:border-[var(--bad)]/30 transition disabled:opacity-50"
+        >
+          <Trash2 size={13} strokeWidth={1.6} />
+        </button>
+      </div>
+
+      {editing && (
+        <HabitFormModal
+          existing={habit}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </li>
   );
 }

@@ -139,7 +139,7 @@ export default function HabitsPage() {
       ) : (
         <div className="life-card overflow-hidden">
           {/* Header row */}
-          <div className="px-5 py-3 grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[1fr_60px_minmax(0,200px)_minmax(0,120px)] gap-4 sm:gap-6 items-center text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] border-b border-[var(--line)]">
+          <div className="px-5 py-3 grid grid-cols-[1fr_auto_auto_auto_auto] sm:grid-cols-[1fr_60px_minmax(0,200px)_minmax(0,120px)_auto] gap-4 sm:gap-6 items-center text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] border-b border-[var(--line)]">
             <span>Habit</span>
             <span className="text-right">Streak</span>
             <div className="hidden sm:grid grid-cols-7 gap-1.5 text-center">
@@ -148,6 +148,8 @@ export default function HabitsPage() {
               ))}
             </div>
             <span className="hidden sm:block text-right">30d</span>
+            {/* spacer for action column */}
+            <span className="w-[68px]" aria-hidden />
           </div>
           <ul>
             {rows.map((h, i) => (
