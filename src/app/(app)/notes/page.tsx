@@ -324,7 +324,7 @@ function NoteCard({ note: n }: { note: StoredItem }) {
         )}
       </div>
       {n.body && (
-        <p className="mt-2 pl-2 text-[12px] text-[var(--text-muted)] line-clamp-5 leading-relaxed">
+        <p className="mt-2 pl-2 text-[12px] text-[var(--text-muted)] line-clamp-5 leading-relaxed whitespace-pre-line">
           {n.body}
         </p>
       )}
