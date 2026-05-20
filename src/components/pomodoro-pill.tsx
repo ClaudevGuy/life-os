@@ -181,7 +181,9 @@ export function PomodoroPill() {
             )}
           </span>
         </span>
-        <span className="font-mono tabular-nums leading-none">
+        <span
+          className={`leading-none ${idle ? "" : "font-mono tabular-nums"}`}
+        >
           {idle ? "Focus" : `${mm}:${ss}`}
         </span>
         {sessionsToday > 0 && (
