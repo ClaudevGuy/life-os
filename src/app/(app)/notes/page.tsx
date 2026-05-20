@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition, useEffect, Suspense } from "react";
+import {
+  useMemo,
+  useState,
+  useTransition,
+  useEffect,
+  useRef,
+  Suspense,
+} from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -12,12 +19,18 @@ import {
   Pencil,
   Clock,
   Menu,
+  ImagePlus,
+  X,
+  Check,
 } from "lucide-react";
 import {
   useItemsOfKind,
   captureItem,
+  updateItem,
   type StoredItem,
 } from "@/lib/store/items";
+import { saveBlob, deleteBlob } from "@/lib/store/blobs";
+import { BlobImg } from "@/components/blob-img";
 import { ItemActions } from "@/components/item-actions";
 
 type View = "editor" | "grid";
@@ -466,7 +479,94 @@ function NoteRow({
 }
 
 function NoteDetail({ note: n }: { note: StoredItem }) {
-  const words = (n.body?.trim().match(/\S+/g) ?? []).length;
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(n.title ?? "");
+  const [body, setBody] = useState(n.body ?? "");
+  const initialPhotos = useMemo(
+    () => ((n.metadata ?? {}) as { photos?: string[] }).photos ?? [],
+    [n.metadata],
+  );
+  const [photos, setPhotos] = useState<string[]>(initialPhotos);
+  const [uploading, setUploading] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // When switching notes, drop edit mode and reseed the local fields.
+  useEffect(() => {
+    setEditing(false);
+    setTitle(n.title ?? "");
+    setBody(n.body ?? "");
+    setPhotos(initialPhotos);
+  }, [n.id, n.title, n.body, initialPhotos]);
+
+  async function uploadFiles(files: FileList | File[]) {
+    const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (list.length === 0) return;
+    setUploading(true);
+    try {
+      const newIds: string[] = [];
+      for (const file of list) {
+        try {
+          const saved = await saveBlob(file);
+          newIds.push(saved.id);
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Upload failed");
+        }
+      }
+      if (newIds.length === 0) return;
+      const next = [...photos, ...newIds];
+      setPhotos(next);
+      // Persist photo additions immediately so they survive Cancel.
+      const meta = { ...(n.metadata ?? {}), photos: next };
+      try {
+        await updateItem(n.id, { metadata: meta });
+        toast.success(
+          `${newIds.length} photo${newIds.length === 1 ? "" : "s"} added`,
+        );
+      } catch {
+        toast.error("Couldn't attach photo");
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removePhoto(id: string) {
+    const next = photos.filter((p) => p !== id);
+    setPhotos(next);
+    const meta = { ...(n.metadata ?? {}), photos: next };
+    try {
+      await updateItem(n.id, { metadata: meta });
+      await deleteBlob(id).catch(() => {});
+    } catch {
+      // Roll back local state if persistence failed.
+      setPhotos(photos);
+      toast.error("Couldn't remove photo");
+    }
+  }
+
+  function save() {
+    startTransition(async () => {
+      try {
+        await updateItem(n.id, {
+          title: title.trim() || null,
+          body: body.trim() || null,
+        });
+        toast.success("Saved");
+        setEditing(false);
+      } catch {
+        toast.error("Couldn't save");
+      }
+    });
+  }
+
+  function cancel() {
+    setTitle(n.title ?? "");
+    setBody(n.body ?? "");
+    setEditing(false);
+  }
+
+  const words = (body.trim().match(/\S+/g) ?? []).length;
   const minRead = Math.max(1, Math.round(words / 220));
   const dot = topicColor(n.topic);
   const tag = n.topic ?? statusTag(n.status);
@@ -483,25 +583,70 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
           </Link>
           <span className="text-[var(--muted-2)]">›</span>
           <span className="text-[var(--ink)] font-medium truncate max-w-[280px]">
-            {n.title ?? "Untitled"}
+            {title || "Untitled"}
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <ItemActions
-            id={n.id}
-            isPinned={n.isPinned}
-            status={n.status}
-            backHref="/notes"
-          />
-          <Link
-            href={`/items/${n.id}`}
-            className="life-btn life-btn-sm life-btn-secondary"
-          >
-            <Pencil size={12} strokeWidth={1.6} />
-            Edit
-          </Link>
+          {!editing && (
+            <ItemActions
+              id={n.id}
+              isPinned={n.isPinned}
+              status={n.status}
+              backHref="/notes"
+            />
+          )}
+          {editing ? (
+            <>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="life-btn life-btn-sm life-btn-ghost"
+              >
+                <ImagePlus size={13} strokeWidth={1.6} />
+                Photo
+              </button>
+              <button
+                type="button"
+                onClick={cancel}
+                className="life-btn life-btn-sm life-btn-ghost"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                disabled={pending}
+                className="life-btn life-btn-sm life-btn-primary"
+              >
+                <Check size={13} strokeWidth={2} />
+                Save
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="life-btn life-btn-sm life-btn-secondary"
+            >
+              <Pencil size={12} strokeWidth={1.6} />
+              Edit
+            </button>
+          )}
         </div>
       </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files) void uploadFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
 
       <div className="flex items-center gap-3 flex-wrap mb-4 text-[11.5px]">
         <span
@@ -528,14 +673,49 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
         </span>
       </div>
 
-      <h1 className="text-[40px] sm:text-[44px] leading-[1.05] font-semibold tracking-[-0.025em] text-[var(--ink)]">
-        {n.title ?? "Untitled"}
-      </h1>
+      {editing ? (
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Untitled"
+          autoFocus
+          className="w-full bg-transparent border-0 outline-none text-[40px] sm:text-[44px] leading-[1.05] font-semibold tracking-[-0.025em] text-[var(--ink)] placeholder:text-[var(--muted-2)]"
+        />
+      ) : (
+        <h1 className="text-[40px] sm:text-[44px] leading-[1.05] font-semibold tracking-[-0.025em] text-[var(--ink)]">
+          {title || "Untitled"}
+        </h1>
+      )}
 
       <div className="mt-6">
-        {n.body?.trim() ? (
+        {editing ? (
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onPaste={(e) => {
+              const files: File[] = [];
+              for (const item of e.clipboardData.items) {
+                if (item.kind === "file") {
+                  const f = item.getAsFile();
+                  if (f) files.push(f);
+                }
+              }
+              if (files.length > 0) {
+                e.preventDefault();
+                void uploadFiles(files);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
+              if (e.key === "Escape") cancel();
+            }}
+            rows={12}
+            placeholder="Empty. Start writing… markdown welcome. Paste an image (⌘V) to attach it."
+            className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-4 py-3 text-[15px] leading-[1.7] text-[var(--ink-2)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] focus:bg-[var(--paper)] resize-y transition whitespace-pre-wrap"
+          />
+        ) : body.trim() ? (
           <p className="text-[15px] leading-[1.7] text-[var(--ink-2)] whitespace-pre-wrap">
-            {n.body}
+            {body}
           </p>
         ) : (
           <p className="text-[15px] text-[var(--muted)]">
@@ -543,6 +723,31 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
           </p>
         )}
       </div>
+
+      {photos.length > 0 && (
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {photos.map((id) => (
+            <div
+              key={id}
+              className="relative group rounded-[10px] overflow-hidden border border-[var(--line)] bg-[var(--paper-2)]"
+              style={{ aspectRatio: "4 / 3" }}
+            >
+              <BlobImg id={id} className="w-full h-full object-cover" />
+              {editing && (
+                <button
+                  type="button"
+                  onClick={() => removePhoto(id)}
+                  className="absolute top-2 right-2 grid place-items-center w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 hover:bg-[var(--bad)] transition"
+                  aria-label="Remove photo"
+                  title="Remove"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
