@@ -63,7 +63,7 @@ export function ItemActions({
   }
 
   return (
-    <div className="inline-flex items-center gap-1">
+    <div className="inline-flex items-center gap-1 rounded-full border border-[var(--border-soft)] bg-[var(--bg-card)] p-1 shadow-sm">
       <ActionBtn
         onClick={togglePin}
         active={pinned}
@@ -71,6 +71,7 @@ export function ItemActions({
         label={pinned ? "Unpin" : "Pin"}
         icon={Pin}
       />
+      <span className="w-px h-4 bg-[var(--border-soft)]" aria-hidden />
       <ActionBtn
         onClick={toggleArchive}
         active={archived}
@@ -78,6 +79,7 @@ export function ItemActions({
         label={archived ? "Restore" : "Archive"}
         icon={archived ? ArchiveRestore : Archive}
       />
+      <span className="w-px h-4 bg-[var(--border-soft)]" aria-hidden />
       <ActionBtn
         onClick={del}
         pending={pending}
@@ -110,7 +112,8 @@ function ActionBtn({
       onClick={onClick}
       disabled={pending}
       title={label}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition disabled:opacity-50 ${
+      aria-label={label}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition disabled:opacity-50 ${
         active
           ? "bg-[var(--accent-soft)] text-[var(--accent)]"
           : danger
@@ -119,7 +122,7 @@ function ActionBtn({
       }`}
     >
       <Icon
-        size={12}
+        size={13}
         className={active && label.startsWith("Unpin") ? "fill-current" : ""}
       />
       <span className="hidden sm:inline">{label}</span>

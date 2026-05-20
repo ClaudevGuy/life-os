@@ -68,12 +68,12 @@ export function InlineTitle({
     <button
       type="button"
       onClick={() => setEditing(true)}
-      className="group text-left -mx-1 px-1 rounded hover:bg-[var(--bg-card-hover)] transition"
+      className="group text-left -mx-2 px-2 py-1 rounded-md hover:bg-[var(--bg-card-hover)] transition"
     >
-      <h1 className="text-3xl font-semibold tracking-tight text-[var(--text)] leading-tight inline-flex items-baseline gap-2">
-        {value ?? <em className="text-[var(--text-faint)]">untitled</em>}
+      <h1 className="text-[34px] font-bold tracking-tight text-[var(--text)] leading-[1.15] inline-flex items-baseline gap-3">
+        {value ?? <em className="text-[var(--text-faint)] font-normal">Untitled</em>}
         <Pencil
-          size={14}
+          size={15}
           className="text-[var(--text-faint)] opacity-0 group-hover:opacity-100 transition"
         />
       </h1>
@@ -114,17 +114,17 @@ export function InlineBody({
 
   if (editing) {
     return (
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-2 text-xs text-[var(--text-faint)]">
-          <span className="uppercase tracking-wide">Editing — markdown</span>
-          <div className="inline-flex items-center gap-1">
+      <div>
+        <div className="flex items-center justify-between mb-2 text-[11px] text-[var(--text-faint)]">
+          <span className="uppercase tracking-[0.14em]">Editing · markdown</span>
+          <div className="inline-flex items-center gap-2">
             <button
               type="button"
               onClick={() => {
                 setDraft(value ?? "");
                 setEditing(false);
               }}
-              className="inline-flex items-center gap-1 hover:text-[var(--text)] px-2 py-1"
+              className="life-btn life-btn-sm life-btn-ghost"
             >
               <X size={11} />
               Cancel
@@ -158,10 +158,30 @@ export function InlineBody({
           className="w-full rounded-lg bg-[var(--bg-rail)] border border-[var(--border-strong)] p-4 text-sm font-mono text-[var(--text)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] resize-none leading-relaxed"
           placeholder="Markdown body. Use [[wiki links]] to connect items, ** for bold, > for quotes."
         />
-        <div className="mt-1 text-[10px] text-[var(--text-faint)]">
+        <div className="mt-1.5 text-[10px] text-[var(--text-faint)]">
           ⌘↵ to save · esc to cancel
         </div>
       </div>
+    );
+  }
+
+  if (!value) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="group w-full rounded-xl border border-dashed border-[var(--border-soft)] hover:border-[var(--accent)] hover:bg-[var(--accent-glow)] transition px-5 py-6 text-left"
+      >
+        <div className="inline-flex items-center gap-2 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition">
+          <span className="grid place-items-center w-7 h-7 rounded-full border border-[var(--border-soft)] group-hover:border-[var(--accent)] transition">
+            <Pencil size={12} />
+          </span>
+          <span className="text-sm">Add notes, thoughts, links…</span>
+        </div>
+        <p className="mt-2 text-[11px] text-[var(--text-faint)] pl-9">
+          Markdown welcome. Use <code className="text-[var(--accent)]">[[wiki links]]</code> to connect items.
+        </p>
+      </button>
     );
   }
 
@@ -169,19 +189,13 @@ export function InlineBody({
     <button
       type="button"
       onClick={() => setEditing(true)}
-      className="group w-full text-left mt-8 -mx-3 px-3 py-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition"
+      className="group w-full text-left -mx-3 px-3 py-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition"
     >
-      <div className="flex items-center gap-2 mb-1 text-xs text-[var(--text-faint)] opacity-0 group-hover:opacity-100 transition">
+      <div className="flex items-center gap-2 mb-2 text-[11px] text-[var(--text-faint)] opacity-0 group-hover:opacity-100 transition">
         <Pencil size={11} />
         Click to edit
       </div>
-      {value ? (
-        <Markdown>{value}</Markdown>
-      ) : (
-        <p className="text-[var(--text-faint)] italic text-sm">
-          Click to add notes, thoughts, links…
-        </p>
-      )}
+      <Markdown>{value}</Markdown>
     </button>
   );
 }

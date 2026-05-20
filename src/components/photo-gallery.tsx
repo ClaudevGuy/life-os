@@ -132,16 +132,24 @@ export function PhotoGallery({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className={`life-card w-full p-8 text-center text-sm text-[var(--text-faint)] hover:text-[var(--text-muted)] transition border-dashed ${
-            dragOver ? "border-[var(--accent)] bg-[var(--accent-glow)]" : ""
+          className={`group w-full rounded-xl border border-dashed transition px-6 py-8 text-center ${
+            dragOver
+              ? "border-[var(--accent)] bg-[var(--accent-glow)]"
+              : "border-[var(--border-soft)] hover:border-[var(--accent)] hover:bg-[var(--accent-glow)]"
           }`}
-          style={{ borderStyle: "dashed" }}
         >
-          <ImagePlus
-            size={20}
-            className={`mx-auto mb-2 ${dragOver ? "text-[var(--accent)]" : "text-[var(--text-faint)]"}`}
-          />
-          {emptyHint}
+          <div
+            className={`mx-auto mb-3 grid place-items-center w-10 h-10 rounded-full border transition ${
+              dragOver
+                ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--bg-card)]"
+                : "border-[var(--border-soft)] text-[var(--text-faint)] group-hover:border-[var(--accent)] group-hover:text-[var(--accent)]"
+            }`}
+          >
+            <ImagePlus size={16} />
+          </div>
+          <p className="text-sm text-[var(--text-muted)] group-hover:text-[var(--text)] transition">
+            {emptyHint}
+          </p>
         </button>
       ) : (
         <div
