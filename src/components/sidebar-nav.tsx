@@ -13,7 +13,6 @@ import {
   Target,
   Users,
   Lightbulb,
-  Clock,
   BarChart3,
   CalendarDays,
   MessageSquare,
@@ -88,7 +87,6 @@ const SECTIONS: RailSection[] = [
     heading: "Explore",
     items: [
       { href: "/ask", label: "Ask my notes", icon: MessageSquare },
-      { href: "/timeline", label: "Timeline", icon: Clock },
       { href: "/stats", label: "Stats", icon: BarChart3 },
     ],
   },

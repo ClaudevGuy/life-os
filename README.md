@@ -29,7 +29,6 @@ The only thing that ever leaves your machine is a single AI call — and only wh
 | `/projects` | PARA-style projects and areas |
 | `/people` | Conversations, last-contacted, what was discussed |
 | `/calendar` | Monthly grid showing captures, due dates, review dates |
-| `/timeline` | Everything you've captured, grouped by day |
 | `/graph` | Items clustered by topic + wiki-link connections |
 | `/tags` | Topics across your captures, weighted by frequency |
 | `/reviews` | Weekly review — 3 prompts, auto-saves |

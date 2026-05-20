@@ -9,7 +9,6 @@ import {
   Sun,
   Users,
   Lightbulb,
-  Clock,
   Network,
   Settings,
 } from "lucide-react";
@@ -32,7 +31,6 @@ const NAV: Array<{
   { href: "/today", label: "Today", icon: Sun },
   { href: "/people", label: "People", icon: Users },
   { href: "/decisions", label: "Decisions", icon: Lightbulb },
-  { href: "/timeline", label: "Timeline", icon: Clock },
   { href: "/graph", label: "Graph", icon: Network },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

@@ -24,7 +24,7 @@ export default function TagsPage() {
         Tags
       </h1>
       <p className="text-sm text-[var(--text-muted)] mt-1">
-        Topics across your captures. Click to filter.
+        Topics across your captures, weighted by frequency.
       </p>
 
       <div className="mt-8 flex flex-wrap gap-2">
@@ -32,17 +32,16 @@ export default function TagsPage() {
           const weight = 0.6 + (t.n / max) * 0.4;
           const size = 0.85 + (t.n / max) * 0.6;
           return (
-            <a
+            <span
               key={t.topic}
-              href={`/timeline?topic=${encodeURIComponent(t.topic)}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-soft)] hover:border-[var(--accent)] px-3 py-1 transition text-[var(--text-muted)] hover:text-[var(--text)]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-soft)] px-3 py-1 text-[var(--text-muted)]"
               style={{ fontSize: `${size}rem`, opacity: weight }}
             >
               <span>#{t.topic}</span>
               <span className="text-[10px] text-[var(--text-faint)] tabular-nums">
                 {t.n}
               </span>
-            </a>
+            </span>
           );
         })}
         {tags.length === 0 && (

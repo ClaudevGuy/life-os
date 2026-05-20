@@ -23,7 +23,6 @@ import { Keyboard } from "lucide-react";
  * g m  → Templates
  * g f  → Projects
  * g g  → Graph
- * g v  → Timeline
  *
  *  ? → open this help
  *  c → quick capture (handled in QuickCapture)
@@ -46,7 +45,6 @@ const MAP: Record<string, { href: string; label: string }> = {
   m: { href: "/templates", label: "Templates" },
   f: { href: "/projects", label: "Projects" },
   g: { href: "/graph", label: "Graph" },
-  v: { href: "/timeline", label: "Timeline" },
 };
 
 export function KeyboardShortcuts() {
