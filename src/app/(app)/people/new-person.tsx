@@ -134,7 +134,7 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
             <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
               New person
             </div>
-            <div className="mt-1 text-[24px] font-semibold tracking-[-0.02em] text-[var(--ink)] leading-tight">
+            <div className="mt-1 text-[21px] font-semibold tracking-[-0.02em] text-[var(--ink)] leading-tight whitespace-nowrap">
               Someone worth remembering.
             </div>
           </div>
