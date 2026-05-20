@@ -64,7 +64,7 @@ export function TemplateCard({
         type="button"
         onClick={use}
         disabled={pending}
-        className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-1.5 text-xs font-medium hover:brightness-110 transition disabled:opacity-50"
+        className="life-btn life-btn-sm life-btn-primary mt-3 w-full"
       >
         Use template <ArrowUpRight size={12} />
       </button>

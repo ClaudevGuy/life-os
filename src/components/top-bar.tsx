@@ -132,11 +132,11 @@ export function TopBar() {
       <div className="ml-auto md:ml-0 flex items-center gap-2 shrink-0">
         <Link
           href="/ask"
-          className="inline-flex items-center gap-1.5 h-[30px] px-3 rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] text-xs text-[var(--text)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm"
+          className="inline-flex items-center gap-1.5 h-[30px] px-3 rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] text-[13px] font-medium leading-none text-[var(--text)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm"
           title="Ask my notes"
         >
           <Sparkles size={12} />
-          Ask
+          <span className="font-sans">Ask</span>
         </Link>
         <PomodoroPill />
         <ThemeToggle />

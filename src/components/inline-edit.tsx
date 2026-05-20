@@ -133,7 +133,7 @@ export function InlineBody({
               type="button"
               onClick={save}
               disabled={pending}
-              className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)] text-zinc-950 px-2.5 py-1 font-medium hover:brightness-110 transition disabled:opacity-50"
+              className="life-btn life-btn-sm life-btn-primary"
             >
               <Check size={11} />
               Save

@@ -92,14 +92,14 @@ export function WelcomeModal() {
             <button
               type="button"
               onClick={dismiss}
-              className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)]"
+              className="life-btn life-btn-sm life-btn-ghost"
             >
               Skip
             </button>
             <button
               type="button"
               onClick={() => (step === steps.length - 1 ? dismiss() : setStep(step + 1))}
-              className="rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-2 text-sm font-medium hover:brightness-110 transition"
+              className="life-btn life-btn-primary"
             >
               {step === steps.length - 1 ? "Let's go" : "Next"}
             </button>

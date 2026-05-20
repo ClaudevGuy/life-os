@@ -192,7 +192,7 @@ export function TaskEditDialog({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition"
+              className="life-btn life-btn-sm life-btn-ghost"
             >
               Cancel
             </button>
@@ -200,7 +200,7 @@ export function TaskEditDialog({
               type="button"
               onClick={save}
               disabled={saving || !cleanTitle}
-              className="rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-1.5 text-xs font-medium hover:brightness-110 transition disabled:opacity-30"
+              className="life-btn life-btn-sm life-btn-primary"
             >
               Save
             </button>

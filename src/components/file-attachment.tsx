@@ -118,9 +118,9 @@ export function FileAttachment({
               type="button"
               onClick={onOpenNewTab}
               disabled={missing}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-soft)] bg-[var(--bg-card)] text-xs px-3 py-1.5 text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--border-strong)] transition disabled:opacity-40"
+              className="life-btn life-btn-sm life-btn-secondary"
             >
-              <ExternalLink size={11} />
+              <ExternalLink size={12} />
               Open
             </button>
           )}
@@ -128,9 +128,9 @@ export function FileAttachment({
             type="button"
             onClick={onDownload}
             disabled={missing}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-3 py-1.5 text-xs font-semibold shadow-[0_2px_8px_var(--accent-glow)] hover:brightness-110 transition disabled:opacity-40"
+            className="life-btn life-btn-sm life-btn-primary"
           >
-            <Download size={11} />
+            <Download size={12} />
             Download
           </button>
         </div>

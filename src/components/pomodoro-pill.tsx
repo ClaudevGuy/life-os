@@ -132,7 +132,7 @@ export function PomodoroPill() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-2 h-[30px] px-3 rounded-full border bg-[var(--bg-card)] text-xs transition shadow-sm ${
+        className={`inline-flex items-center gap-2 h-[30px] px-3 rounded-full border bg-[var(--bg-card)] text-[13px] font-medium leading-none transition shadow-sm ${
           running
             ? "border-[var(--accent)] text-[var(--text)] shadow-[0_0_0_3px_var(--accent-glow)]"
             : "border-[var(--border-strong)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
@@ -182,7 +182,7 @@ export function PomodoroPill() {
           </span>
         </span>
         <span
-          className={`leading-none ${idle ? "" : "font-mono tabular-nums"}`}
+          className={`leading-none ${idle ? "font-sans" : "font-mono tabular-nums"}`}
         >
           {idle ? "Focus" : `${mm}:${ss}`}
         </span>

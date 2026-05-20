@@ -753,7 +753,7 @@ function QuickAddInput({
           type="button"
           disabled={pending || !text.trim()}
           onClick={() => onSubmit(text)}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 hover:shadow-[0_2px_12px_var(--accent-glow)] active:translate-y-px transition disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed"
+          className="life-btn life-btn-primary ml-auto"
         >
           <Plus size={12} strokeWidth={3} />
           {isReminder ? "Set reminder" : "Add"}

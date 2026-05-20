@@ -83,7 +83,7 @@ export function QuickNote() {
           type="button"
           onClick={save}
           disabled={pending || !dirty}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 hover:shadow-[0_2px_12px_var(--accent-glow)] active:translate-y-px transition disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed shrink-0"
+          className="life-btn life-btn-primary shrink-0"
         >
           <Plus size={12} strokeWidth={3} />
           Add

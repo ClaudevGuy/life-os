@@ -266,7 +266,7 @@ export function AskClient() {
             <button
               type="submit"
               disabled={streaming || !q.trim()}
-              className="inline-flex items-center gap-1.5 rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-1.5 text-sm font-medium hover:brightness-110 transition disabled:opacity-30 shadow-[0_4px_12px_rgba(212,168,102,0.25)]"
+              className="life-btn life-btn-sm life-btn-primary"
             >
               {streaming ? (
                 <RefreshCw size={12} className="animate-spin" />

@@ -157,7 +157,7 @@ export function AiKeySection() {
               type="button"
               onClick={save}
               disabled={!draft.trim() || status === "saving"}
-              className="rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-1.5 text-xs font-medium hover:brightness-110 transition disabled:opacity-50"
+              className="life-btn life-btn-sm life-btn-primary"
             >
               Save
             </button>

@@ -79,7 +79,7 @@ export function EveningReflection() {
               type="button"
               onClick={save}
               disabled={pending || !text.trim()}
-              className="rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-1 text-xs font-medium hover:brightness-110 transition disabled:opacity-30"
+              className="life-btn life-btn-sm life-btn-primary"
             >
               Save
             </button>

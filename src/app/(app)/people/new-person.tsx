@@ -44,7 +44,7 @@ export function NewPersonButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 text-xs font-semibold uppercase tracking-[0.08em] px-4 py-1.5 shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 hover:shadow-[0_2px_12px_var(--accent-glow)] active:translate-y-px transition"
+        className="life-btn life-btn-primary"
       >
         <Plus size={12} strokeWidth={3} />
         Add person
@@ -82,7 +82,7 @@ export function NewPersonButton() {
           <button
             type="button"
             onClick={reset}
-            className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] px-2"
+            className="life-btn life-btn-sm life-btn-ghost"
           >
             Cancel
           </button>
@@ -90,7 +90,7 @@ export function NewPersonButton() {
             type="button"
             onClick={save}
             disabled={pending}
-            className="rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-1.5 text-xs font-medium hover:brightness-110 transition disabled:opacity-50"
+            className="life-btn life-btn-sm life-btn-primary"
           >
             Save
           </button>

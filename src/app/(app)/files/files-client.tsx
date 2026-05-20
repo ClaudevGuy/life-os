@@ -168,9 +168,9 @@ export function FilesClient() {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 transition disabled:opacity-50"
+          className="life-btn life-btn-primary"
         >
-          <Upload size={12} />
+          <Upload size={13} />
           {uploading ? "Uploading…" : "Upload"}
         </button>
         <input
@@ -522,9 +522,9 @@ function FilesEmpty({
           <button
             type="button"
             onClick={onUpload}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 transition"
+            className="life-btn life-btn-primary"
           >
-            <Upload size={12} />
+            <Upload size={13} />
             Upload a file
           </button>
           <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-faint)]">

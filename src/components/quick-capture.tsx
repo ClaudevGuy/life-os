@@ -370,7 +370,7 @@ export function QuickCapture() {
                 <button
                   type="button"
                   onClick={reset}
-                  className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] transition"
+                  className="life-btn life-btn-sm life-btn-ghost"
                 >
                   Cancel
                 </button>
@@ -378,7 +378,7 @@ export function QuickCapture() {
                   type="button"
                   onClick={save}
                   disabled={pending}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-5 py-2 text-sm font-medium hover:brightness-110 transition disabled:opacity-50 shadow-[0_8px_24px_-8px_rgba(212,168,102,0.55)]"
+                  className="life-btn life-btn-primary"
                 >
                   Save
                   <kbd className="text-[10px] opacity-70 inline-flex items-center">

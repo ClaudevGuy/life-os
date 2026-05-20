@@ -46,7 +46,7 @@ export function NewHighlight() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-md bg-[var(--accent)] text-zinc-950 text-xs px-3 py-1.5 hover:brightness-110 transition"
+        className="life-btn life-btn-primary"
       >
         <Plus size={12} /> New highlight
       </button>
@@ -90,7 +90,7 @@ export function NewHighlight() {
           <button
             type="button"
             onClick={reset}
-            className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] px-2"
+            className="life-btn life-btn-sm life-btn-ghost"
           >
             Cancel
           </button>
@@ -98,7 +98,7 @@ export function NewHighlight() {
             type="button"
             onClick={save}
             disabled={pending}
-            className="rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-1.5 text-xs font-medium hover:brightness-110 transition disabled:opacity-50"
+            className="life-btn life-btn-sm life-btn-primary"
           >
             Save highlight
           </button>

@@ -87,7 +87,7 @@ export function NewTask() {
         type="button"
         onClick={save}
         disabled={pending || !cleanTitle}
-        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 hover:shadow-[0_2px_12px_var(--accent-glow)] active:translate-y-px transition disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed"
+        className="life-btn life-btn-primary"
       >
         <Plus size={12} strokeWidth={3} />
         Add
