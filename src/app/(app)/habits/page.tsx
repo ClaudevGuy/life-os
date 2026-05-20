@@ -55,33 +55,14 @@ export default function HabitsPage() {
 
   let doneToday = 0;
   let bestStreak = 0;
-  let weekHits = 0;
-  let weekCells = 0;
-
-  // 14-day sparkline of total checkins across all habits
-  const last14 = Array.from({ length: 14 }).map((_, i) =>
-    ymd(new Date(Date.now() - (13 - i) * 86_400_000)),
-  );
-  const sparkData: number[] = new Array(14).fill(0);
 
   for (const h of rows) {
     const m = (h.metadata ?? {}) as { checkins?: string[] };
-    const checkins = m.checkins ?? [];
-    const set = new Set(checkins);
+    const set = new Set(m.checkins ?? []);
     if (set.has(today)) doneToday++;
     const s = calcStreak(set);
     if (s > bestStreak) bestStreak = s;
-
-    for (const d of week) {
-      weekCells++;
-      if (set.has(d)) weekHits++;
-    }
-    for (let i = 0; i < 14; i++) {
-      if (set.has(last14[i])) sparkData[i]++;
-    }
   }
-
-  const weekPct = weekCells > 0 ? Math.round((weekHits / weekCells) * 100) : 0;
 
   return (
     <div className="p-8 max-w-7xl mx-auto pg-enter">
@@ -102,7 +83,7 @@ export default function HabitsPage() {
         <NewHabit />
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 life-stagger mb-6">
+      <div className="grid grid-cols-3 gap-3 life-stagger mb-6">
         <Stat label="Habits" value={rows.length} tone="ink" />
         <Stat
           label="Today"
@@ -110,12 +91,6 @@ export default function HabitsPage() {
           tone="terra"
         />
         <Stat label="Best streak" value={`${bestStreak}d`} tone="gold" />
-        <Stat
-          label="Week consistency"
-          value={`${weekPct}%`}
-          tone="sage"
-          sparkline={sparkData}
-        />
       </div>
 
       {rows.length === 0 ? (
@@ -171,20 +146,16 @@ function Stat({
   label,
   value,
   tone,
-  sparkline,
 }: {
   label: string;
   value: number | string;
-  tone: "ink" | "terra" | "gold" | "sage";
-  sparkline?: number[];
+  tone: "ink" | "terra" | "gold";
 }) {
   const color =
     tone === "terra"
       ? "var(--terra)"
       : tone === "gold"
       ? "var(--gold)"
-      : tone === "sage"
-      ? "var(--sage)"
       : "var(--ink)";
 
   return (
@@ -198,40 +169,7 @@ function Stat({
       >
         {value}
       </div>
-      {sparkline && sparkline.length > 1 && (
-        <Sparkline data={sparkline} color={color} />
-      )}
     </div>
   );
 }
 
-function Sparkline({ data, color }: { data: number[]; color: string }) {
-  const max = Math.max(...data, 1);
-  const W = 100;
-  const H = 18;
-  const pts = data
-    .map((v, i) => {
-      const x = (i / (data.length - 1)) * W;
-      const y = H - (v / max) * H;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-  return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      width="100%"
-      height={H}
-      preserveAspectRatio="none"
-      className="mt-3"
-    >
-      <polyline
-        points={pts}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
