@@ -712,26 +712,26 @@ function QuickAddInput({
   const isReminder = kind === "reminder";
   return (
     <div className="mt-3 space-y-2">
+      <input
+        autoFocus
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSubmit(text);
+          if (e.key === "Escape") onCancel();
+        }}
+        placeholder={
+          isReminder
+            ? "Remind me to…"
+            : kind === "task"
+            ? "Task due that day…"
+            : kind === "decision"
+            ? "Decision to review that day…"
+            : "Note title…"
+        }
+        className="w-full rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition"
+      />
       <div className="flex items-center gap-2">
-        <input
-          autoFocus
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onSubmit(text);
-            if (e.key === "Escape") onCancel();
-          }}
-          placeholder={
-            isReminder
-              ? "Remind me to…"
-              : kind === "task"
-              ? "Task due that day…"
-              : kind === "decision"
-              ? "Decision to review that day…"
-              : "Note title…"
-          }
-          className="flex-1 rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition"
-        />
         {isReminder && (
           <input
             type="time"
@@ -745,14 +745,14 @@ function QuickAddInput({
           type="button"
           disabled={pending || !text.trim()}
           onClick={() => onSubmit(text)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 hover:shadow-[0_2px_12px_var(--accent-glow)] active:translate-y-px transition disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 hover:shadow-[0_2px_12px_var(--accent-glow)] active:translate-y-px transition disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed"
         >
           <Plus size={12} strokeWidth={3} />
-          {isReminder ? "Set" : "Add"}
+          {isReminder ? "Set reminder" : "Add"}
         </button>
       </div>
       {isReminder && (
-        <p className="text-[10px] text-[var(--text-faint)] px-1">
+        <p className="text-[11px] leading-snug text-[var(--text-faint)] px-1">
           Saved as a task with a due time — it'll show up in Tasks, Today, and on this day in the calendar.
         </p>
       )}
