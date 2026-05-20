@@ -182,7 +182,10 @@ export function PomodoroPill() {
           </span>
         </span>
         <span
-          className={`leading-none ${idle ? "font-sans" : "font-mono tabular-nums"}`}
+          className={`text-[13px] font-medium leading-none ${
+            idle ? "" : "font-mono tabular-nums"
+          }`}
+          style={idle ? { fontFamily: "var(--font-sans), system-ui, sans-serif" } : undefined}
         >
           {idle ? "Focus" : `${mm}:${ss}`}
         </span>

@@ -136,7 +136,12 @@ export function TopBar() {
           title="Ask my notes"
         >
           <Sparkles size={12} />
-          <span className="font-sans">Ask</span>
+          <span
+            className="text-[13px] font-medium leading-none"
+            style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
+          >
+            Ask
+          </span>
         </Link>
         <PomodoroPill />
         <ThemeToggle />
