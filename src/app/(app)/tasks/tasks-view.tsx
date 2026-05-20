@@ -7,11 +7,18 @@ import { TaskRow } from "./task-row";
 import { TaskEditDialog } from "./task-edit-dialog";
 import { LayoutList, KanbanSquare, Check, Repeat, Pencil } from "lucide-react";
 
-type Tab = "all" | "today" | "overdue" | "done";
+export type Tab = "all" | "today" | "overdue" | "done";
 type View = "list" | "board";
 
-export function TasksView({ rows }: { rows: Item[] }) {
-  const [tab, setTab] = useState<Tab>("all");
+export function TasksView({
+  rows,
+  tab,
+  onTabChange,
+}: {
+  rows: Item[];
+  tab: Tab;
+  onTabChange: (t: Tab) => void;
+}) {
   const [view, setView] = useState<View>("board");
   const [editing, setEditing] = useState<Item | null>(null);
 
@@ -47,7 +54,7 @@ export function TasksView({ rows }: { rows: Item[] }) {
             <button
               key={t}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => onTabChange(t)}
               className={`px-3 py-1 rounded-md text-xs capitalize transition ${
                 tab === t
                   ? "bg-[var(--accent-soft)] text-[var(--accent)]"

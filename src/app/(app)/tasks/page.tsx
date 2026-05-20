@@ -1,12 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useItemsOfKind } from "@/lib/store/items";
 import { ListTodo } from "lucide-react";
 import { NewTask } from "./new-task";
-import { TasksView } from "./tasks-view";
+import { TasksView, type Tab } from "./tasks-view";
 
 export default function TasksPage() {
   const rows = useItemsOfKind("task") ?? [];
+  const [tab, setTab] = useState<Tab>("all");
 
   const now = new Date();
   const startOfToday = new Date();
@@ -54,17 +56,41 @@ export default function TasksPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 life-stagger">
-        <Stat label="Open" value={open.length} tone="default" />
-        <Stat label="Overdue" value={overdue.length} tone="warn" />
-        <Stat label="Due today" value={dueToday.length} tone="accent" />
-        <Stat label="Done this week" value={doneThisWeek.length} tone="good" />
+        <Stat
+          label="Open"
+          value={open.length}
+          tone="default"
+          active={tab === "all"}
+          onClick={() => setTab("all")}
+        />
+        <Stat
+          label="Overdue"
+          value={overdue.length}
+          tone="warn"
+          active={tab === "overdue"}
+          onClick={() => setTab("overdue")}
+        />
+        <Stat
+          label="Due today"
+          value={dueToday.length}
+          tone="accent"
+          active={tab === "today"}
+          onClick={() => setTab("today")}
+        />
+        <Stat
+          label="Done this week"
+          value={doneThisWeek.length}
+          tone="good"
+          active={tab === "done"}
+          onClick={() => setTab("done")}
+        />
       </div>
 
       <div className="mt-6">
         <NewTask />
       </div>
 
-      <TasksView rows={rows} />
+      <TasksView rows={rows} tab={tab} onTabChange={setTab} />
     </div>
   );
 }
@@ -73,10 +99,14 @@ function Stat({
   label,
   value,
   tone,
+  active,
+  onClick,
 }: {
   label: string;
   value: number;
   tone: "default" | "warn" | "accent" | "good";
+  active?: boolean;
+  onClick?: () => void;
 }) {
   const colorClass =
     tone === "warn"
@@ -86,14 +116,37 @@ function Stat({
       : tone === "good"
       ? "text-emerald-300"
       : "text-[var(--text)]";
+  const accentColor =
+    tone === "warn"
+      ? "#ef8b8b"
+      : tone === "accent"
+      ? "var(--accent)"
+      : tone === "good"
+      ? "#6dc8a1"
+      : "var(--text-muted)";
   return (
-    <div className="life-card p-3.5">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`life-card p-3.5 text-left transition relative overflow-hidden ${
+        active
+          ? "border-[var(--border-strong)] bg-[var(--bg-card-hover)]"
+          : "hover:bg-[var(--bg-card-hover)] hover:border-[var(--border-strong)]"
+      }`}
+    >
+      {active && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px"
+          style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }}
+        />
+      )}
       <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
         {label}
       </div>
       <div className={`mt-1 text-2xl font-semibold tabular-nums ${colorClass}`}>
         {value}
       </div>
-    </div>
+    </button>
   );
 }

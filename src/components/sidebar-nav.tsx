@@ -23,6 +23,8 @@ import {
   MessageSquare,
   FolderKanban,
   BookOpen,
+  BookHeart,
+  RefreshCw,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -76,16 +78,10 @@ const SECTIONS: RailSection[] = [
     ],
   },
   {
-    heading: "Think",
-    items: [
-      { href: "/ask", label: "Ask my notes", icon: MessageSquare },
-      { href: "/projects", label: "Projects & Areas", icon: FolderKanban },
-    ],
-  },
-  {
     heading: "Reflect",
     items: [
-      { href: "/journal", label: "Journal", icon: NotebookPen },
+      { href: "/journal", label: "Journal", icon: BookHeart },
+      { href: "/projects", label: "Projects & Areas", icon: FolderKanban },
       { href: "/goals", label: "Goals", icon: Target },
       {
         href: "/decisions",
@@ -94,12 +90,13 @@ const SECTIONS: RailSection[] = [
         badgeKey: "pendingDecisions",
       },
       { href: "/people", label: "People", icon: Users },
-      { href: "/reviews", label: "Reviews", icon: Sparkles },
+      { href: "/reviews", label: "Reviews", icon: RefreshCw },
     ],
   },
   {
     heading: "Explore",
     items: [
+      { href: "/ask", label: "Ask my notes", icon: MessageSquare },
       { href: "/timeline", label: "Timeline", icon: Clock },
       { href: "/graph", label: "Graph", icon: Network },
       { href: "/tags", label: "Tags", icon: Tag },
