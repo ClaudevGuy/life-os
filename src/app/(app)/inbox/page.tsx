@@ -5,7 +5,7 @@ export const metadata = { title: "Inbox · Life OS" };
 
 export default function InboxPage() {
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 max-w-3xl mx-auto">
       <div className="flex items-baseline justify-between">
         <div>
           <h1 className="life-h1 inline-flex items-center gap-2">

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Pin, ExternalLink, Sparkles, Archive, Trash2 } from "lucide-react";
+import { Pin, ExternalLink, Sparkles, Archive, Trash2, Inbox } from "lucide-react";
 import { FilterChips } from "./filter-chips";
+import { EmptyState } from "@/components/empty-state";
 import {
   useInboxItems,
   updateItem,
@@ -37,17 +38,32 @@ export function InboxList() {
     toast.success("Deleted");
   }
 
+  const empty = filtered.length === 0;
+  const totalEmpty = rows.length === 0;
+
   return (
     <div>
       <div className="mt-6">
         <FilterChips onChange={setFilter} />
       </div>
+      {empty && (
+        <EmptyState
+          icon={Inbox}
+          tint="var(--accent)"
+          title={totalEmpty ? "Inbox zero." : "Nothing in this filter."}
+          body={
+            totalEmpty
+              ? "Capture anything — a bookmark, a thought, a task. It lands here first, then you triage."
+              : "Try another kind or capture something new."
+          }
+          actions={
+            totalEmpty
+              ? [{ label: "Capture", onClickKey: "c" }]
+              : undefined
+          }
+        />
+      )}
       <ul className="mt-4 space-y-1.5 life-stagger">
-        {filtered.length === 0 && (
-          <li className="life-card p-6 text-center text-sm text-[var(--text-faint)]">
-            Nothing in this filter.
-          </li>
-        )}
         {filtered.map((it) => {
           const pinned = it.isPinned;
           return (

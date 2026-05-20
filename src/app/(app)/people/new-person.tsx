@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { captureItem } from "@/lib/store/items";
 
 export function NewPersonButton() {
@@ -44,35 +44,45 @@ export function NewPersonButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs px-3 py-1.5 transition"
+        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 text-xs font-semibold uppercase tracking-[0.08em] px-4 py-1.5 shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 hover:shadow-[0_2px_12px_var(--accent-glow)] active:translate-y-px transition"
       >
-        <Plus size={12} /> Add person
+        <Plus size={12} strokeWidth={3} />
+        Add person
       </button>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-        <h2 className="text-sm font-medium mb-4">Add person</h2>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-black/60 backdrop-blur-sm"
+      onClick={reset}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-card)] p-5 life-rise"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="inline-flex items-center gap-2 text-sm font-medium mb-4">
+          <Users size={14} className="text-[var(--accent)]" />
+          Add person
+        </h2>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Name"
-          className="w-full rounded-md bg-zinc-950 border border-zinc-900 px-3 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-700"
+          className="w-full rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           autoFocus
         />
         <input
           value={handle}
           onChange={(e) => setHandle(e.target.value)}
           placeholder="Handle (optional, e.g. @daniel)"
-          className="mt-2 w-full rounded-md bg-zinc-950 border border-zinc-900 px-3 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-700"
+          className="mt-2 w-full rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         />
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"
             onClick={reset}
-            className="text-xs text-zinc-500 hover:text-zinc-300 px-2"
+            className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] px-2"
           >
             Cancel
           </button>
@@ -80,7 +90,7 @@ export function NewPersonButton() {
             type="button"
             onClick={save}
             disabled={pending}
-            className="rounded-md bg-zinc-100 text-zinc-900 px-3 py-1.5 text-xs font-medium hover:bg-white transition disabled:opacity-50"
+            className="rounded-md bg-[var(--accent)] text-zinc-950 px-3 py-1.5 text-xs font-medium hover:brightness-110 transition disabled:opacity-50"
           >
             Save
           </button>
