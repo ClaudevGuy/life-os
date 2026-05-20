@@ -1,6 +1,6 @@
 # Life OS
 
-> Capture, organize, and recall everything you care about — notes, tasks, decisions, people, daily journals — in one place. **Local-first**: every byte lives in your browser, never on someone else's server.
+> Capture, organize, and recall everything you care about — notes, tasks, projects, people, daily journals — in one place. **Local-first**: every byte lives in your browser, never on someone else's server.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black) ![React](https://img.shields.io/badge/React-19-149eca) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6) ![IndexedDB](https://img.shields.io/badge/storage-IndexedDB-f0a868)
 
@@ -16,19 +16,17 @@ The only thing that ever leaves your machine is a single AI call — and only wh
 
 | Route | What it's for |
 | --- | --- |
-| `/today` | Morning brief, journal entry, what-to-do-now nudge, quick stats |
-| `/inbox` | Triage everything you've captured |
-| `/notes` | Free-form notes, pinned ones float to the top |
+| `/today` | Morning brief, inline journal entry, what-to-do-now nudge, next-7-days agenda |
+| `/inbox` | Triage what you've captured — swipe rows to archive (terra) or file (sage), or use the buttons |
+| `/notes` | Master-detail two-pane editor with a grid-view toggle. Inline edit + paste-to-attach images |
 | `/files` | PDFs, Word, text, slides — uploaded and stored locally |
-| `/tasks` | What needs doing, with priorities, due dates, recurrence, kanban or list view |
-| `/habits` | Daily / weekly check-ins, 30-day heatmap, streaks |
-| `/decisions` | Log a decision with reasoning, set a review date, mark the outcome later |
+| `/tasks` | Quick-add bar with priority pills + Board / List views. Stat tiles for Open / Overdue / Due today / Done this week |
+| `/habits` | Single table: dot + name, streak, 7 clickable weekday cells (Monday-anchored), 30-day sparkline. Per-row edit / delete |
 | `/highlights` | Lines worth re-reading, surfaced again after a week |
 | `/journal` | Inline write-today editor (5-circle energy scale, rotating prompts, autosave) with past entries listed alongside |
-| `/goals` | Targets with progress bars and milestones |
-| `/projects` | PARA-style projects and areas |
-| `/people` | Conversations, last-contacted, what was discussed |
-| `/calendar` | Month / week / agenda views of reminders; archived ones show struck-through |
+| `/projects` | Stats row + projects grouped under their area. Project detail has a Studio hero, KPI grid, real task-pip bar (uses `metadata.projectId`), inline tasks list, milestones, photos, linked items |
+| `/people` | "Needs a reply" (no contact / >14d stale) + "Everyone" grid. Person detail with color-band hero, next-step row, Notes + Threads timeline (backlinks-driven), Quick facts, Reach out (mailto:/tel:) |
+| `/calendar` | Month / week / agenda views of reminders; archived reminders render struck-through |
 | `/graph` | Items clustered by topic + wiki-link connections |
 | `/tags` | Topics across your captures, weighted by frequency |
 | `/reviews` | Weekly review — 3 prompts, auto-saves |
@@ -90,12 +88,14 @@ If you'd rather **self-host**, anything that can serve a Next.js standalone buil
 
 ### Items
 
-Every captured object — note, task, journal entry, habit, decision, highlight, goal, person, project, area — is stored as a single polymorphic record in the `items` table:
+Every captured object — note, task, journal entry, habit, highlight, person, project, area, file, voice — is stored as a single polymorphic record in the `items` table:
 
 ```ts
 type StoredItem = {
   id: string;
-  kind: "note" | "task" | "decision" | ... ;
+  kind: "note" | "task" | "habit" | "journal" | "highlight"
+      | "person" | "project" | "area" | "file" | "voice"
+      | "goal" | "decision";   // legacy — no list page, items still viewable
   title: string | null;
   body: string | null;
   sourceUrl: string | null;
@@ -107,7 +107,15 @@ type StoredItem = {
 };
 ```
 
-Kind-specific fields (priority, dueDate, checkins, reviewAt, outcome, etc.) all live under `metadata`. This keeps the schema flat and lets new kinds be added without a migration.
+Kind-specific fields all live under `metadata`. Some shapes the UI reads today:
+
+- **task** — `priority`, `dueDate`, `completedAt`, `recurrence`, `reminder`, `projectId` (links task to a project)
+- **habit** — `cadence`, `checkins: string[]` (ymd dates)
+- **journal** — `energy: 1..5`, `mood`, `photos: string[]`
+- **project** — `area: string`, `progress: 0..100`, `targetDate`, `status: "active" | "shipping" | "paused"`, `milestones: { title, date?, done? }[]`
+- **person** — `relationship`, `role`, `location`, `color`, `email`, `phone`, `birthday`, `metAt`, `lastContactedAt`, `nextStep: { title, dueDate? }`
+
+This flat shape lets new kinds and fields be added without a schema migration.
 
 ### Reading data
 
@@ -119,7 +127,6 @@ const inbox = useInboxItems();              // reactive
 const oneItem = useItem(id);                // reactive
 const recent = useRecentItems(24);          // last 24h
 const todayJournal = useJournalToday();
-const dueDecisions = useDecisionsDue();
 ```
 
 `useLiveQuery` automatically re-runs whenever the underlying IndexedDB changes — capture an item in one tab, every other tab updates instantly.
@@ -184,13 +191,21 @@ src/
       today/                   morning hub
       inbox/                   triage queue
       tasks/ habits/ ...       per-kind list pages
-      items/[id]/              shared detail view
+      items/[id]/              shared detail view (dispatches to kind-specific layouts)
+      projects/project-detail  Studio layout for kind="project"
+      people/person-detail     Studio layout for kind="person"
       ...
       settings/                preferences · AI key · export · erase
     api/
       ai/brief/                Claude proxy: morning brief
       ai/ask/                  Claude proxy: streaming chat
-  components/                  shared UI (TopBar, SidebarNav, QuickCapture, ...)
+  components/
+    portal.tsx                 createPortal wrapper so modals escape any
+                               containing-block-creating ancestor
+    sidebar-nav.tsx
+    top-bar.tsx
+    quick-capture.tsx          floating "+" FAB and Cmd-key composer
+    ...
   lib/
     store/
       db.ts                    Dexie schema (items + blobs)
@@ -201,6 +216,12 @@ src/
     natural-date.ts            "friday", "tomorrow", "in 3 days" parsing
     ...
 ```
+
+**Kind-specific detail pages.** `/items/[id]` is the canonical detail route, but it switches on `item.kind`:
+
+- `project` → renders [`ProjectDetail`](src/app/(app)/projects/project-detail.tsx) (hero with monogram + KPIs, real task-pip bar from `metadata.projectId`-linked tasks, inline tasks list, milestones)
+- `person` → renders [`PersonDetail`](src/app/(app)/people/person-detail.tsx) (color-band hero, next-step row, Threads timeline, Quick facts, Reach out)
+- everything else → the generic detail view (title, body, photos, backlinks, kind-specific editors for journal energy, habit streak, etc.)
 
 ---
 
