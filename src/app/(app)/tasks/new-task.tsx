@@ -54,28 +54,42 @@ export function NewTask() {
           </div>
         )}
       </div>
-      <div className="hidden sm:flex items-center gap-0.5 rounded-md bg-[var(--bg-rail)] p-0.5">
-        {(["low", "medium", "high"] as const).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPriority(p)}
-            className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded transition ${
-              priority === p
-                ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"
-            }`}
-          >
-            {p}
-          </button>
-        ))}
+      <div className="hidden sm:flex items-center gap-1 rounded-full bg-[var(--bg-rail)] border border-[var(--border-soft)] p-1">
+        {(["low", "medium", "high"] as const).map((p) => {
+          const active = priority === p;
+          const dot =
+            p === "high" ? "#ef8b8b" : p === "medium" ? "var(--accent)" : "#6dc8a1";
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPriority(p)}
+              className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] font-medium px-2.5 py-1 rounded-full transition ${
+                active
+                  ? "bg-[var(--bg-card)] text-[var(--text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.3)]"
+                  : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"
+              }`}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full transition"
+                style={{
+                  background: dot,
+                  boxShadow: active ? `0 0 6px ${dot}` : "none",
+                  opacity: active ? 1 : 0.5,
+                }}
+              />
+              {p}
+            </button>
+          );
+        })}
       </div>
       <button
         type="button"
         onClick={save}
         disabled={pending || !cleanTitle}
-        className="rounded-md bg-[var(--accent)] text-zinc-950 px-2.5 py-1 text-xs font-medium hover:brightness-110 transition disabled:opacity-30"
+        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-zinc-950 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] shadow-[0_2px_8px_var(--accent-glow),inset_0_1px_0_rgba(255,255,255,0.25)] hover:brightness-110 hover:shadow-[0_2px_12px_var(--accent-glow)] active:translate-y-px transition disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed"
       >
+        <Plus size={12} strokeWidth={3} />
         Add
       </button>
     </div>
