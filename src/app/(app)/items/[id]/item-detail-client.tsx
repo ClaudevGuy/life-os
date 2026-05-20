@@ -12,9 +12,9 @@ import {
   GoalProgressEditor,
 } from "@/components/kind-editors";
 import { RecentTracker } from "@/components/recently-viewed";
-import { ProjectRollUp } from "@/components/project-roll-up";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { FileAttachment } from "@/components/file-attachment";
+import { ProjectDetail } from "@/app/(app)/projects/project-detail";
 
 export function ItemDetailClient({ id }: { id: string }) {
   const item = useItem(id);
@@ -22,6 +22,11 @@ export function ItemDetailClient({ id }: { id: string }) {
   if (item === undefined) return null; // loading
   if (item === null) {
     notFound();
+  }
+
+  // Project gets its own Studio-direction layout (Tasks list, KPIs, milestones).
+  if (item.kind === "project") {
+    return <ProjectDetail project={item} />;
   }
 
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
@@ -176,12 +181,6 @@ export function ItemDetailClient({ id }: { id: string }) {
           emptyHint={emptyHintForKind(item.kind)}
         />
       </section>
-
-      {item.kind === "project" && (
-        <div className="mt-5 life-rise" style={{ animationDelay: "240ms" }}>
-          <ProjectRollUp projectId={item.id} />
-        </div>
-      )}
 
       <div className="mt-5 life-rise" style={{ animationDelay: "280ms" }}>
         <Backlinks

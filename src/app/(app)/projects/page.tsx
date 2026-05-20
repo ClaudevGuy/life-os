@@ -8,6 +8,8 @@ import type { StoredItem } from "@/lib/store/items";
 import { FolderKanban, Compass, Calendar, Clock } from "lucide-react";
 import { NewProject } from "./new-project";
 
+type ProjectTasks = { open: StoredItem[]; done: StoredItem[] };
+
 type ProjectStatus = "active" | "shipping" | "paused";
 
 const STUDIO_PALETTE = [
@@ -36,9 +38,14 @@ function projectColor(p: StoredItem): string {
 }
 
 function projectStatus(p: StoredItem): ProjectStatus {
+  // Prefer explicit metadata.status; fall back to derived from archived /
+  // progress so older projects without the field still render correctly.
+  const m = (p.metadata ?? {}) as { status?: ProjectStatus; progress?: number };
+  if (m.status === "paused" || m.status === "shipping" || m.status === "active") {
+    return m.status;
+  }
   if (p.status === "archived") return "paused";
-  const progress = ((p.metadata ?? {}) as { progress?: number }).progress ?? 0;
-  if (progress >= 95) return "shipping";
+  if ((m.progress ?? 0) >= 95) return "shipping";
   return "active";
 }
 
@@ -66,6 +73,20 @@ export default function ProjectsPage() {
   const areas = useMemo(() => rows.filter((r) => r.kind === "area"), [rows]);
   const allTasks = useMemo(() => rows.filter((r) => r.kind === "task"), [rows]);
   const openTasks = useMemo(() => allTasks.filter(isOpenTask), [allTasks]);
+
+  // Index tasks by projectId once so each card filters in O(1).
+  const tasksByProject = useMemo(() => {
+    const m = new Map<string, ProjectTasks>();
+    for (const t of allTasks) {
+      const tm = (t.metadata ?? {}) as { projectId?: string; reminder?: boolean };
+      if (!tm.projectId || tm.reminder === true) continue;
+      const bucket = m.get(tm.projectId) ?? { open: [], done: [] };
+      if (isOpenTask(t)) bucket.open.push(t);
+      else bucket.done.push(t);
+      m.set(tm.projectId, bucket);
+    }
+    return m;
+  }, [allTasks]);
 
   const completed = useMemo(
     () =>
@@ -169,7 +190,11 @@ export default function ProjectsPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 life-stagger">
                   {list.map((p) => (
-                    <ProjectCard key={p.id} project={p} />
+                    <ProjectCard
+                      key={p.id}
+                      project={p}
+                      tasks={tasksByProject.get(p.id) ?? null}
+                    />
                   ))}
                 </div>
               </section>
@@ -229,19 +254,47 @@ export default function ProjectsPage() {
 // Project card
 // ──────────────────────────────────────────────────────────────────────
 
-function ProjectCard({ project: p }: { project: StoredItem }) {
+function ProjectCard({
+  project: p,
+  tasks,
+}: {
+  project: StoredItem;
+  tasks: ProjectTasks | null;
+}) {
   const meta = (p.metadata ?? {}) as {
     targetDate?: string;
     progress?: number;
     area?: string;
   };
-  const progress = Math.max(0, Math.min(100, meta.progress ?? 0));
   const color = projectColor(p);
   const tint = STUDIO_TINTS[color] ?? "var(--paper-2)";
   const status = projectStatus(p);
   const monogram = (p.title?.trim()?.[0] ?? "·").toUpperCase();
   const updatedRel = relDate(p.updatedAt);
   const due = meta.targetDate ? new Date(meta.targetDate) : null;
+
+  const openCount = tasks?.open.length ?? 0;
+  const doneCount = tasks?.done.length ?? 0;
+  const totalTasks = openCount + doneCount;
+
+  // Prefer real task ratio; fall back to metadata.progress for unwired projects.
+  const progress =
+    totalTasks > 0
+      ? Math.round((doneCount / totalTasks) * 100)
+      : Math.max(0, Math.min(100, meta.progress ?? 0));
+
+  // NEXT UP: highest-priority open task, earliest due date.
+  const nextUp = useMemo(() => {
+    if (!tasks || tasks.open.length === 0) return null;
+    return [...tasks.open].sort((a, b) => {
+      const pa = priorityRank(a);
+      const pb = priorityRank(b);
+      if (pa !== pb) return pb - pa;
+      const da = dueTimestamp(a);
+      const dbb = dueTimestamp(b);
+      return da - dbb;
+    })[0];
+  }, [tasks]);
 
   return (
     <Link
@@ -280,29 +333,33 @@ function ProjectCard({ project: p }: { project: StoredItem }) {
           <StatusPill status={status} />
         </div>
 
-        <div className="mt-auto">
-          <div className="flex items-center justify-between text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[var(--muted-2)] mb-1.5">
-            <span>Progress</span>
-            <span
-              className="font-mono"
-              style={{ color: progress > 0 ? color : "var(--muted-2)" }}
+        <div className="mt-auto flex flex-col gap-3">
+          {totalTasks > 0 ? (
+            <PipPreview total={totalTasks} done={doneCount} color={color} />
+          ) : (
+            <div
+              className="h-[6px] rounded-full overflow-hidden"
+              style={{ background: "var(--bg-2)" }}
             >
+              <div
+                className="h-full transition-all"
+                style={{ width: `${progress}%`, background: color }}
+              />
+            </div>
+          )}
+          <div className="flex items-center justify-between text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[var(--muted-2)]">
+            <span className="font-mono">
+              {totalTasks > 0
+                ? `${doneCount} / ${totalTasks}`
+                : "Progress"}
+            </span>
+            <span className="font-mono" style={{ color }}>
               {progress}%
             </span>
           </div>
-          <div
-            className="h-[6px] rounded-full overflow-hidden"
-            style={{ background: "var(--bg-2)" }}
-          >
-            <div
-              className="h-full transition-all"
-              style={{
-                width: `${progress}%`,
-                background: color,
-              }}
-            />
-          </div>
         </div>
+
+        {nextUp && <NextUpRow task={nextUp} color={color} />}
       </div>
 
       <div
@@ -324,6 +381,82 @@ function ProjectCard({ project: p }: { project: StoredItem }) {
       </div>
     </Link>
   );
+}
+
+function PipPreview({
+  total,
+  done,
+  color,
+}: {
+  total: number;
+  done: number;
+  color: string;
+}) {
+  // Cap the pip count so very large task lists don't shrink to invisible.
+  const cap = 8;
+  const renderCount = Math.min(total, cap);
+  const doneShown = total <= cap
+    ? done
+    : Math.round((done / total) * cap);
+  return (
+    <div className="flex gap-[5px]">
+      {Array.from({ length: renderCount }).map((_, i) => {
+        const filled = i < doneShown;
+        return (
+          <span
+            key={i}
+            className="flex-1 h-[10px] rounded-[3px]"
+            style={{
+              background: filled ? color : "transparent",
+              border: `1.4px solid ${filled ? color : "var(--line-2)"}`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function NextUpRow({ task, color }: { task: StoredItem; color: string }) {
+  const m = (task.metadata ?? {}) as { dueDate?: string };
+  const due = m.dueDate ? new Date(m.dueDate) : null;
+  return (
+    <div
+      className="rounded-[10px] p-3 flex items-center gap-3"
+      style={{ background: "var(--paper-2)" }}
+    >
+      <span
+        className="grid place-items-center w-4 h-4 rounded-[5px] shrink-0"
+        style={{ border: `1.4px solid ${color}` }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] uppercase tracking-[0.12em] font-semibold text-[var(--muted)]">
+          Next up
+        </div>
+        <div className="text-[13.5px] text-[var(--ink)] truncate">
+          {task.title?.trim() || "untitled"}
+        </div>
+      </div>
+      {due && (
+        <span className="text-[11px] font-mono tabular-nums uppercase tracking-[0.1em] text-[var(--muted-2)] shrink-0">
+          {dueLabel(due)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function priorityRank(t: StoredItem): number {
+  const p = ((t.metadata ?? {}) as { priority?: string }).priority;
+  if (p === "high") return 3;
+  if (p === "medium") return 2;
+  if (p === "low") return 1;
+  return 0;
+}
+
+function dueTimestamp(t: StoredItem): number {
+  const d = ((t.metadata ?? {}) as { dueDate?: string }).dueDate;
+  return d ? new Date(d).getTime() : Number.POSITIVE_INFINITY;
 }
 
 function StatusPill({ status }: { status: ProjectStatus }) {
