@@ -108,11 +108,11 @@ function NewPersonModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[80px] pb-6 bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg max-h-[min(92vh,860px)] flex flex-col rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
+        className="w-full max-w-lg max-h-[calc(100vh-104px)] flex flex-col rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
         style={{ boxShadow: "var(--shadow-3)" }}
         onClick={(e) => e.stopPropagation()}
       >
