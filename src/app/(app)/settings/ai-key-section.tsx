@@ -46,18 +46,9 @@ const PROVIDERS: Record<AiProvider, ProviderMeta> = {
     helpHost: "platform.openai.com",
     blurb: "Direct OpenAI access. Great general-purpose.",
   },
-  gateway: {
-    label: "AI Gateway",
-    placeholder: "vck_…",
-    defaultModel: "anthropic/claude-haiku-4.5",
-    helpHref: "https://vercel.com/dashboard/ai-gateway",
-    helpHost: "vercel.com/ai-gateway",
-    blurb:
-      "One key, any model. Set the Model field as provider/model — e.g. google/gemini-2.5-flash, openai/gpt-4o, mistral/mistral-large.",
-  },
 };
 
-const ORDER: AiProvider[] = ["anthropic", "openai", "gateway"];
+const ORDER: AiProvider[] = ["anthropic", "openai"];
 
 export function AiKeySection() {
   const [saved, setSaved] = useState<AiCreds | null>(null);

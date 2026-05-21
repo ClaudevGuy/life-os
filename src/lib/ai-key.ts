@@ -3,19 +3,20 @@
  * sessions. Credentials never leave the browser except as headers on
  * `/api/ai/*` requests to the user's own deployment.
  *
- * Three supported providers:
+ * Supported providers:
  *
  *   - "anthropic" — direct via @ai-sdk/anthropic. Get a key at
  *     console.anthropic.com.
- *   - "openai"   — direct via @ai-sdk/openai. Get a key at
+ *   - "openai"    — direct via @ai-sdk/openai. Get a key at
  *     platform.openai.com/api-keys.
- *   - "gateway"  — Vercel AI Gateway. One key, any model. Set the model
- *     field to provider/model, e.g. "google/gemini-2.5-flash" or
- *     "openai/gpt-4o-mini". Get a key at vercel.com/dashboard/ai-gateway.
+ *
+ * To add another provider (Google, Mistral, etc.), install its
+ * @ai-sdk/<provider> package, add the literal to AiProvider, add a case
+ * in ai-provider.ts's buildModel, and a meta entry in ai-key-section.tsx.
  */
 "use client";
 
-export type AiProvider = "anthropic" | "openai" | "gateway";
+export type AiProvider = "anthropic" | "openai";
 
 export type AiCreds = {
   provider: AiProvider;
@@ -37,9 +38,7 @@ function read(): AiCreds | null {
       if (
         parsed &&
         typeof parsed.key === "string" &&
-        (parsed.provider === "anthropic" ||
-          parsed.provider === "openai" ||
-          parsed.provider === "gateway")
+        (parsed.provider === "anthropic" || parsed.provider === "openai")
       ) {
         return {
           provider: parsed.provider,

@@ -4,24 +4,25 @@
  * browser when a BYO credential is configured in /settings → AI):
  *
  *   Authorization:  Bearer <key>
- *   X-AI-Provider:  anthropic | openai | gateway
+ *   X-AI-Provider:  anthropic | openai
  *   X-AI-Model:     optional model override (e.g. "gpt-4o", "claude-sonnet-4.5")
  *
- * If no Authorization header is present, falls back to passing the raw model
- * string to the AI SDK — which uses AI_GATEWAY_API_KEY (or, on Vercel, the
- * auto-injected OIDC token) to route via the AI Gateway.
+ * If no Authorization header is present, falls back to env vars based on the
+ * fallback model's prefix:
+ *   - "openai/..."         → @ai-sdk/openai reads OPENAI_API_KEY
+ *   - anything else        → @ai-sdk/anthropic reads ANTHROPIC_API_KEY
+ *
+ * No gateway routing — Life OS talks to providers directly.
  */
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createGateway } from "@ai-sdk/gateway";
 import type { LanguageModel } from "ai";
 
-type Provider = "anthropic" | "openai" | "gateway";
+type Provider = "anthropic" | "openai";
 
 const DEFAULT_MODEL: Record<Provider, string> = {
   anthropic: "claude-haiku-4.5",
   openai: "gpt-4o-mini",
-  gateway: "anthropic/claude-haiku-4.5",
 };
 
 export function bearerKey(req: Request): string | null {
@@ -33,7 +34,7 @@ export function bearerKey(req: Request): string | null {
 
 function providerHeader(req: Request): Provider {
   const p = req.headers.get("x-ai-provider")?.toLowerCase();
-  if (p === "openai" || p === "gateway" || p === "anthropic") return p;
+  if (p === "openai" || p === "anthropic") return p;
   return "anthropic"; // back-compat: pre-multi-provider clients only set Authorization
 }
 
@@ -41,52 +42,49 @@ function modelHeader(req: Request): string | null {
   return req.headers.get("x-ai-model")?.trim() || null;
 }
 
+/** Strip a "provider/" prefix from a model id, if present. */
+function stripPrefix(model: string, provider: Provider): string {
+  return model.replace(new RegExp(`^${provider}/`), "");
+}
+
 /**
- * Returns a model handle (or a model-id string) for the AI SDK.
- * `fallbackModel` is the deployment-wide default (env var or hardcoded);
- * it's only used when the request did not provide its own credentials.
+ * Pick a provider for the env-driven fallback path. Reads LIFEOS_TEXT_MODEL
+ * to figure out where the user wants to go; if it starts with "openai/",
+ * route to OpenAI, otherwise Anthropic.
+ */
+function fallbackProvider(model: string): Provider {
+  return model.toLowerCase().startsWith("openai/") ? "openai" : "anthropic";
+}
+
+/**
+ * Returns a model handle for the AI SDK. The handle either has a bearer key
+ * baked into it (BYO path) or reads its credentials from env (fallback path).
  */
 export function buildModel(
   fallbackModel: string,
   req: Request,
-): LanguageModel | string {
+): LanguageModel {
   const key = bearerKey(req);
 
-  // No BYO credentials — use the deployment-wide gateway path.
-  if (!key) {
-    return modelHeader(req) ?? fallbackModel;
+  // BYO path: per-request credentials.
+  if (key) {
+    const provider = providerHeader(req);
+    const requestedModel = modelHeader(req) ?? DEFAULT_MODEL[provider];
+    if (provider === "openai") {
+      const openai = createOpenAI({ apiKey: key });
+      return openai(stripPrefix(requestedModel, "openai"));
+    }
+    const anthropic = createAnthropic({ apiKey: key });
+    return anthropic(stripPrefix(requestedModel, "anthropic"));
   }
 
-  const provider = providerHeader(req);
-  const requestedModel = modelHeader(req) ?? DEFAULT_MODEL[provider];
-
+  // Fallback path: env-driven. The @ai-sdk/* providers each auto-read
+  // their own env var (OPENAI_API_KEY / ANTHROPIC_API_KEY) when apiKey
+  // isn't passed.
+  const model = modelHeader(req) ?? fallbackModel;
+  const provider = fallbackProvider(model);
   if (provider === "openai") {
-    const openai = createOpenAI({ apiKey: key });
-    return openai(requestedModel);
+    return createOpenAI()(stripPrefix(model, "openai"));
   }
-
-  if (provider === "gateway") {
-    const gateway = createGateway({ apiKey: key });
-    return gateway(requestedModel);
-  }
-
-  // Default: Anthropic.
-  const anthropic = createAnthropic({ apiKey: key });
-  // Tolerate "anthropic/..." prefixed model ids by stripping the prefix.
-  const m = requestedModel.replace(/^anthropic\//, "");
-  return anthropic(m);
-}
-
-/**
- * Back-compat wrapper for the old call site. Same behavior as `buildModel`
- * but only used by routes that haven't been migrated yet. Safe to delete
- * after both routes are using `buildModel`.
- */
-export function providerWithKey(
-  modelString: string,
-  userKey: string | null,
-): LanguageModel | string {
-  if (!userKey) return modelString;
-  const anthropic = createAnthropic({ apiKey: userKey });
-  return anthropic(modelString.replace(/^anthropic\//, ""));
+  return createAnthropic()(stripPrefix(model, "anthropic"));
 }
