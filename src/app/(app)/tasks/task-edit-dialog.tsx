@@ -5,6 +5,7 @@ import { Calendar, Repeat, Trash2, X } from "lucide-react";
 import type { StoredItem } from "@/lib/store/items";
 import { updateItem, deleteItem } from "@/lib/store/items";
 import { parseNaturalDate, dateLabel } from "@/lib/natural-date";
+import { Portal } from "@/components/portal";
 
 type Priority = "low" | "medium" | "high";
 type Recurrence = "" | "daily" | "weekdays" | "weekly" | "monthly";
@@ -75,13 +76,15 @@ export function TaskEditDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
-      onClick={onClose}
-    >
+    <Portal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-card)] shadow-2xl overflow-hidden life-rise"
+        className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-md rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] overflow-hidden life-rise"
+          style={{ boxShadow: "var(--shadow-3)" }}
       >
         <header className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-soft)]">
           <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
@@ -206,7 +209,8 @@ export function TaskEditDialog({
             </button>
           </div>
         </footer>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }
