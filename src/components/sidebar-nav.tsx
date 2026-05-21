@@ -18,6 +18,7 @@ import {
   FolderKanban,
   BookHeart,
   Files,
+  CreditCard,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -31,7 +32,8 @@ type BadgeKey =
   | "overdueTasks"
   | "dueToday"
   | "inboxCount"
-  | "habitsPending";
+  | "habitsPending"
+  | "renewingSoon";
 
 type RailItem = {
   href: string;
@@ -78,6 +80,12 @@ const SECTIONS: RailSection[] = [
       { href: "/journal", label: "Journal", icon: BookHeart },
       { href: "/projects", label: "Projects & Areas", icon: FolderKanban },
       { href: "/people", label: "People", icon: Users },
+      {
+        href: "/subscriptions",
+        label: "Subscriptions",
+        icon: CreditCard,
+        badgeKey: "renewingSoon",
+      },
     ],
   },
   {
@@ -95,6 +103,7 @@ type Stats = {
   dueToday: number;
   inboxCount: number;
   habitsPending: number;
+  renewingSoon: number;
 };
 
 const EMPTY: Stats = {
@@ -103,6 +112,7 @@ const EMPTY: Stats = {
   dueToday: 0,
   inboxCount: 0,
   habitsPending: 0,
+  renewingSoon: 0,
 };
 
 export function SidebarNav() {
@@ -188,6 +198,8 @@ function computeStats(rows: Array<{
   let dueToday = 0;
   let inboxCount = 0;
   let habitsPending = 0;
+  let renewingSoon = 0;
+  const cutoffRenew = Date.now() + 7 * 86_400_000;
 
   for (const r of rows) {
     const meta = (r.metadata ?? {}) as Record<string, unknown>;
@@ -211,6 +223,14 @@ function computeStats(rows: Array<{
       const cadence = (meta.cadence as Cadence | undefined) ?? "daily";
       if (isPending(checkins, cadence)) habitsPending++;
     }
+
+    if (r.kind === "subscription" && r.status !== "archived") {
+      const nextCharge = meta.nextChargeAt as string | undefined;
+      if (nextCharge) {
+        const t = new Date(nextCharge).getTime();
+        if (t <= cutoffRenew) renewingSoon++;
+      }
+    }
   }
 
   return {
@@ -219,5 +239,6 @@ function computeStats(rows: Array<{
     dueToday,
     inboxCount,
     habitsPending,
+    renewingSoon,
   };
 }

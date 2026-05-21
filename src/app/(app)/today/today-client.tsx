@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ListTodo, Flame, CalendarDays, Bell } from "lucide-react";
+import { ListTodo, Flame, CalendarDays, Bell, CreditCard } from "lucide-react";
 import {
   useRecentItems,
   useItemsOfKind,
@@ -10,7 +10,14 @@ import {
   useOnThisDay,
   useWeekCounts,
   useAllItems,
+  type StoredItem as Item,
 } from "@/lib/store/items";
+import {
+  formatMoney,
+  monthlyTotals,
+  nextChargeLabel,
+  readSubscription,
+} from "@/lib/subscriptions";
 import { Brief } from "./brief";
 import { JournalForm } from "./journal-form";
 import { TodayHero } from "./hero";
@@ -46,6 +53,7 @@ export function TodayClient() {
   const recent = useRecentItems(24) ?? [];
   const journalToday = useJournalToday() ?? null;
   const allTasks = useItemsOfKind("task") ?? [];
+  const subscriptions = useItemsOfKind("subscription") ?? [];
   const habits = useItemsOfKind("habit") ?? [];
   const oldHighlights = useOldHighlights() ?? [];
   const onThisDayRows = useOnThisDay() ?? [];
@@ -234,9 +242,83 @@ export function TodayClient() {
             )}
           </Card>
 
+          <SubscriptionsTile items={subscriptions} />
         </div>
       </div>
     </div>
+  );
+}
+
+function SubscriptionsTile({ items }: { items: Item[] }) {
+  const active = items.filter((i) => i.status !== "archived");
+  if (active.length === 0) return null;
+
+  const totals = monthlyTotals(active);
+  const totalsEntries = Object.entries(totals);
+  // Renewing in the next 7 days, ordered by soonest.
+  const upcoming = active
+    .map((item) => {
+      const sub = readSubscription(item);
+      return sub?.nextChargeAt
+        ? { item, sub, t: new Date(sub.nextChargeAt).getTime() }
+        : null;
+    })
+    .filter((x): x is { item: Item; sub: NonNullable<ReturnType<typeof readSubscription>>; t: number } => x !== null)
+    .filter((x) => x.t <= Date.now() + 7 * 86_400_000)
+    .sort((a, b) => a.t - b.t)
+    .slice(0, 4);
+
+  return (
+    <Card
+      icon={CreditCard}
+      title="Subscriptions"
+      href="/subscriptions"
+      tint="var(--gold)"
+    >
+      <div className="space-y-2">
+        {totalsEntries.length > 0 && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-[var(--text-muted)]">
+            {totalsEntries.map(([currency, monthly]) => (
+              <span key={currency} className="tabular-nums">
+                <span className="font-semibold text-[var(--text)]">
+                  {formatMoney(Math.round(monthly), currency)}
+                </span>
+                <span className="ml-1 opacity-70">/mo</span>
+              </span>
+            ))}
+          </div>
+        )}
+        {upcoming.length > 0 ? (
+          <ul className="space-y-1.5 mt-2">
+            {upcoming.map(({ item, sub }) => (
+              <li
+                key={item.id}
+                className="flex items-center gap-2.5 text-sm"
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: "var(--gold)" }}
+                />
+                <Link
+                  href="/subscriptions"
+                  className="text-[var(--text)] hover:text-[var(--accent)] truncate flex-1"
+                >
+                  {item.title}
+                </Link>
+                <span className="text-[10.5px] uppercase tracking-wide text-[var(--text-faint)] tabular-nums shrink-0">
+                  {formatMoney(sub.amount, sub.currency)} ·{" "}
+                  {nextChargeLabel(sub.nextChargeAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-[var(--text-faint)]">
+            Nothing renews this week.
+          </p>
+        )}
+      </div>
+    </Card>
   );
 }
 

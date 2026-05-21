@@ -19,7 +19,8 @@ export type ItemKind =
   | "highlight"
   | "project"
   | "area"
-  | "file";
+  | "file"
+  | "subscription";
 
 export type ItemStatus = "inbox" | "active" | "archived" | "reference";
 
