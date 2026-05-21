@@ -13,7 +13,7 @@
  */
 import { generateText } from "ai";
 import { z } from "zod";
-import { bearerKey, providerWithKey } from "@/lib/ai-provider";
+import { buildModel } from "@/lib/ai-provider";
 
 const TEXT_MODEL =
   process.env.LIFEOS_TEXT_MODEL ?? "anthropic/claude-haiku-4.5";
@@ -59,8 +59,7 @@ export async function POST(req: Request) {
 ${lines}`;
 
   try {
-    const userKey = bearerKey(req);
-    const model = providerWithKey(TEXT_MODEL, userKey);
+    const model = buildModel(TEXT_MODEL, req);
     const { text } = await generateText({ model, prompt });
     return Response.json({ brief: text });
   } catch (err) {

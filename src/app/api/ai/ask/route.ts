@@ -11,7 +11,7 @@
  */
 import { streamText } from "ai";
 import { z } from "zod";
-import { bearerKey, providerWithKey } from "@/lib/ai-provider";
+import { buildModel } from "@/lib/ai-provider";
 
 const TEXT_MODEL =
   process.env.LIFEOS_TEXT_MODEL ?? "anthropic/claude-haiku-4.5";
@@ -54,8 +54,7 @@ QUESTION: ${question}
 ANSWER:`;
 
   try {
-    const userKey = bearerKey(req);
-    const model = providerWithKey(TEXT_MODEL, userKey);
+    const model = buildModel(TEXT_MODEL, req);
     const result = streamText({ model, prompt });
 
     const encoder = new TextEncoder();
