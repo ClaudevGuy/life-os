@@ -398,13 +398,14 @@ html[data-density="comfortable"] .life-card { padding: 1.25rem !important; }
   background: color-mix(in oklch, var(--paper) 70%, transparent);
 }
 
-/* focus rings */
+/* focus rings — quiet by default. Studio inputs each set their own
+   focus:border-[var(--terra)] state, so we don't paint a redundant
+   outline on top. Buttons get their own focus indicator via
+   .life-btn[class]:focus-visible further down. */
 input:focus-visible,
 textarea:focus-visible,
-select:focus-visible,
-button:focus-visible {
-  outline: 2px solid var(--terra-tint);
-  outline-offset: 2px;
+select:focus-visible {
+  outline: none;
 }
 
 /* Focus-mode: top-bar Focus toggle adds .focus-mode to <body>.

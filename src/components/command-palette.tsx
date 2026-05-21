@@ -20,6 +20,7 @@ import {
   Quote,
   Mic,
   Compass,
+  CreditCard,
 } from "lucide-react";
 import { db } from "@/lib/store/db";
 import { Portal } from "@/components/portal";
@@ -46,6 +47,7 @@ const NAV: Array<{
   { href: "/journal", label: "Journal", icon: BookHeart },
   { href: "/projects", label: "Projects & Areas", icon: FolderKanban },
   { href: "/people", label: "People", icon: Users },
+  { href: "/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/files", label: "Files", icon: Files },
   { href: "/ask", label: "Ask my notes", icon: MessageSquare },
   { href: "/settings", label: "Settings", icon: Settings },
