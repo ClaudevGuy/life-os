@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/store/db";
+import { ymd } from "@/lib/ymd";
 import {
   Inbox,
   Sun,
@@ -29,7 +30,8 @@ type BadgeKey =
   | "openTasks"
   | "overdueTasks"
   | "dueToday"
-  | "inboxCount";
+  | "inboxCount"
+  | "habitsPending";
 
 type RailItem = {
   href: string;
@@ -62,7 +64,12 @@ const SECTIONS: RailSection[] = [
         badgeKey: "openTasks",
         alertWhen: "overdueTasks",
       },
-      { href: "/habits", label: "Habits", icon: Flame },
+      {
+        href: "/habits",
+        label: "Habits",
+        icon: Flame,
+        badgeKey: "habitsPending",
+      },
     ],
   },
   {
@@ -87,6 +94,7 @@ type Stats = {
   overdueTasks: number;
   dueToday: number;
   inboxCount: number;
+  habitsPending: number;
 };
 
 const EMPTY: Stats = {
@@ -94,6 +102,7 @@ const EMPTY: Stats = {
   overdueTasks: 0,
   dueToday: 0,
   inboxCount: 0,
+  habitsPending: 0,
 };
 
 export function SidebarNav() {
@@ -178,6 +187,8 @@ function computeStats(rows: Array<{
   let overdueTasks = 0;
   let dueToday = 0;
   let inboxCount = 0;
+  let habitsPending = 0;
+  const today = ymd();
 
   for (const r of rows) {
     const meta = (r.metadata ?? {}) as Record<string, unknown>;
@@ -195,6 +206,11 @@ function computeStats(rows: Array<{
         }
       }
     }
+
+    if (r.kind === "habit" && r.status !== "archived") {
+      const checkins = (meta.checkins as string[] | undefined) ?? [];
+      if (!checkins.includes(today)) habitsPending++;
+    }
   }
 
   return {
@@ -202,5 +218,6 @@ function computeStats(rows: Array<{
     overdueTasks,
     dueToday,
     inboxCount,
+    habitsPending,
   };
 }
