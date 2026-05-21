@@ -6,10 +6,7 @@ import { Flame, Check, Pencil, Trash2 } from "lucide-react";
 import type { StoredItem as Item } from "@/lib/store/items";
 import { updateItem, deleteItem } from "@/lib/store/items";
 import { HabitFormModal } from "./new-habit";
-
-function ymd(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
+import { ymd } from "@/lib/ymd";
 
 function last30Days(): string[] {
   return Array.from({ length: 30 }).map((_, i) =>

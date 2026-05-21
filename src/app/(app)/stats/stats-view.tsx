@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { BarChart3, Sparkles, Flame, Target, Clock, Calendar } from "lucide-react";
+import { ymd } from "@/lib/ymd";
 
 export type StatsItem = {
   id: string;
@@ -20,10 +21,6 @@ const RANGES: Array<{ value: Range; label: string; days: number | null }> = [
   { value: "90d", label: "90 days", days: 90 },
   { value: "all", label: "All time", days: null },
 ];
-
-function ymd(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 export function StatsView({ items }: { items: StatsItem[] }) {
   const [range, setRange] = useState<Range>("30d");

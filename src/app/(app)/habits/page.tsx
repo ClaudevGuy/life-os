@@ -6,6 +6,7 @@ import { Flame } from "lucide-react";
 import { HabitRow } from "./habit-card";
 import { NewHabit } from "./new-habit";
 import type { StoredItem } from "@/lib/store/items";
+import { ymd } from "@/lib/ymd";
 
 const HABIT_PALETTE = [
   "var(--sage)",
@@ -16,10 +17,6 @@ const HABIT_PALETTE = [
 ];
 
 const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
-
-function ymd(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 function thisWeekDates(): string[] {
   // Monday-anchored 7-day window starting from this week's Monday.

@@ -15,6 +15,7 @@ import { SidebarToggle } from "@/components/sidebar-toggle";
 import { SearchTrigger } from "@/components/search-trigger";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PomodoroPill } from "@/components/pomodoro-pill";
+import { ymd } from "@/lib/ymd";
 
 type Stats = {
   openTasks: number;
@@ -191,7 +192,7 @@ function computeStats(rows: Array<{
   startOfToday.setHours(0, 0, 0, 0);
   const endOfToday = new Date(startOfToday);
   endOfToday.setDate(endOfToday.getDate() + 1);
-  const today = startOfToday.toISOString().slice(0, 10);
+  const today = ymd(startOfToday);
 
   let openTasks = 0;
   let overdueTasks = 0;
@@ -226,9 +227,7 @@ function computeStats(rows: Array<{
       let streak = 0;
       const set = new Set(checkins);
       for (let i = 0; i < 365; i++) {
-        const d = new Date(Date.now() - i * 86_400_000)
-          .toISOString()
-          .slice(0, 10);
+        const d = ymd(new Date(Date.now() - i * 86_400_000));
         if (set.has(d)) streak++;
         else if (i === 0) continue;
         else break;

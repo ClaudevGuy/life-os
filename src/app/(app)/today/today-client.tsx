@@ -18,10 +18,7 @@ import { WeekStrip } from "./week-strip";
 import { OnThisDay } from "./on-this-day";
 import { SrsHighlight } from "./srs-highlight";
 import { WhatNow } from "./what-now";
-
-function ymd(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
+import { ymd } from "@/lib/ymd";
 
 function relDay(when: Date, startOfToday: Date) {
   const day = new Date(when);
@@ -97,7 +94,7 @@ export function TodayClient() {
     return !m.completedAt;
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ymd();
   const habitsDoneToday = habits.filter((h) =>
     ((h.metadata ?? {}) as { checkins?: string[] }).checkins?.includes(today),
   ).length;

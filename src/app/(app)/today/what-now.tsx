@@ -8,6 +8,7 @@ import {
   Sparkles,
   ArrowRight,
 } from "lucide-react";
+import { ymd } from "@/lib/ymd";
 
 /**
  * Heuristic "next best action" — server-rendered to keep it snappy.
@@ -30,7 +31,7 @@ export function WhatNow({
   const now = new Date();
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const today = startOfToday.toISOString().slice(0, 10);
+  const today = ymd(startOfToday);
 
   // 1. overdue task
   const overdue = tasks
