@@ -149,49 +149,48 @@ function Toolbar({
     cursor.getMonth() === todayDate.getMonth();
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="inline-flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onPrev}
-          className="inline-flex items-center justify-center rounded-md w-8 h-8 hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text)] transition"
-          aria-label="Previous"
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={onToday}
-          title={
-            onCurrentMonth
-              ? `Open today (${todayDate.toLocaleDateString(undefined, {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })})`
-              : "Jump to today"
-          }
-          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-[var(--text-muted)] border border-[var(--border-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition"
-        >
-          <span className="font-medium">Today</span>
-          <span className="text-[10px] tabular-nums text-[var(--text-faint)] group-hover:text-[var(--accent)]">
-            {todayDate.getDate()}
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          className="inline-flex items-center justify-center rounded-md w-8 h-8 hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text)] transition"
-          aria-label="Next"
-        >
-          <ChevronRight size={16} />
-        </button>
-        <span className="ml-2 text-sm font-semibold text-[var(--text)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div className="inline-flex items-center gap-3">
+        <div className="inline-flex items-center gap-0.5 p-1 rounded-[10px] bg-[var(--paper)] border border-[var(--line)]">
+          <button
+            type="button"
+            onClick={onPrev}
+            className="grid place-items-center w-7 h-7 rounded-[7px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
+            aria-label="Previous"
+          >
+            <ChevronLeft size={14} strokeWidth={1.6} />
+          </button>
+          <button
+            type="button"
+            onClick={onToday}
+            title={
+              onCurrentMonth
+                ? `Open today (${todayDate.toLocaleDateString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })})`
+                : "Jump to today"
+            }
+            className="px-3 py-1 rounded-[7px] text-[12.5px] font-medium text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            className="grid place-items-center w-7 h-7 rounded-[7px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
+            aria-label="Next"
+          >
+            <ChevronRight size={14} strokeWidth={1.6} />
+          </button>
+        </div>
+        <span className="text-[22px] font-semibold tracking-[-0.02em] text-[var(--ink)]">
           {label}
         </span>
       </div>
 
-      <div className="inline-flex items-center gap-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border-soft)] p-0.5">
+      <div className="inline-flex items-center gap-1 p-1 rounded-[10px] bg-[var(--paper)] border border-[var(--line)]">
         <ViewBtn current={view} target="month" label="Month" icon={LayoutGrid} onClick={onView} />
         <ViewBtn current={view} target="week" label="Week" icon={Columns3} onClick={onView} />
         <ViewBtn current={view} target="agenda" label="Agenda" icon={Rows3} onClick={onView} />
@@ -210,7 +209,7 @@ function ViewBtn({
   current: ViewMode;
   target: ViewMode;
   label: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   onClick: (v: ViewMode) => void;
 }) {
   const active = current === target;
@@ -218,13 +217,14 @@ function ViewBtn({
     <button
       type="button"
       onClick={() => onClick(target)}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition ${
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-[7px] text-[12.5px] font-medium transition ${
         active
-          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-          : "text-[var(--text-muted)] hover:text-[var(--text)]"
+          ? "bg-[var(--paper-2)] text-[var(--ink)]"
+          : "text-[var(--muted)] hover:text-[var(--ink)]"
       }`}
+      style={active ? { boxShadow: "var(--shadow-1)" } : undefined}
     >
-      <Icon size={11} />
+      <Icon size={13} strokeWidth={1.6} />
       {label}
     </button>
   );
@@ -243,6 +243,8 @@ function MonthGrid({
   itemsByDay: Map<string, CalItem[]>;
   onSelectDay: (day: string) => void;
 }) {
+  // Build the full 6-row grid including spillover from prev/next month so
+  // the calendar feels complete instead of having empty leading cells.
   const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
   const startDay = first.getDay();
   const daysInMonth = new Date(
@@ -251,72 +253,141 @@ function MonthGrid({
     0,
   ).getDate();
 
-  const cells: Array<{ date: Date | null }> = [];
-  for (let i = 0; i < startDay; i++) cells.push({ date: null });
-  for (let d = 1; d <= daysInMonth; d++)
-    cells.push({ date: new Date(cursor.getFullYear(), cursor.getMonth(), d) });
-  while (cells.length % 7 !== 0) cells.push({ date: null });
+  const cells: Array<{ date: Date; outside: boolean }> = [];
+  if (startDay > 0) {
+    const prevMonthDays = new Date(
+      cursor.getFullYear(),
+      cursor.getMonth(),
+      0,
+    ).getDate();
+    for (let i = startDay - 1; i >= 0; i--) {
+      cells.push({
+        date: new Date(
+          cursor.getFullYear(),
+          cursor.getMonth() - 1,
+          prevMonthDays - i,
+        ),
+        outside: true,
+      });
+    }
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({
+      date: new Date(cursor.getFullYear(), cursor.getMonth(), d),
+      outside: false,
+    });
+  }
+  while (cells.length % 7 !== 0) {
+    const last = cells[cells.length - 1].date;
+    const next = new Date(last);
+    next.setDate(last.getDate() + 1);
+    cells.push({ date: next, outside: true });
+  }
+
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
 
   return (
     <div>
-      <div className="grid grid-cols-7 gap-1 text-[10px] uppercase tracking-wide text-[var(--text-faint)]">
+      <div className="grid grid-cols-7 gap-1.5 mb-2">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <div key={d} className="px-2 py-1">
+          <div
+            key={d}
+            className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] px-2 py-1"
+          >
             {d}
           </div>
         ))}
       </div>
-      <div className="mt-1 grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1.5">
         {cells.map((c, i) => {
-          if (!c.date) return <div key={i} />;
           const iso = ymd(c.date);
           const dayItems = itemsByDay.get(iso) ?? [];
           const isToday = iso === today;
+          const cellTime = new Date(c.date);
+          cellTime.setHours(0, 0, 0, 0);
+          const isPast = !isToday && cellTime.getTime() < todayDate.getTime();
+
           return (
             <button
-              key={i}
+              key={`${iso}-${i}`}
               type="button"
               onClick={() => onSelectDay(iso)}
-              className={`text-left min-h-[96px] rounded-lg border p-2 transition ${
-                isToday
-                  ? "border-[var(--accent)] bg-[var(--accent-glow)]"
-                  : "border-[var(--border-soft)] bg-[var(--bg-card)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-card-hover)]"
-              }`}
+              className="group text-left min-h-[108px] rounded-[10px] border p-2.5 transition relative overflow-hidden"
+              style={{
+                background: isToday
+                  ? "color-mix(in oklch, var(--terra-tint) 55%, var(--paper))"
+                  : c.outside
+                  ? "transparent"
+                  : "var(--paper)",
+                borderColor: isToday
+                  ? "color-mix(in oklch, var(--terra) 35%, transparent)"
+                  : "var(--line)",
+                opacity: c.outside ? 0.45 : isPast ? 0.78 : 1,
+              }}
             >
-              <div className="flex items-baseline justify-between">
-                <span
-                  className={`text-xs tabular-nums ${
-                    isToday
-                      ? "text-[var(--accent)] font-semibold"
-                      : "text-[var(--text-faint)]"
-                  }`}
-                >
-                  {c.date.getDate()}
-                </span>
+              <div className="flex items-start justify-between gap-1.5">
+                {isToday ? (
+                  <span
+                    className="grid place-items-center w-[22px] h-[22px] rounded-full text-[11.5px] tabular-nums font-semibold"
+                    style={{
+                      background: "var(--terra)",
+                      color: "var(--paper)",
+                    }}
+                  >
+                    {c.date.getDate()}
+                  </span>
+                ) : (
+                  <span
+                    className="text-[12.5px] tabular-nums font-semibold pl-0.5"
+                    style={{
+                      color: c.outside
+                        ? "var(--muted-2)"
+                        : isPast
+                        ? "var(--muted)"
+                        : "var(--ink-2)",
+                    }}
+                  >
+                    {c.date.getDate()}
+                  </span>
+                )}
                 {dayItems.length > 0 && (
-                  <span className="text-[9px] text-[var(--text-faint)] tabular-nums">
+                  <span
+                    className="text-[9.5px] tabular-nums font-mono font-semibold px-1.5 py-px rounded-full"
+                    style={{
+                      background: "var(--bg-2)",
+                      color: "var(--muted)",
+                    }}
+                  >
                     {dayItems.length}
                   </span>
                 )}
               </div>
-              <ul className="mt-1 space-y-0.5">
+              <ul className="mt-1.5 space-y-1">
                 {dayItems.slice(0, 3).map((it) => {
                   const archived = it.status === "archived";
+                  const dot = archived
+                    ? "var(--muted-2)"
+                    : `var(--kind-${it.kind})`;
                   return (
-                    <li key={`${it.id}-${it.via}`} className="flex items-center gap-1.5">
+                    <li
+                      key={`${it.id}-${it.via}`}
+                      className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-[5px]"
+                      style={{
+                        background: archived
+                          ? "transparent"
+                          : `color-mix(in oklch, ${dot} 16%, transparent)`,
+                      }}
+                    >
                       <span
                         className="w-1 h-1 rounded-full shrink-0"
-                        style={{
-                          background: archived
-                            ? "var(--muted-2)"
-                            : `var(--kind-${it.kind})`,
-                        }}
+                        style={{ background: dot }}
                       />
                       <span
-                        className={`text-[10px] truncate ${
+                        className={`text-[10.5px] truncate ${
                           archived
                             ? "line-through text-[var(--muted-2)]"
-                            : "text-[var(--text-muted)]"
+                            : "text-[var(--ink-2)]"
                         }`}
                       >
                         {it.title ?? "untitled"}
@@ -325,7 +396,7 @@ function MonthGrid({
                   );
                 })}
                 {dayItems.length > 3 && (
-                  <li className="text-[10px] text-[var(--text-faint)]">
+                  <li className="text-[10px] uppercase tracking-[0.1em] font-semibold text-[var(--muted-2)] pl-1.5">
                     +{dayItems.length - 3} more
                   </li>
                 )}
