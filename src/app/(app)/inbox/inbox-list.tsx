@@ -205,7 +205,10 @@ function InboxRow({ item }: { item: StoredItem }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Link
-              href={`/items/${item.id}`}
+              href={
+                // Habits live on /habits, not on a detail page.
+                item.kind === "habit" ? "/habits" : `/items/${item.id}`
+              }
               className="text-[16px] font-medium text-[var(--ink)] hover:text-[var(--terra)] truncate transition"
             >
               {item.title?.trim() ? (

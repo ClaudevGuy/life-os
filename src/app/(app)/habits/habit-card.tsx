@@ -76,16 +76,22 @@ export function HabitRow({
 
   return (
     <li className="group px-5 py-4 grid grid-cols-[1fr_auto_auto_auto_auto] sm:grid-cols-[1fr_60px_minmax(0,200px)_minmax(0,120px)_auto] gap-4 sm:gap-6 items-center border-b border-[var(--line)] last:border-b-0 hover:bg-[var(--paper-2)] transition relative">
-      {/* Name */}
-      <div className="flex items-center gap-2.5 min-w-0">
+      {/* Name — click opens edit. Habits don't have a detail page; the
+          edit modal is the canonical "open habit" surface. */}
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        title="Edit habit"
+        className="flex items-center gap-2.5 min-w-0 text-left rounded-[6px] -my-1 -mx-2 px-2 py-1 hover:bg-[var(--paper)] transition cursor-pointer"
+      >
         <span
           className="w-2 h-2 rounded-full shrink-0"
           style={{ background: color }}
         />
-        <span className="text-[15px] font-medium text-[var(--ink)] truncate">
+        <span className="text-[15px] font-medium text-[var(--ink)] truncate group-hover:text-[var(--terra)] transition">
           {habit.title}
         </span>
-      </div>
+      </button>
 
       {/* Streak */}
       <div className="inline-flex items-center gap-1.5 justify-end shrink-0">

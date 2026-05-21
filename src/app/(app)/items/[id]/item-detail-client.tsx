@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useItem } from "@/lib/store/items";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { ExternalLink, ArrowLeft, Pin, Calendar, Hash, Clock, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Backlinks } from "@/components/backlinks";
@@ -19,11 +20,21 @@ import { PersonDetail } from "@/app/(app)/people/person-detail";
 
 export function ItemDetailClient({ id }: { id: string }) {
   const item = useItem(id);
+  const router = useRouter();
+
+  // Habits don't have a detail page — bounce back to /habits where they
+  // actually live. Old links from inbox / recent / backlinks still work.
+  useEffect(() => {
+    if (item && item.kind === "habit") {
+      router.replace("/habits");
+    }
+  }, [item, router]);
 
   if (item === undefined) return null; // loading
   if (item === null) {
     notFound();
   }
+  if (item.kind === "habit") return null; // redirecting
 
   // Kind-specific Studio layouts.
   if (item.kind === "project") {
