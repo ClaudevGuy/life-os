@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/store/db";
-import { ymd } from "@/lib/ymd";
+import { isPending, type Cadence } from "@/lib/habits";
 import {
   Inbox,
   Sun,
@@ -188,7 +188,6 @@ function computeStats(rows: Array<{
   let dueToday = 0;
   let inboxCount = 0;
   let habitsPending = 0;
-  const today = ymd();
 
   for (const r of rows) {
     const meta = (r.metadata ?? {}) as Record<string, unknown>;
@@ -209,7 +208,8 @@ function computeStats(rows: Array<{
 
     if (r.kind === "habit" && r.status !== "archived") {
       const checkins = (meta.checkins as string[] | undefined) ?? [];
-      if (!checkins.includes(today)) habitsPending++;
+      const cadence = (meta.cadence as Cadence | undefined) ?? "daily";
+      if (isPending(checkins, cadence)) habitsPending++;
     }
   }
 

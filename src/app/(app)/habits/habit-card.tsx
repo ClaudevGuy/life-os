@@ -7,22 +7,12 @@ import type { StoredItem as Item } from "@/lib/store/items";
 import { updateItem, deleteItem } from "@/lib/store/items";
 import { HabitFormModal } from "./new-habit";
 import { ymd } from "@/lib/ymd";
+import { calcStreak, type Cadence } from "@/lib/habits";
 
 function last30Days(): string[] {
   return Array.from({ length: 30 }).map((_, i) =>
     ymd(new Date(Date.now() - (29 - i) * 86_400_000)),
   );
-}
-
-function calcStreak(checkins: Set<string>): number {
-  let streak = 0;
-  for (let i = 0; i < 365; i++) {
-    const d = ymd(new Date(Date.now() - i * 86_400_000));
-    if (checkins.has(d)) streak++;
-    else if (i === 0) continue; // allow missing today
-    else break;
-  }
-  return streak;
 }
 
 export function HabitRow({
@@ -34,7 +24,8 @@ export function HabitRow({
   color: string;
   weekDates: string[];
 }) {
-  const meta = (habit.metadata ?? {}) as { checkins?: string[]; cadence?: string };
+  const meta = (habit.metadata ?? {}) as { checkins?: string[]; cadence?: Cadence };
+  const cadence: Cadence = meta.cadence ?? "daily";
   const [checkins, setCheckins] = useState<Set<string>>(
     new Set(meta.checkins ?? []),
   );
@@ -42,7 +33,10 @@ export function HabitRow({
   const [editing, setEditing] = useState(false);
   const today = ymd(new Date());
 
-  const streak = useMemo(() => calcStreak(checkins), [checkins]);
+  const streak = useMemo(
+    () => calcStreak(checkins, cadence),
+    [checkins, cadence],
+  );
   const grid = useMemo(() => last30Days(), []);
   const isFutureDate = (d: string) => d > today;
 
