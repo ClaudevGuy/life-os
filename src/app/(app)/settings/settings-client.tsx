@@ -8,18 +8,15 @@ type Theme = "dark" | "light" | "system";
 const KEYS = {
   theme: "lifeos.theme",
   density: "lifeos.density",
-  defaultKind: "lifeos.defaultKind",
 };
 
 export function SettingsClient() {
   const [theme, setTheme] = useState<Theme>("dark");
   const [density, setDensity] = useState<Density>("cozy");
-  const [defaultKind, setDefaultKind] = useState<string>("note");
 
   useEffect(() => {
     setTheme((localStorage.getItem(KEYS.theme) as Theme) ?? "dark");
     setDensity((localStorage.getItem(KEYS.density) as Density) ?? "cozy");
-    setDefaultKind(localStorage.getItem(KEYS.defaultKind) ?? "note");
   }, []);
 
   function persist(key: string, value: string) {
@@ -60,21 +57,6 @@ export function SettingsClient() {
             setDensity(v as Density);
             persist(KEYS.density, v);
             document.documentElement.dataset.density = v;
-          }}
-        />
-      </Row>
-      <Row label="Default capture kind" hint="What the floating + opens to.">
-        <Pill
-          options={[
-            { value: "note", label: "Note" },
-            { value: "task", label: "Task" },
-            { value: "highlight", label: "Highlight" },
-            { value: "decision", label: "Decision" },
-          ]}
-          value={defaultKind}
-          onChange={(v) => {
-            setDefaultKind(v);
-            persist(KEYS.defaultKind, v);
           }}
         />
       </Row>
