@@ -78,7 +78,18 @@ export function TodayHero({
           <div className="text-[11px] uppercase tracking-[0.16em] text-white/70">
             {dateLabel} · {timeLabel}
           </div>
-          <h1 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight life-shine">
+          <h1
+            className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight"
+            style={{
+              // The hero gradient is dark in every theme (it's a "sky"), so
+              // the greeting needs to be bright regardless of light/dark mode.
+              background:
+                "linear-gradient(135deg, #FBF7EE 0%, #FAE2D6 55%, #E4B871 100%)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
             {greeting}
           </h1>
           {quote && (
