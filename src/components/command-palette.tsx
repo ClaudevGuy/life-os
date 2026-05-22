@@ -21,6 +21,7 @@ import {
   Mic,
   Compass,
   CreditCard,
+  Bookmark,
 } from "lucide-react";
 import { db } from "@/lib/store/db";
 import { Portal } from "@/components/portal";
@@ -41,6 +42,7 @@ const NAV: Array<{
   { href: "/today", label: "Today", icon: Sun },
   { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/notes", label: "Notes", icon: NotebookPen },
+  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/habits", label: "Habits", icon: Flame },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
@@ -71,6 +73,7 @@ const KIND_META: Record<
   area: { icon: Compass, color: "var(--plum)", tint: "var(--plum-tint)" },
   voice: { icon: Mic, color: "var(--plum)", tint: "var(--plum-tint)" },
   file: { icon: Files, color: "var(--sky)", tint: "var(--sky-tint)" },
+  bookmark: { icon: Bookmark, color: "var(--terra)", tint: "var(--terra-tint)" },
 };
 
 export function CommandPalette() {

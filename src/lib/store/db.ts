@@ -20,7 +20,8 @@ export type ItemKind =
   | "project"
   | "area"
   | "file"
-  | "subscription";
+  | "subscription"
+  | "bookmark";
 
 export type ItemStatus = "inbox" | "active" | "archived" | "reference";
 
