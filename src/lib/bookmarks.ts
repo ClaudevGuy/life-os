@@ -143,6 +143,21 @@ export function platformInitial(name: string): string {
   return t[0].toUpperCase();
 }
 
+/**
+ * Real favicon URL via Google's S2 service. Works for any public host with
+ * zero infrastructure on our side. Returns a 64×64 PNG.
+ *
+ * Privacy note: this DOES go through Google for the favicon fetch, so the
+ * domains in your bookmarks become visible to Google when the page renders.
+ * Acceptable trade-off for a personal local-first app — bookmarks are URLs
+ * to public resources, not secrets — but worth flagging.
+ */
+export function faviconUrl(host: string): string {
+  return `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(
+    host,
+  )}`;
+}
+
 /** Short relative-time label. */
 export function relDate(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
