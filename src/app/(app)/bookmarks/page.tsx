@@ -7,9 +7,9 @@ import {
   Plus,
   ExternalLink,
   Pencil,
-  Tag,
-  Pin,
   Star,
+  Hash,
+  Inbox,
 } from "lucide-react";
 import {
   useItemsOfKind,
@@ -62,9 +62,16 @@ function derive(item: StoredItem): DerivedBookmark | null {
   };
 }
 
+type Filter =
+  | { kind: "all" }
+  | { kind: "pinned" }
+  | { kind: "platform"; name: string }
+  | { kind: "tag"; name: string };
+
 export default function BookmarksPage() {
   const rows = (useItemsOfKind("bookmark") ?? []) as StoredItem[];
   const [editing, setEditing] = useState<StoredItem | null>(null);
+  const [filter, setFilter] = useState<Filter>({ kind: "all" });
   const [, startTransition] = useTransition();
 
   const bookmarks = useMemo(
@@ -72,43 +79,134 @@ export default function BookmarksPage() {
       rows
         .filter((r) => r.status !== "archived")
         .map(derive)
-        .filter((x): x is DerivedBookmark => x !== null),
-    [rows],
-  );
-
-  const pinned = useMemo(
-    () =>
-      bookmarks
-        .filter((b) => b.pinned)
+        .filter((x): x is DerivedBookmark => x !== null)
         .sort(
           (a, b) =>
             new Date(b.item.capturedAt).getTime() -
             new Date(a.item.capturedAt).getTime(),
         ),
-    [bookmarks],
+    [rows],
   );
 
-  const groups = useMemo(() => {
-    const m = new Map<string, DerivedBookmark[]>();
+  const platformCounts = useMemo(() => {
+    const m = new Map<
+      string,
+      { count: number; color: string; host: string }
+    >();
     for (const b of bookmarks) {
-      if (b.pinned) continue; // pinned ones surface in the dedicated row
-      const arr = m.get(b.platform) ?? [];
-      arr.push(b);
-      m.set(b.platform, arr);
+      const prev = m.get(b.platform);
+      m.set(b.platform, {
+        count: (prev?.count ?? 0) + 1,
+        color: prev?.color ?? b.color,
+        host: prev?.host ?? b.host,
+      });
     }
     return [...m.entries()]
-      .map(([name, items]) => ({
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.count - a.count);
+  }, [bookmarks]);
+
+  const tagCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const b of bookmarks) {
+      for (const t of b.tags) m.set(t, (m.get(t) ?? 0) + 1);
+    }
+    return [...m.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [bookmarks]);
+
+  const pinnedCount = bookmarks.filter((b) => b.pinned).length;
+
+  const visible = useMemo(() => {
+    switch (filter.kind) {
+      case "all":
+        return bookmarks;
+      case "pinned":
+        return bookmarks.filter((b) => b.pinned);
+      case "platform":
+        return bookmarks.filter((b) => b.platform === filter.name);
+      case "tag":
+        return bookmarks.filter((b) => b.tags.includes(filter.name));
+    }
+  }, [bookmarks, filter]);
+
+  type Section = {
+    name: string;
+    color: string;
+    host: string;
+    items: DerivedBookmark[];
+    accent?: "gold";
+  };
+
+  const sections = useMemo<Section[]>(() => {
+    if (filter.kind === "platform") {
+      const first = visible[0];
+      return [
+        {
+          name: filter.name,
+          color: first?.color ?? "var(--muted)",
+          host: first?.host ?? "",
+          items: visible,
+        },
+      ];
+    }
+    if (filter.kind === "pinned") {
+      return [
+        {
+          name: "Reading list",
+          color: "var(--gold)",
+          host: "",
+          items: visible,
+          accent: "gold",
+        },
+      ];
+    }
+    if (filter.kind === "tag") {
+      return [
+        {
+          name: `#${filter.name}`,
+          color: "var(--terra)",
+          host: "",
+          items: visible,
+        },
+      ];
+    }
+    // All — pinned shelf first, then platforms by count
+    const groups = new Map<string, DerivedBookmark[]>();
+    const pinned: DerivedBookmark[] = [];
+    for (const b of visible) {
+      if (b.pinned) {
+        pinned.push(b);
+        continue;
+      }
+      const arr = groups.get(b.platform) ?? [];
+      arr.push(b);
+      groups.set(b.platform, arr);
+    }
+    const list: Section[] = [];
+    if (pinned.length) {
+      list.push({
+        name: "Reading list",
+        color: "var(--gold)",
+        host: "",
+        items: pinned,
+        accent: "gold",
+      });
+    }
+    const entries = [...groups.entries()].sort(
+      (a, b) => b[1].length - a[1].length,
+    );
+    for (const [name, items] of entries) {
+      list.push({
         name,
-        items: items.sort(
-          (a, b) =>
-            new Date(b.item.capturedAt).getTime() -
-            new Date(a.item.capturedAt).getTime(),
-        ),
         color: items[0].color,
         host: items[0].host,
-      }))
-      .sort((a, b) => b.items.length - a.items.length);
-  }, [bookmarks]);
+        items,
+      });
+    }
+    return list;
+  }, [visible, filter]);
 
   function togglePin(b: DerivedBookmark) {
     startTransition(async () => {
@@ -120,57 +218,157 @@ export default function BookmarksPage() {
     });
   }
 
+  const activeFilterLabel =
+    filter.kind === "all"
+      ? null
+      : filter.kind === "pinned"
+        ? "Reading list"
+        : filter.kind === "platform"
+          ? filter.name
+          : `#${filter.name}`;
+
   return (
     <div className="p-8 max-w-6xl mx-auto pg-enter">
-      <header className="mb-6 flex items-baseline justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="life-h1 inline-flex items-center gap-2">
-            <Bookmark
-              size={20}
-              strokeWidth={1.6}
-              className="text-[var(--terra)]"
-            />
-            Bookmarks
-          </h1>
-          <p className="text-[14.5px] text-[var(--muted)] mt-1 max-w-xl">
-            Links worth coming back to.{" "}
-            {bookmarks.length > 0 && (
-              <span className="text-[var(--muted-2)]">
-                {bookmarks.length} saved across {groups.length + (pinned.length > 0 ? 1 : 0)}{" "}
-                {groups.length === 1 ? "platform" : "platforms"}.
-              </span>
-            )}
-          </p>
-        </div>
+      <header className="mb-6">
+        <h1 className="life-h1 inline-flex items-center gap-2">
+          <Bookmark
+            size={20}
+            strokeWidth={1.6}
+            className="text-[var(--terra)]"
+          />
+          Bookmarks
+        </h1>
+        <p className="text-[14.5px] text-[var(--muted)] mt-1">
+          Links worth coming back to.
+        </p>
       </header>
 
-      <AddBar />
-
       {bookmarks.length === 0 ? (
-        <EmptyHero />
+        <>
+          <AddBar />
+          <EmptyHero />
+        </>
       ) : (
-        <div className="space-y-10">
-          {/* Pinned reading list */}
-          {pinned.length > 0 && (
-            <PinnedShelf
-              bookmarks={pinned}
-              onEdit={(item) => setEditing(item)}
-              onTogglePin={togglePin}
-            />
-          )}
+        <div className="grid md:grid-cols-[212px_1fr] gap-8">
+          {/* Sidebar */}
+          <aside className="md:sticky md:top-8 md:self-start space-y-6">
+            <FilterSection>
+              <FilterRow
+                active={filter.kind === "all"}
+                label="All bookmarks"
+                count={bookmarks.length}
+                onClick={() => setFilter({ kind: "all" })}
+                leadingIcon={
+                  <Inbox size={13} strokeWidth={1.6} />
+                }
+              />
+              {pinnedCount > 0 && (
+                <FilterRow
+                  active={filter.kind === "pinned"}
+                  label="Reading list"
+                  count={pinnedCount}
+                  onClick={() => setFilter({ kind: "pinned" })}
+                  leadingIcon={
+                    <Star
+                      size={12}
+                      strokeWidth={1.6}
+                      fill="var(--gold)"
+                      stroke="var(--gold)"
+                    />
+                  }
+                  accent="var(--gold)"
+                />
+              )}
+            </FilterSection>
 
-          {/* Groups, one per platform */}
-          {groups.map((g) => (
-            <PlatformShelf
-              key={g.name}
-              name={g.name}
-              host={g.host}
-              color={g.color}
-              items={g.items}
-              onEdit={(item) => setEditing(item)}
-              onTogglePin={togglePin}
-            />
-          ))}
+            {platformCounts.length > 0 && (
+              <FilterSection heading="Platforms">
+                {platformCounts.map((p) => (
+                  <FilterRow
+                    key={p.name}
+                    active={
+                      filter.kind === "platform" && filter.name === p.name
+                    }
+                    label={p.name}
+                    count={p.count}
+                    onClick={() =>
+                      setFilter({ kind: "platform", name: p.name })
+                    }
+                    leadingFavicon={{
+                      host: p.host,
+                      color: p.color,
+                      initial: p.name,
+                    }}
+                  />
+                ))}
+              </FilterSection>
+            )}
+
+            {tagCounts.length > 0 && (
+              <FilterSection heading="Tags">
+                {tagCounts.slice(0, 20).map((t) => (
+                  <FilterRow
+                    key={t.name}
+                    active={filter.kind === "tag" && filter.name === t.name}
+                    label={t.name}
+                    count={t.count}
+                    onClick={() => setFilter({ kind: "tag", name: t.name })}
+                    leadingIcon={
+                      <Hash
+                        size={12}
+                        strokeWidth={1.8}
+                        className="opacity-70"
+                      />
+                    }
+                  />
+                ))}
+              </FilterSection>
+            )}
+          </aside>
+
+          {/* Content */}
+          <div className="min-w-0">
+            <AddBar />
+
+            {activeFilterLabel && (
+              <div className="mb-4 flex items-center gap-2 text-[12px] text-[var(--muted)]">
+                <span>Showing</span>
+                <span
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-[var(--paper-2)] text-[var(--ink)] font-medium"
+                  style={{
+                    boxShadow: "inset 0 0 0 1px var(--line)",
+                  }}
+                >
+                  {activeFilterLabel}
+                  <span className="font-mono text-[var(--muted-2)]">
+                    {visible.length}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilter({ kind: "all" })}
+                  className="text-[var(--muted)] hover:text-[var(--terra)] transition underline-offset-2 hover:underline"
+                >
+                  clear
+                </button>
+              </div>
+            )}
+
+            {visible.length === 0 ? (
+              <EmptyFiltered onReset={() => setFilter({ kind: "all" })} />
+            ) : (
+              <div className="space-y-8">
+                {sections.map((s) => (
+                  <ListSection
+                    key={s.name}
+                    section={s}
+                    onEdit={(item) => setEditing(item)}
+                    onTogglePin={togglePin}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -185,251 +383,304 @@ export default function BookmarksPage() {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Pinned shelf — gold-tinted "reading list" at the top
+// Sidebar
 // ──────────────────────────────────────────────────────────────────────
 
-function PinnedShelf({
-  bookmarks,
-  onEdit,
-  onTogglePin,
+function FilterSection({
+  heading,
+  children,
 }: {
-  bookmarks: DerivedBookmark[];
-  onEdit: (item: StoredItem) => void;
-  onTogglePin: (b: DerivedBookmark) => void;
+  heading?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <section>
-      <ShelfHeader
-        title="Reading list"
-        count={bookmarks.length}
-        color="var(--gold)"
-        leadingIcon={<Pin size={14} strokeWidth={1.6} fill="var(--gold)" />}
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {bookmarks.map((b) => (
-          <BookmarkCard
-            key={b.item.id}
-            bookmark={b}
-            onEdit={() => onEdit(b.item)}
-            onTogglePin={() => onTogglePin(b)}
-          />
-        ))}
-      </div>
-    </section>
+    <div>
+      {heading && (
+        <div className="px-2 pb-1.5 text-[10px] uppercase tracking-[0.16em] font-semibold text-[var(--muted-2)]">
+          {heading}
+        </div>
+      )}
+      <div className="flex flex-col gap-[1px]">{children}</div>
+    </div>
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Platform shelf
-// ──────────────────────────────────────────────────────────────────────
-
-function PlatformShelf({
-  name,
-  host,
-  color,
-  items,
-  onEdit,
-  onTogglePin,
-}: {
-  name: string;
-  host: string;
-  color: string;
-  items: DerivedBookmark[];
-  onEdit: (item: StoredItem) => void;
-  onTogglePin: (b: DerivedBookmark) => void;
-}) {
-  return (
-    <section>
-      <ShelfHeader
-        title={name}
-        host={host}
-        count={items.length}
-        color={color}
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((b) => (
-          <BookmarkCard
-            key={b.item.id}
-            bookmark={b}
-            onEdit={() => onEdit(b.item)}
-            onTogglePin={() => onTogglePin(b)}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ShelfHeader({
-  title,
-  host,
+function FilterRow({
+  active,
+  label,
   count,
-  color,
+  onClick,
   leadingIcon,
+  leadingFavicon,
+  accent,
 }: {
-  title: string;
-  host?: string;
+  active: boolean;
+  label: string;
   count: number;
-  color: string;
+  onClick: () => void;
   leadingIcon?: React.ReactNode;
+  leadingFavicon?: { host: string; color: string; initial: string };
+  accent?: string;
 }) {
   return (
-    <header className="mb-4 flex items-end gap-3">
-      <div
-        className="grid place-items-center w-11 h-11 rounded-[12px] shrink-0 overflow-hidden"
-        style={{
-          background: `color-mix(in oklch, ${color} 14%, transparent)`,
-          border: `1px solid color-mix(in oklch, ${color} 30%, transparent)`,
-        }}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group flex items-center gap-2.5 w-full px-2 py-[7px] rounded-[8px] text-[13px] transition ${
+        active
+          ? "bg-[var(--paper-2)] text-[var(--ink)] font-medium"
+          : "text-[var(--ink-2)] hover:bg-[var(--bg-2)]"
+      }`}
+      style={
+        active && accent
+          ? { boxShadow: `inset 2px 0 0 ${accent}` }
+          : undefined
+      }
+    >
+      <span
+        className="grid place-items-center w-[18px] h-[18px] shrink-0 overflow-hidden rounded-[4px]"
+        style={{ color: accent ?? "var(--muted)" }}
       >
-        {leadingIcon ? (
-          <span style={{ color }}>{leadingIcon}</span>
-        ) : host ? (
-          <FaviconImg host={host} size={22} color={color} initial={title} />
+        {leadingFavicon ? (
+          <FaviconImg
+            host={leadingFavicon.host}
+            size={14}
+            color={leadingFavicon.color}
+            initial={leadingFavicon.initial}
+          />
         ) : (
-          <span
-            className="text-[15px] font-semibold tracking-[-0.01em]"
-            style={{ color }}
-          >
-            {platformInitial(title)}
+          leadingIcon
+        )}
+      </span>
+      <span className="flex-1 text-left truncate">{label}</span>
+      <span
+        className={`tabular-nums font-mono text-[10.5px] ${
+          active ? "text-[var(--muted)]" : "text-[var(--muted-2)]"
+        }`}
+      >
+        {count}
+      </span>
+    </button>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Content list
+// ──────────────────────────────────────────────────────────────────────
+
+function ListSection({
+  section,
+  onEdit,
+  onTogglePin,
+}: {
+  section: {
+    name: string;
+    color: string;
+    host: string;
+    items: DerivedBookmark[];
+    accent?: "gold";
+  };
+  onEdit: (item: StoredItem) => void;
+  onTogglePin: (b: DerivedBookmark) => void;
+}) {
+  return (
+    <section>
+      <header className="mb-3 flex items-center gap-2.5">
+        {section.accent === "gold" ? (
+          <Star
+            size={12}
+            strokeWidth={1.6}
+            fill="var(--gold)"
+            stroke="var(--gold)"
+            className="shrink-0"
+          />
+        ) : null}
+        <span
+          className="text-[11px] uppercase tracking-[0.16em] font-semibold"
+          style={{ color: section.color }}
+        >
+          {section.name}
+        </span>
+        <span className="text-[10.5px] font-mono tabular-nums text-[var(--muted-2)]">
+          {section.items.length}
+        </span>
+        {section.host && (
+          <span className="text-[10.5px] font-mono text-[var(--muted-2)]">
+            · {section.host}
           </span>
         )}
+        <span
+          aria-hidden
+          className="flex-1 h-px self-center"
+          style={{
+            background: `color-mix(in oklch, ${section.color} 22%, var(--line))`,
+          }}
+        />
+      </header>
+
+      <div
+        className="rounded-[12px] border bg-[var(--paper)] overflow-hidden"
+        style={{
+          borderColor:
+            section.accent === "gold"
+              ? `color-mix(in oklch, var(--gold) 35%, var(--line))`
+              : "var(--line)",
+        }}
+      >
+        {section.items.map((b, i) => (
+          <BookmarkRow
+            key={b.item.id}
+            bookmark={b}
+            divider={i > 0}
+            onEdit={() => onEdit(b.item)}
+            onTogglePin={() => onTogglePin(b)}
+          />
+        ))}
       </div>
-      <div className="min-w-0 flex-1">
-        <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-[var(--ink)] leading-none">
-          {title}
-        </h2>
-        <div className="mt-1.5 text-[11.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted-2)]">
-          {count} {count === 1 ? "saved" : "saved"}
-          {host && (
-            <>
-              <span className="mx-1.5 text-[var(--muted-2)]">·</span>
-              <span className="font-mono normal-case tracking-[0.04em] text-[var(--muted)]">
-                {host}
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-      <span
-        aria-hidden
-        className="flex-1 hidden sm:block h-px self-center"
-        style={{ background: "var(--line)" }}
-      />
-    </header>
+    </section>
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Card
-// ──────────────────────────────────────────────────────────────────────
-
-function BookmarkCard({
+function BookmarkRow({
   bookmark: b,
+  divider,
   onEdit,
   onTogglePin,
 }: {
   bookmark: DerivedBookmark;
+  divider: boolean;
   onEdit: () => void;
   onTogglePin: () => void;
 }) {
   return (
-    <div className="group life-card life-card-hover relative overflow-hidden flex flex-col">
+    <div
+      className={`group relative flex items-start gap-4 p-4 transition-colors hover:bg-[var(--paper-2)] ${
+        divider ? "border-t border-[var(--line)]" : ""
+      }`}
+    >
+      {/* Color rail */}
       <span
         aria-hidden
-        className="absolute inset-x-0 top-0 h-[3px]"
+        className="absolute left-0 top-0 bottom-0 w-[3px] opacity-0 group-hover:opacity-100 transition"
         style={{ background: b.color }}
       />
+
+      <div
+        className="grid place-items-center w-[46px] h-[46px] rounded-[10px] shrink-0 overflow-hidden mt-0.5"
+        style={{
+          background: `color-mix(in oklch, ${b.color} 14%, transparent)`,
+          border: `1px solid color-mix(in oklch, ${b.color} 30%, transparent)`,
+        }}
+      >
+        <FaviconImg
+          host={b.host}
+          size={22}
+          color={b.color}
+          initial={b.platform}
+        />
+      </div>
+
       <a
         href={b.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex-1 p-5 pb-3 block min-h-[140px]"
+        className="min-w-0 flex-1 block"
       >
-        <div className="flex items-start gap-3">
-          <div
-            className="grid place-items-center w-10 h-10 rounded-[10px] shrink-0 overflow-hidden"
-            style={{
-              background: `color-mix(in oklch, ${b.color} 14%, transparent)`,
-              border: `1px solid color-mix(in oklch, ${b.color} 30%, transparent)`,
-            }}
-          >
-            <FaviconImg
-              host={b.host}
-              size={20}
-              color={b.color}
-              initial={b.platform}
+        <div className="flex items-start gap-2">
+          <h3 className="text-[15px] font-semibold leading-snug text-[var(--ink)] group-hover:text-[var(--terra)] transition flex-1 min-w-0">
+            {b.title}
+          </h3>
+          {b.pinned && (
+            <Star
+              size={13}
+              strokeWidth={1.6}
+              fill="var(--gold)"
+              stroke="var(--gold)"
+              className="shrink-0 mt-1"
             />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-[15px] font-semibold leading-snug text-[var(--ink)] line-clamp-2 group-hover:text-[var(--terra)] transition">
-              {b.title}
-            </h3>
-            <div className="mt-1 flex items-center gap-1.5 text-[11.5px] font-mono text-[var(--muted-2)] truncate">
-              {b.host}
-              <ExternalLink
-                size={10}
-                strokeWidth={1.6}
-                className="opacity-0 group-hover:opacity-100 transition"
-              />
-            </div>
-          </div>
+          )}
         </div>
+
         {b.description && (
-          <p className="mt-3 text-[12.5px] text-[var(--muted)] line-clamp-3 leading-relaxed">
+          <p className="mt-1 text-[13px] text-[var(--muted)] line-clamp-2 leading-relaxed">
             {b.description}
           </p>
         )}
-      </a>
 
-      <div className="px-5 pb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-          {b.tags.slice(0, 3).map((t) => (
-            <span
-              key={t}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] uppercase tracking-[0.1em] font-semibold text-[var(--muted)] bg-[var(--bg-2)]"
-            >
-              <Tag size={9} strokeWidth={1.6} />
-              {t}
-            </span>
-          ))}
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="text-[10.5px] tabular-nums font-mono text-[var(--muted-2)] mr-1">
+        <div className="mt-2 flex items-center gap-x-2 gap-y-1 text-[11.5px] flex-wrap">
+          <span
+            className="inline-flex items-center gap-1 font-medium uppercase tracking-[0.1em] text-[10px] px-1.5 py-0.5 rounded-full"
+            style={{
+              background: `color-mix(in oklch, ${b.color} 12%, transparent)`,
+              color: b.color,
+            }}
+          >
+            {b.platform}
+          </span>
+          <span className="inline-flex items-center gap-1 font-mono text-[var(--muted-2)]">
+            {b.host}
+            <ExternalLink
+              size={10}
+              strokeWidth={1.6}
+              className="opacity-0 group-hover:opacity-100 transition"
+            />
+          </span>
+          <span className="text-[var(--line-2)]">·</span>
+          <span className="tabular-nums font-mono text-[var(--muted-2)]">
             {relDate(b.item.capturedAt)}
           </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              onTogglePin();
-            }}
-            aria-label={b.pinned ? "Unpin" : "Pin to reading list"}
-            title={b.pinned ? "Unpin from reading list" : "Pin to reading list"}
-            className={`grid place-items-center w-6 h-6 rounded-[6px] transition ${
-              b.pinned
-                ? "text-[var(--gold)]"
-                : "opacity-0 group-hover:opacity-100 text-[var(--muted)] hover:text-[var(--gold)] hover:bg-[var(--paper-2)]"
-            }`}
-          >
-            <Star
-              size={12}
-              strokeWidth={1.6}
-              fill={b.pinned ? "var(--gold)" : "none"}
-            />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              onEdit();
-            }}
-            aria-label="Edit"
-            className="opacity-0 group-hover:opacity-100 grid place-items-center w-6 h-6 rounded-[6px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
-          >
-            <Pencil size={11} strokeWidth={1.6} />
-          </button>
+          {b.tags.length > 0 && (
+            <>
+              <span className="text-[var(--line-2)]">·</span>
+              <span className="inline-flex items-center gap-1.5 flex-wrap">
+                {b.tags.slice(0, 5).map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center gap-0.5 text-[10.5px] font-mono lowercase text-[var(--muted)]"
+                  >
+                    <Hash
+                      size={9}
+                      strokeWidth={1.8}
+                      className="opacity-60"
+                    />
+                    {t}
+                  </span>
+                ))}
+              </span>
+            </>
+          )}
         </div>
+      </a>
+
+      <div className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 flex items-center gap-1 shrink-0 self-start mt-0.5 transition">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            onTogglePin();
+          }}
+          aria-label={b.pinned ? "Unpin" : "Pin to reading list"}
+          title={b.pinned ? "Unpin from reading list" : "Pin to reading list"}
+          className={`grid place-items-center w-7 h-7 rounded-[7px] transition ${
+            b.pinned
+              ? "text-[var(--gold)]"
+              : "text-[var(--muted)] hover:text-[var(--gold)] hover:bg-[var(--paper)]"
+          }`}
+        >
+          <Star
+            size={13}
+            strokeWidth={1.6}
+            fill={b.pinned ? "var(--gold)" : "none"}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label="Edit"
+          className="grid place-items-center w-7 h-7 rounded-[7px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition"
+        >
+          <Pencil size={12} strokeWidth={1.6} />
+        </button>
       </div>
     </div>
   );
@@ -526,10 +777,10 @@ function AddBar() {
   }
 
   return (
-    <div className="life-card p-4 mb-8">
+    <div className="life-card p-3 mb-6">
       <div className="flex items-center gap-3">
         <div
-          className="grid place-items-center w-10 h-10 rounded-[10px] shrink-0 overflow-hidden transition-colors"
+          className="grid place-items-center w-9 h-9 rounded-[9px] shrink-0 overflow-hidden transition-colors"
           style={{
             background: platform
               ? `color-mix(in oklch, ${platform.color} 14%, transparent)`
@@ -544,13 +795,13 @@ function AddBar() {
           {platform ? (
             <FaviconImg
               host={platform.host}
-              size={22}
+              size={20}
               color={platform.color}
               initial={platform.name}
             />
           ) : (
             <Bookmark
-              size={16}
+              size={15}
               strokeWidth={1.6}
               className="text-[var(--muted)]"
             />
@@ -618,6 +869,10 @@ function AddBar() {
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// Empty states
+// ──────────────────────────────────────────────────────────────────────
+
 function EmptyHero() {
   return (
     <div className="rounded-[12px] border border-dashed border-[var(--line-2)] py-12 px-6 text-center">
@@ -635,6 +890,23 @@ function EmptyHero() {
         OS auto-detects the platform and groups them so they don&apos;t
         disappear into the void.
       </p>
+    </div>
+  );
+}
+
+function EmptyFiltered({ onReset }: { onReset: () => void }) {
+  return (
+    <div className="rounded-[12px] border border-dashed border-[var(--line-2)] py-10 px-6 text-center">
+      <p className="text-[13px] text-[var(--muted)]">
+        Nothing matches that filter yet.
+      </p>
+      <button
+        type="button"
+        onClick={onReset}
+        className="mt-3 life-btn life-btn-sm life-btn-ghost"
+      >
+        Show all bookmarks
+      </button>
     </div>
   );
 }
