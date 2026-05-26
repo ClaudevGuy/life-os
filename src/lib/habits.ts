@@ -13,22 +13,21 @@ import { ymd } from "@/lib/ymd";
 
 export type Cadence = "daily" | "weekdays" | "weekly";
 
-/** Monday-anchored start-of-week for any date (local). */
+/** Sunday-anchored start-of-week for any date (local). */
 export function startOfWeek(d: Date = new Date()): Date {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
   const dow = x.getDay(); // 0 = Sun … 6 = Sat
-  const offsetToMonday = dow === 0 ? -6 : 1 - dow;
-  x.setDate(x.getDate() + offsetToMonday);
+  x.setDate(x.getDate() - dow);
   return x;
 }
 
-/** All 7 ymd strings of the week containing `d` (Mon → Sun). */
+/** All 7 ymd strings of the week containing `d` (Sun → Sat). */
 export function weekDates(d: Date = new Date()): string[] {
-  const monday = startOfWeek(d);
+  const sunday = startOfWeek(d);
   return Array.from({ length: 7 }).map((_, i) => {
-    const day = new Date(monday);
-    day.setDate(monday.getDate() + i);
+    const day = new Date(sunday);
+    day.setDate(sunday.getDate() + i);
     return ymd(day);
   });
 }
@@ -40,7 +39,7 @@ export function weekDates(d: Date = new Date()): string[] {
  *   weekends when counting backwards, so a Mon–Fri-only routine doesn't break
  *   on Saturday.)
  *
- *   weekly — consecutive weeks (Monday-anchored) with ≥1 check-in. So a
+ *   weekly — consecutive weeks (Sunday-anchored) with ≥1 check-in. So a
  *   gym-3x-a-week habit can still build a streak.
  *
  * Today/this-week is allowed to be unmarked without breaking the streak.
@@ -116,7 +115,7 @@ export function isPending(
   return !set.has(ymd());
 }
 
-/** Count of check-ins for this current week (Mon → Sun). */
+/** Count of check-ins for this current week (Sun → Sat). */
 export function thisWeekCount(checkins: string[]): number {
   const set = new Set(checkins);
   let n = 0;

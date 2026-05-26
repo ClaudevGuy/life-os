@@ -16,19 +16,18 @@ const HABIT_PALETTE = [
   "var(--sky)",
 ];
 
-const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 function thisWeekDates(): string[] {
-  // Monday-anchored 7-day window starting from this week's Monday.
+  // Sunday-anchored 7-day window starting from this week's Sunday.
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const dow = now.getDay(); // 0 = Sun
-  const offsetToMonday = dow === 0 ? -6 : 1 - dow;
-  const monday = new Date(now);
-  monday.setDate(monday.getDate() + offsetToMonday);
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() - dow);
   return Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
     return ymd(d);
   });
 }
