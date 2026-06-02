@@ -136,34 +136,43 @@ export function PersonDetail({ person }: { person: StoredItem }) {
       </div>
 
       {/* Hero */}
-      <section className="life-card overflow-hidden">
-        {/* Color band — gradient using the person's color */}
-        <div
-          className="h-[120px] relative"
+      <section className="life-card overflow-hidden relative">
+        {/* Slim color accent */}
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-[4px]"
           style={{
-            background: `linear-gradient(135deg, color-mix(in oklch, ${color} 80%, black) 0%, ${color} 60%, color-mix(in oklch, ${color} 85%, white) 100%)`,
+            background: `linear-gradient(90deg, ${color}, color-mix(in oklch, ${color} 55%, white))`,
           }}
         />
-        <div className="px-7 pb-6 -mt-[44px] flex items-end gap-5 flex-wrap">
-          {/* Big monogram */}
+        {/* Soft color wash behind the avatar */}
+        <span
+          aria-hidden
+          className="absolute left-0 top-0 bottom-0 w-[280px] pointer-events-none"
+          style={{
+            background: `linear-gradient(105deg, color-mix(in oklch, ${color} 12%, transparent), transparent)`,
+          }}
+        />
+        <div className="relative px-7 py-6 flex items-center gap-5 flex-wrap">
+          {/* Monogram */}
           <div
-            className="grid place-items-center w-[88px] h-[88px] rounded-full text-[28px] font-semibold tracking-[-0.01em] shrink-0"
+            className="grid place-items-center w-[72px] h-[72px] rounded-full text-[25px] font-semibold tracking-[-0.01em] shrink-0"
             style={{
               background: tint,
               color,
-              border: `3px solid var(--paper)`,
-              boxShadow: "var(--shadow-2)",
+              border: `1px solid color-mix(in oklch, ${color} 32%, transparent)`,
+              boxShadow: "var(--shadow-1)",
             }}
           >
             {initials(person.title)}
           </div>
 
           {/* Name + facts inline */}
-          <div className="flex-1 min-w-0 pt-[44px]">
-            <h1 className="text-[34px] font-semibold tracking-[-0.025em] leading-[1.05] text-[var(--ink)]">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[30px] sm:text-[32px] font-semibold tracking-[-0.025em] leading-[1.08] text-[var(--ink)] truncate">
               {name}
             </h1>
-            <div className="mt-3 flex items-center gap-3 flex-wrap text-[13px] text-[var(--muted)]">
+            <div className="mt-2 flex items-center gap-2.5 flex-wrap text-[13px] text-[var(--muted)]">
               {meta.relationship && (
                 <span
                   className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-semibold uppercase tracking-[0.12em]"
@@ -189,7 +198,7 @@ export function PersonDetail({ person }: { person: StoredItem }) {
           </div>
 
           {/* CTA buttons */}
-          <div className="flex items-center gap-2 pt-[44px] shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => router.push(`/items/${person.id}#note`)}
