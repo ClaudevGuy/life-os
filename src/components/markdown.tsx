@@ -9,14 +9,37 @@ import Link from "next/link";
 function inline(s: string): React.ReactNode[] {
   const tokens: React.ReactNode[] = [];
   const regex =
-    /(\[\[[^\]]+\]\]|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
+    /(\[\[[^\]]+\]\]|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\)|https?:\/\/[^\s<>()]+)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
   while ((match = regex.exec(s))) {
     if (match.index > lastIndex) tokens.push(s.slice(lastIndex, match.index));
     const tok = match[0];
-    if (tok.startsWith("[[")) {
+    if (/^https?:\/\//.test(tok)) {
+      // Bare URL — autolink it. Strip trailing sentence punctuation so a URL
+      // at the end of a sentence doesn't swallow the period.
+      let url = tok;
+      let trail = "";
+      const punct = /[.,;:!?]+$/.exec(url);
+      if (punct) {
+        trail = punct[0];
+        url = url.slice(0, -trail.length);
+      }
+      const label = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+      tokens.push(
+        <a
+          key={key++}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-[var(--accent)] decoration-1 underline-offset-2 text-[var(--text)] hover:text-[var(--accent)] break-all"
+        >
+          {label}
+        </a>,
+      );
+      if (trail) tokens.push(trail);
+    } else if (tok.startsWith("[[")) {
       const target = tok.slice(2, -2).trim();
       tokens.push(
         <Link

@@ -242,23 +242,27 @@ export function ProjectDetail({ project }: { project: StoredItem }) {
                 )}
               </div>
               <InlineProjectTitle project={project} />
-              {project.summary && (
-                <p className="mt-2 text-[14.5px] text-[var(--muted)] leading-relaxed max-w-xl">
-                  {project.summary}
-                </p>
-              )}
+              <InlineProjectSummary project={project} />
             </div>
           </div>
 
-          {/* Right: KPI grid */}
-          <div className="grid grid-cols-2 gap-x-10 gap-y-5 self-start lg:pl-4">
-            <Kpi label="Progress" value={`${progress}%`} accent={color} />
-            <Kpi label="Open" value={openTasks.length} />
-            <Kpi label="Completed" value={doneCount} accent="var(--sage)" />
-            <Kpi
-              label="Due"
-              value={meta.targetDate ? dueLabel(new Date(meta.targetDate)) : "—"}
-            />
+          {/* Right: progress ring + key stats */}
+          <div className="flex items-center gap-6 self-start lg:pl-4">
+            <ProgressRing value={progress} color={color} />
+            <div className="flex flex-col gap-2.5 min-w-[124px]">
+              <HeroStat label="Open" value={openTasks.length} />
+              <HeroStat
+                label="Done"
+                value={doneCount}
+                accent="var(--sage)"
+              />
+              <HeroStat
+                label="Due"
+                value={
+                  meta.targetDate ? dueLabel(new Date(meta.targetDate)) : "—"
+                }
+              />
+            </div>
           </div>
         </div>
 
@@ -296,19 +300,24 @@ export function ProjectDetail({ project }: { project: StoredItem }) {
       </section>
 
       {/* Two-column body */}
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 items-start">
-        <TasksCard
-          project={project}
-          openTasks={openTasks}
-          completedTasks={completedTasks}
-          color={color}
-        />
-
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 items-start">
+        {/* Left: the work + notes */}
         <div className="flex flex-col gap-6">
-          <RepoCard project={project} />
+          <TasksCard
+            project={project}
+            openTasks={openTasks}
+            completedTasks={completedTasks}
+            color={color}
+          />
           <AboutCard project={project} />
-          <MilestonesCard project={project} milestones={milestones} color={color} />
           <PhotosCard project={project} />
+        </div>
+
+        {/* Right: properties + resources */}
+        <div className="flex flex-col gap-6">
+          <DetailsCard project={project} status={status} />
+          <RepoCard project={project} />
+          <MilestonesCard project={project} milestones={milestones} color={color} />
           <LinkedItemsCard project={project} />
         </div>
       </div>
@@ -578,7 +587,60 @@ function StatusPill({ status }: { status: ProjectStatus }) {
   );
 }
 
-function Kpi({
+function ProgressRing({
+  value,
+  color,
+  size = 96,
+  stroke = 9,
+}: {
+  value: number;
+  color: string;
+  size?: number;
+  stroke?: number;
+}) {
+  const clamped = Math.max(0, Math.min(100, Math.round(value)));
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - clamped / 100);
+  const c = size / 2;
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={c}
+          cy={c}
+          r={r}
+          fill="none"
+          stroke="var(--bg-2)"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={c}
+          cy={c}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset .55s cubic-bezier(.4,0,.2,1)" }}
+        />
+      </svg>
+      <div className="absolute inset-0 grid place-items-center">
+        <span
+          className="text-[23px] font-semibold tabular-nums tracking-[-0.02em] leading-none"
+          style={{ color }}
+        >
+          {clamped}
+          <span className="text-[13px] font-medium opacity-70">%</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function HeroStat({
   label,
   value,
   accent,
@@ -588,16 +650,166 @@ function Kpi({
   accent?: string;
 }) {
   return (
-    <div className="flex flex-col">
-      <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+    <div className="flex items-center justify-between gap-4 border-b border-[var(--line)] pb-2 last:border-0 last:pb-0">
+      <span className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
         {label}
-      </div>
-      <div
-        className="mt-1.5 font-mono text-[20px] font-semibold tabular-nums tracking-[-0.01em] leading-none"
+      </span>
+      <span
+        className="font-mono text-[16px] font-semibold tabular-nums lowercase"
         style={{ color: accent ?? "var(--ink)" }}
       >
         {value}
-      </div>
+      </span>
+    </div>
+  );
+}
+
+function InlineProjectSummary({ project }: { project: StoredItem }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(project.summary ?? "");
+  const [pending, startTransition] = useTransition();
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setDraft(project.summary ?? "");
+  }, [project.summary]);
+  useEffect(() => {
+    if (editing) ref.current?.focus();
+  }, [editing]);
+
+  function save() {
+    const t = draft.trim();
+    if (t === (project.summary ?? "")) {
+      setEditing(false);
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await updateItem(project.id, { summary: t || null });
+        setEditing(false);
+      } catch {
+        toast.error("Couldn't save");
+      }
+    });
+  }
+
+  if (editing) {
+    return (
+      <textarea
+        ref={ref}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            save();
+          }
+          if (e.key === "Escape") {
+            setDraft(project.summary ?? "");
+            setEditing(false);
+          }
+        }}
+        rows={2}
+        disabled={pending}
+        placeholder="A one-line description of this project…"
+        className="mt-2 w-full max-w-xl bg-transparent text-[14.5px] text-[var(--muted)] leading-relaxed resize-none focus:outline-none border-b border-[var(--terra)] pb-1"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      title="Click to edit"
+      className="group mt-2 block text-left max-w-xl"
+    >
+      {project.summary?.trim() ? (
+        <p className="text-[14.5px] text-[var(--muted)] leading-relaxed group-hover:text-[var(--ink-2)] transition">
+          {project.summary}
+        </p>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 text-[13.5px] text-[var(--muted-2)] italic group-hover:text-[var(--muted)] transition">
+          <Pencil size={12} strokeWidth={1.6} />
+          Add a one-line description
+        </span>
+      )}
+    </button>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Details card — consolidated project properties
+// ──────────────────────────────────────────────────────────────────────
+
+function DetailsCard({
+  project,
+  status,
+}: {
+  project: StoredItem;
+  status: ProjectStatus;
+}) {
+  const meta = (project.metadata ?? {}) as { area?: string; targetDate?: string };
+  const areaLabel = meta.area?.trim() || project.topic?.trim() || null;
+  const due = meta.targetDate ? new Date(meta.targetDate) : null;
+  const created = project.capturedAt ? new Date(project.capturedAt) : null;
+  const updated = project.updatedAt ? new Date(project.updatedAt) : null;
+
+  return (
+    <section className="life-card p-5">
+      <h3 className="text-[18px] font-semibold tracking-[-0.015em] text-[var(--ink)] mb-4">
+        Details
+      </h3>
+      <dl className="flex flex-col">
+        <DetailRow label="Status">
+          <StatusPill status={status} />
+        </DetailRow>
+        <DetailRow label="Area">
+          {areaLabel ? (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)] bg-[var(--bg-2)]">
+              {areaLabel}
+            </span>
+          ) : (
+            <span className="text-[var(--muted-2)]">—</span>
+          )}
+        </DetailRow>
+        <DetailRow label="Due">
+          <span
+            className="font-mono text-[12.5px] tabular-nums"
+            style={{ color: due ? "var(--ink-2)" : "var(--muted-2)" }}
+          >
+            {due ? fullDate(due) : "—"}
+          </span>
+        </DetailRow>
+        <DetailRow label="Created">
+          <span className="font-mono text-[12.5px] tabular-nums text-[var(--muted)]">
+            {created ? fullDate(created) : "—"}
+          </span>
+        </DetailRow>
+        <DetailRow label="Updated">
+          <span className="font-mono text-[12.5px] tabular-nums text-[var(--muted)]">
+            {updated ? relativeFromNow(updated) : "—"}
+          </span>
+        </DetailRow>
+      </dl>
+    </section>
+  );
+}
+
+function DetailRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-2.5 border-b border-[var(--line)] last:border-0">
+      <dt className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] shrink-0">
+        {label}
+      </dt>
+      <dd className="min-w-0 text-right">{children}</dd>
     </div>
   );
 }
@@ -732,30 +944,63 @@ function TasksCard({
         />
       )}
 
-      <TaskGroup
-        label="Open"
-        count={sortedOpen.length}
-        tasks={sortedOpen}
-        empty="Nothing open."
-      />
-      {sortedCompleted.length > 0 && (
-        <TaskGroup
-          label="Completed"
-          count={sortedCompleted.length}
-          tasks={sortedCompleted}
-        />
+      {openTasks.length === 0 && completedTasks.length === 0 && !adding ? (
+        <EmptyTasks onAdd={() => setAdding(true)} color={color} />
+      ) : (
+        <>
+          <TaskGroup
+            label="Open"
+            count={sortedOpen.length}
+            tasks={sortedOpen}
+            empty="Nothing open — every task is done. 🎉"
+          />
+          {sortedCompleted.length > 0 && (
+            <TaskGroup
+              label="Completed"
+              count={sortedCompleted.length}
+              tasks={sortedCompleted}
+            />
+          )}
+        </>
       )}
-
-      {openTasks.length === 0 &&
-        completedTasks.length === 0 &&
-        !adding && (
-          <p className="text-[13px] text-[var(--muted)] mt-2">
-            No tasks linked to this project yet. Tap{" "}
-            <span className="font-medium text-[var(--ink)]">Add task</span> to
-            start.
-          </p>
-        )}
     </section>
+  );
+}
+
+function EmptyTasks({
+  onAdd,
+  color,
+}: {
+  onAdd: () => void;
+  color: string;
+}) {
+  return (
+    <div className="rounded-[12px] border border-dashed border-[var(--line-2)] py-8 px-6 text-center">
+      <div
+        className="mx-auto mb-3 grid place-items-center w-11 h-11 rounded-full"
+        style={{
+          background: `color-mix(in oklch, ${color} 12%, transparent)`,
+          color,
+        }}
+      >
+        <Plus size={18} strokeWidth={1.8} />
+      </div>
+      <div className="text-[14px] font-medium text-[var(--ink)]">
+        No tasks yet
+      </div>
+      <p className="mt-1 text-[12.5px] text-[var(--muted)] max-w-xs mx-auto leading-relaxed">
+        Break this project into next actions. Each one you check off fills the
+        progress ring.
+      </p>
+      <button
+        type="button"
+        onClick={onAdd}
+        className="mt-4 life-btn life-btn-sm life-btn-primary mx-auto"
+      >
+        <Plus size={12} strokeWidth={2} />
+        Add first task
+      </button>
+    </div>
   );
 }
 
@@ -1406,4 +1651,29 @@ function dueLabel(d: Date): string {
   return d
     .toLocaleDateString(undefined, { month: "short", day: "numeric" })
     .toLowerCase();
+}
+
+/** "Jun 12, 2026" — full, unambiguous date for the Details panel. */
+function fullDate(d: Date): string {
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/** "just now" / "3h ago" / "yesterday" / "2w ago" — for the Updated row. */
+function relativeFromNow(d: Date): string {
+  const diff = Date.now() - d.getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
 }
