@@ -5,7 +5,6 @@ import { ListTodo, Flame, CalendarDays, Bell, CreditCard } from "lucide-react";
 import {
   useRecentItems,
   useItemsOfKind,
-  useJournalToday,
   useOldHighlights,
   useOnThisDay,
   useWeekCounts,
@@ -19,7 +18,6 @@ import {
   readSubscription,
 } from "@/lib/subscriptions";
 import { Brief } from "./brief";
-import { JournalForm } from "./journal-form";
 import { TodayHero } from "./hero";
 import { WeekStrip } from "./week-strip";
 import { OnThisDay } from "./on-this-day";
@@ -51,7 +49,6 @@ function calcStreak(checkins: Set<string>) {
 
 export function TodayClient() {
   const recent = useRecentItems(24) ?? [];
-  const journalToday = useJournalToday() ?? null;
   const allTasks = useItemsOfKind("task") ?? [];
   const subscriptions = useItemsOfKind("subscription") ?? [];
   const habits = useItemsOfKind("habit") ?? [];
@@ -132,7 +129,6 @@ export function TodayClient() {
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5">
         <div className="space-y-5">
           <Brief recentCount={recent.length} />
-          <JournalForm existing={journalToday} />
           <SrsHighlight pool={oldHighlights} />
           <OnThisDay items={onThisDayRows} />
         </div>
