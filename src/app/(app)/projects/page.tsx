@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/store/db";
 import type { StoredItem } from "@/lib/store/items";
-import { FolderKanban, Compass, Calendar, Clock, ExternalLink } from "lucide-react";
+import { FolderKanban, Calendar, Clock, ExternalLink } from "lucide-react";
 import { NewProject } from "./new-project";
 import { parseRepo } from "@/lib/github";
 import { RepoGlyph } from "@/components/repo-glyph";
@@ -73,7 +73,6 @@ export default function ProjectsPage() {
     () => rows.filter((r) => r.kind === "project"),
     [rows],
   );
-  const areas = useMemo(() => rows.filter((r) => r.kind === "area"), [rows]);
   const allTasks = useMemo(() => rows.filter((r) => r.kind === "task"), [rows]);
   const openTasks = useMemo(() => allTasks.filter(isOpenTask), [allTasks]);
 
@@ -115,7 +114,7 @@ export default function ProjectsPage() {
     };
   }, [tasksByProject]);
 
-  // Group projects by area name (string field, opt-in).
+  // Group projects by their optional group/area string field.
   const grouped = useMemo(() => {
     const m = new Map<string, StoredItem[]>();
     for (const p of projects) {
@@ -124,20 +123,15 @@ export default function ProjectsPage() {
       arr.push(p);
       m.set(a, arr);
     }
-    // Sort groups: known areas first by title order in area list, then alphabetical
-    const areaTitles = new Set(areas.map((a) => a.title?.trim()).filter(Boolean));
-    const ordered = [...m.entries()].sort(([a], [b]) => {
-      const aIsArea = areaTitles.has(a);
-      const bIsArea = areaTitles.has(b);
-      if (aIsArea !== bIsArea) return aIsArea ? -1 : 1;
+    // Alphabetical, with the catch-all group sinking to the bottom.
+    return [...m.entries()].sort(([a], [b]) => {
       if (a === "Uncategorized") return 1;
       if (b === "Uncategorized") return -1;
       return a.localeCompare(b);
     });
-    return ordered;
-  }, [projects, areas]);
+  }, [projects]);
 
-  const isEmpty = projects.length === 0 && areas.length === 0;
+  const isEmpty = projects.length === 0;
 
   return (
     <div className="p-8 max-w-7xl mx-auto pg-enter">
@@ -149,10 +143,10 @@ export default function ProjectsPage() {
               strokeWidth={1.6}
               className="text-[var(--terra)]"
             />
-            Projects &amp; Areas
+            Projects
           </h1>
           <p className="text-[14.5px] text-[var(--muted)] mt-1 max-w-xl">
-            Active work, life maintenance — grouped by where it lives.
+            Everything you&apos;re actively moving forward.
           </p>
         </div>
         <NewProject />
@@ -170,7 +164,6 @@ export default function ProjectsPage() {
             projectTotal={projects.length}
             openTasks={openTasks.length}
             completed={completed.length}
-            areas={areas.length}
           />
 
           {grouped.length === 0 ? (
@@ -209,61 +202,6 @@ export default function ProjectsPage() {
               );
             })
           )}
-
-          {/* Areas — keep as a separate section for area-kind items */}
-          <section className="mt-10">
-            <div className="flex items-center gap-3 mb-3">
-              <h2 className="inline-flex items-center gap-2 text-[18px] font-semibold tracking-[-0.015em] text-[var(--ink)]">
-                <Compass
-                  size={17}
-                  strokeWidth={1.6}
-                  className="text-[var(--plum)]"
-                />
-                Areas
-              </h2>
-              <span
-                aria-hidden
-                className="flex-1 h-px"
-                style={{ background: "var(--line)" }}
-              />
-              <span className="font-mono text-[11px] text-[var(--muted)] tabular-nums">
-                {areas.length} area{areas.length === 1 ? "" : "s"}
-              </span>
-            </div>
-            {areas.length === 0 ? (
-              <div className="rounded-[12px] border border-dashed border-[var(--line-2)] px-5 py-5 flex items-center gap-4">
-                <div
-                  className="grid place-items-center w-11 h-11 rounded-[11px] bg-[var(--plum-tint)] text-[var(--plum)] shrink-0"
-                  style={{
-                    border:
-                      "1px solid color-mix(in oklch, var(--plum) 26%, transparent)",
-                  }}
-                >
-                  <Compass size={20} strokeWidth={1.6} />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[14px] text-[var(--ink)] font-medium">
-                    No areas yet
-                  </div>
-                  <p className="mt-0.5 text-[12.5px] text-[var(--muted)] leading-relaxed">
-                    Areas are the ongoing parts of life — Health, Work,
-                    Finances. They don&apos;t end, they just need tending. Add
-                    one from{" "}
-                    <span className="font-medium text-[var(--ink-2)]">
-                      New project → Area
-                    </span>
-                    .
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 life-stagger">
-                {areas.map((a) => (
-                  <AreaCard key={a.id} area={a} />
-                ))}
-              </div>
-            )}
-          </section>
         </>
       )}
     </div>
@@ -551,47 +489,6 @@ function StatusPill({ status }: { status: ProjectStatus }) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Area card
-// ──────────────────────────────────────────────────────────────────────
-
-function AreaCard({ area }: { area: StoredItem }) {
-  return (
-    <Link
-      href={`/items/${area.id}`}
-      className="life-card life-card-hover p-5 block relative overflow-hidden"
-    >
-      <span
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-[3px]"
-        style={{ background: "var(--plum)" }}
-      />
-      <div className="flex items-start gap-3">
-        <div
-          className="grid place-items-center w-10 h-10 rounded-[10px] shrink-0"
-          style={{
-            background: "var(--plum-tint)",
-            color: "var(--plum)",
-            border: "1px solid color-mix(in oklch, var(--plum) 30%, transparent)",
-          }}
-        >
-          <Compass size={18} strokeWidth={1.6} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[16px] font-semibold tracking-[-0.015em] text-[var(--ink)] truncate">
-            {area.title}
-          </h3>
-          {area.summary && (
-            <p className="mt-1 text-[12.5px] text-[var(--muted)] line-clamp-2 leading-relaxed">
-              {area.summary}
-            </p>
-          )}
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────
 // Atoms
 // ──────────────────────────────────────────────────────────────────────
 
@@ -603,7 +500,6 @@ function PortfolioBand({
   projectTotal,
   openTasks,
   completed,
-  areas,
 }: {
   pct: number;
   done: number;
@@ -612,7 +508,6 @@ function PortfolioBand({
   projectTotal: number;
   openTasks: number;
   completed: number;
-  areas: number;
 }) {
   return (
     <section className="life-card p-6 mb-9 flex flex-col sm:flex-row sm:items-center gap-x-8 gap-y-6">
@@ -642,7 +537,7 @@ function PortfolioBand({
       <span className="hidden sm:block w-px self-stretch bg-[var(--line)]" />
 
       {/* Headline counts */}
-      <div className="grid grid-cols-2 sm:flex sm:flex-1 sm:justify-around gap-x-6 gap-y-5">
+      <div className="grid grid-cols-3 sm:flex sm:flex-1 sm:justify-around gap-x-6 gap-y-5">
         <PortfolioStat label="Active" value={active} hint={`of ${projectTotal}`} />
         <PortfolioStat
           label="Open tasks"
@@ -655,7 +550,6 @@ function PortfolioBand({
           accent="var(--sage)"
           hint="projects"
         />
-        <PortfolioStat label="Areas" value={areas} accent="var(--plum)" />
       </div>
     </section>
   );

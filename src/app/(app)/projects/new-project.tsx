@@ -9,7 +9,6 @@ import { RepoGlyph } from "@/components/repo-glyph";
 
 export function NewProject() {
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<"project" | "area">("project");
   const [title, setTitle] = useState("");
   const [area, setArea] = useState("");
   const [repo, setRepo] = useState("");
@@ -40,24 +39,20 @@ export function NewProject() {
     }
     startTransition(async () => {
       try {
-        let metadata: Record<string, unknown> | undefined;
-        if (kind === "project") {
-          const m: Record<string, unknown> = {};
-          if (area.trim()) m.area = area.trim();
-          const repoUrl = normalizeRepoUrl(repo);
-          if (repoUrl) m.repoUrl = repoUrl;
-          if (Object.keys(m).length > 0) metadata = m;
-        }
+        const m: Record<string, unknown> = {};
+        if (area.trim()) m.area = area.trim();
+        const repoUrl = normalizeRepoUrl(repo);
+        if (repoUrl) m.repoUrl = repoUrl;
         await captureItem({
-          kind,
+          kind: "project",
           title: title.trim(),
-          metadata,
+          metadata: Object.keys(m).length > 0 ? m : undefined,
         });
       } catch {
         toast.error("Couldn't create");
         return;
       }
-      toast.success(`${kind === "project" ? "Project" : "Area"} created`);
+      toast.success("Project created");
       reset();
     });
   }
@@ -91,26 +86,8 @@ export function NewProject() {
             strokeWidth={1.6}
             className="text-[var(--terra)]"
           />
-          New project or area
+          New project
         </h2>
-
-        <div className="inline-flex items-center gap-1 p-1 rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] mb-3">
-          {(["project", "area"] as const).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setKind(k)}
-              className={`text-[12.5px] capitalize px-3 py-1 rounded-[7px] font-medium transition ${
-                kind === k
-                  ? "bg-[var(--paper)] text-[var(--ink)]"
-                  : "text-[var(--muted)] hover:text-[var(--ink)]"
-              }`}
-              style={kind === k ? { boxShadow: "var(--shadow-1)" } : undefined}
-            >
-              {k}
-            </button>
-          ))}
-        </div>
 
         <input
           value={title}
@@ -118,58 +95,54 @@ export function NewProject() {
           onKeyDown={(e) => {
             if (e.key === "Enter") save();
           }}
-          placeholder={kind === "project" ? "Project name" : "Area of life"}
+          placeholder="Project name"
           autoFocus
           className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-[14px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
         />
 
-        {kind === "project" && (
-          <>
-            <div className="mt-3 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
-              Area <span className="opacity-60 normal-case tracking-normal font-normal">(optional)</span>
-            </div>
-            <input
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") save();
-              }}
-              placeholder="e.g. Work, Life"
-              className="mt-1.5 w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-[14px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
-            />
+        <div className="mt-3 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+          Group <span className="opacity-60 normal-case tracking-normal font-normal">(optional)</span>
+        </div>
+        <input
+          value={area}
+          onChange={(e) => setArea(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+          }}
+          placeholder="e.g. Work, Personal"
+          className="mt-1.5 w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-[14px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
+        />
 
-            <div className="mt-3 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
-              Repository <span className="opacity-60 normal-case tracking-normal font-normal">(optional)</span>
-            </div>
-            <div className="mt-1.5 flex items-center gap-2 rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] focus-within:border-[var(--terra)] px-3 transition">
-              <span
-                className="shrink-0"
-                style={{
-                  color: repoRef ? "var(--ink)" : "var(--muted-2)",
-                }}
-              >
-                <RepoGlyph provider={repoRef?.provider ?? "github"} size={15} />
-              </span>
-              <input
-                value={repo}
-                onChange={(e) => setRepo(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") save();
-                }}
-                placeholder="github.com/owner/repo"
-                className="flex-1 bg-transparent py-2 text-[13.5px] font-mono text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none"
-              />
-            </div>
-            {repoRef && repoRef.owner && repoRef.repo && (
-              <div className="mt-1.5 text-[11.5px] text-[var(--muted)] font-mono truncate">
-                {repoRef.owner}
-                <span className="text-[var(--muted-2)]"> / </span>
-                <span className="text-[var(--ink-2)] font-medium">
-                  {repoRef.repo}
-                </span>
-              </div>
-            )}
-          </>
+        <div className="mt-3 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+          Repository <span className="opacity-60 normal-case tracking-normal font-normal">(optional)</span>
+        </div>
+        <div className="mt-1.5 flex items-center gap-2 rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] focus-within:border-[var(--terra)] px-3 transition">
+          <span
+            className="shrink-0"
+            style={{
+              color: repoRef ? "var(--ink)" : "var(--muted-2)",
+            }}
+          >
+            <RepoGlyph provider={repoRef?.provider ?? "github"} size={15} />
+          </span>
+          <input
+            value={repo}
+            onChange={(e) => setRepo(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+            }}
+            placeholder="github.com/owner/repo"
+            className="flex-1 bg-transparent py-2 text-[13.5px] font-mono text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none"
+          />
+        </div>
+        {repoRef && repoRef.owner && repoRef.repo && (
+          <div className="mt-1.5 text-[11.5px] text-[var(--muted)] font-mono truncate">
+            {repoRef.owner}
+            <span className="text-[var(--muted-2)]"> / </span>
+            <span className="text-[var(--ink-2)] font-medium">
+              {repoRef.repo}
+            </span>
+          </div>
         )}
 
         <div className="mt-5 flex justify-end gap-2">

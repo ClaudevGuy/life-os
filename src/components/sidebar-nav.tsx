@@ -80,7 +80,7 @@ const SECTIONS: RailSection[] = [
     heading: "Reflect",
     items: [
       { href: "/journal", label: "Journal", icon: BookHeart },
-      { href: "/projects", label: "Projects & Areas", icon: FolderKanban },
+      { href: "/projects", label: "Projects", icon: FolderKanban },
       { href: "/people", label: "People", icon: Users },
       {
         href: "/subscriptions",

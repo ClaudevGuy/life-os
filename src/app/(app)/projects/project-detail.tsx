@@ -159,7 +159,7 @@ export function ProjectDetail({ project }: { project: StoredItem }) {
             className="inline-flex items-center gap-1.5 hover:text-[var(--ink)] transition shrink-0"
           >
             <ArrowLeft size={13} strokeWidth={1.6} />
-            Projects &amp; Areas
+            Projects
           </Link>
           {areaLabel && (
             <>

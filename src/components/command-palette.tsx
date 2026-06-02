@@ -47,7 +47,7 @@ const NAV: Array<{
   { href: "/habits", label: "Habits", icon: Flame },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/journal", label: "Journal", icon: BookHeart },
-  { href: "/projects", label: "Projects & Areas", icon: FolderKanban },
+  { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/people", label: "People", icon: Users },
   { href: "/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/files", label: "Files", icon: Files },
