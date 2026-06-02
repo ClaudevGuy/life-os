@@ -22,6 +22,9 @@ import {
   ImagePlus,
   X,
   Check,
+  Bold,
+  Italic,
+  Code,
 } from "lucide-react";
 import {
   useItemsOfKind,
@@ -32,6 +35,7 @@ import {
 import { saveBlob, deleteBlob } from "@/lib/store/blobs";
 import { BlobImg } from "@/components/blob-img";
 import { ItemActions } from "@/components/item-actions";
+import { Markdown } from "@/components/markdown";
 
 type View = "editor" | "grid";
 
@@ -405,7 +409,7 @@ function NoteGridCard({ note: n }: { note: StoredItem }) {
         {n.title ?? "Untitled"}
       </h3>
       <div className="mt-2 text-[13.5px] text-[var(--ink-2)] leading-relaxed line-clamp-6 whitespace-pre-line">
-        {n.body?.trim() || <em className="text-[var(--muted)] not-italic">Empty.</em>}
+        {plainPreview(n.body) || <em className="text-[var(--muted)] not-italic">Empty.</em>}
       </div>
       <div className="mt-auto pt-4 border-t border-dashed border-[var(--line)] flex items-center justify-between gap-3">
         <span
@@ -467,7 +471,7 @@ function NoteRow({
         </span>
       </div>
       <p className="mt-1 pl-[14px] text-[12.5px] text-[var(--muted)] line-clamp-2 leading-relaxed">
-        {n.body?.trim() ? n.body : "Empty"}
+        {plainPreview(n.body) || "Empty"}
       </p>
       <div className="mt-1.5 pl-[14px] flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] font-semibold text-[var(--muted-2)]">
         <span>{tag}</span>
@@ -490,6 +494,9 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
   const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  // Selection to restore after a programmatic wrap (set via the toolbar).
+  const pendingSel = useRef<[number, number] | null>(null);
 
   // When switching notes, drop edit mode and reseed the local fields.
   useEffect(() => {
@@ -498,6 +505,51 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
     setBody(n.body ?? "");
     setPhotos(initialPhotos);
   }, [n.id, n.title, n.body, initialPhotos]);
+
+  // After a toolbar wrap mutates the body, restore the caret/selection.
+  useEffect(() => {
+    if (pendingSel.current && bodyRef.current) {
+      const [s, e] = pendingSel.current;
+      pendingSel.current = null;
+      const ta = bodyRef.current;
+      ta.focus();
+      ta.setSelectionRange(s, e);
+    }
+  }, [body]);
+
+  /**
+   * Toggle a markdown wrapper (e.g. ** for bold, * for italic, ` for code)
+   * around the current selection. If the selection — or the text just
+   * outside it — is already wrapped, the markers are stripped instead.
+   */
+  function applyWrap(marker: string) {
+    const ta = bodyRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const sel = body.slice(start, end);
+    const m = marker.length;
+    const inside =
+      sel.startsWith(marker) && sel.endsWith(marker) && sel.length >= 2 * m;
+    const outside =
+      body.slice(Math.max(0, start - m), start) === marker &&
+      body.slice(end, end + m) === marker;
+
+    if (inside) {
+      const inner = sel.slice(m, sel.length - m);
+      setBody(body.slice(0, start) + inner + body.slice(end));
+      pendingSel.current = [start, start + inner.length];
+    } else if (outside) {
+      setBody(body.slice(0, start - m) + sel + body.slice(end + m));
+      pendingSel.current = [start - m, end - m];
+    } else {
+      setBody(body.slice(0, start) + marker + sel + marker + body.slice(end));
+      pendingSel.current =
+        sel.length === 0
+          ? [start + m, start + m]
+          : [start + m, end + m];
+    }
+  }
 
   async function uploadFiles(files: FileList | File[]) {
     const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
@@ -689,34 +741,83 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
 
       <div className="mt-6">
         {editing ? (
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onPaste={(e) => {
-              const files: File[] = [];
-              for (const item of e.clipboardData.items) {
-                if (item.kind === "file") {
-                  const f = item.getAsFile();
-                  if (f) files.push(f);
+          <div>
+            {/* Formatting toolbar */}
+            <div className="flex items-center gap-1 mb-2">
+              <FormatButton
+                label="Bold"
+                shortcut="⌘B"
+                onClick={() => applyWrap("**")}
+              >
+                <Bold size={14} strokeWidth={2.25} />
+              </FormatButton>
+              <FormatButton
+                label="Italic"
+                shortcut="⌘I"
+                onClick={() => applyWrap("*")}
+              >
+                <Italic size={14} strokeWidth={2.25} />
+              </FormatButton>
+              <FormatButton
+                label="Inline code"
+                shortcut="⌘E"
+                onClick={() => applyWrap("`")}
+              >
+                <Code size={14} strokeWidth={2.25} />
+              </FormatButton>
+              <span className="ml-1.5 text-[11px] text-[var(--muted-2)] hidden sm:inline">
+                Select text, then format — or press ⌘B / ⌘I.
+              </span>
+            </div>
+            <textarea
+              ref={bodyRef}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              onPaste={(e) => {
+                const files: File[] = [];
+                for (const item of e.clipboardData.items) {
+                  if (item.kind === "file") {
+                    const f = item.getAsFile();
+                    if (f) files.push(f);
+                  }
                 }
-              }
-              if (files.length > 0) {
-                e.preventDefault();
-                void uploadFiles(files);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
-              if (e.key === "Escape") cancel();
-            }}
-            rows={12}
-            placeholder="Empty. Start writing… markdown welcome. Paste an image (⌘V) to attach it."
-            className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-4 py-3 text-[15px] leading-[1.7] text-[var(--ink-2)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] focus:bg-[var(--paper)] resize-y transition whitespace-pre-wrap"
-          />
+                if (files.length > 0) {
+                  e.preventDefault();
+                  void uploadFiles(files);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  save();
+                  return;
+                }
+                if (e.key === "Escape") {
+                  cancel();
+                  return;
+                }
+                if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+                  const k = e.key.toLowerCase();
+                  if (k === "b") {
+                    e.preventDefault();
+                    applyWrap("**");
+                  } else if (k === "i") {
+                    e.preventDefault();
+                    applyWrap("*");
+                  } else if (k === "e") {
+                    e.preventDefault();
+                    applyWrap("`");
+                  }
+                }
+              }}
+              rows={12}
+              placeholder="Empty. Start writing… markdown welcome. Paste an image (⌘V) to attach it."
+              className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-4 py-3 text-[15px] leading-[1.7] text-[var(--ink-2)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] focus:bg-[var(--paper)] resize-y transition whitespace-pre-wrap"
+            />
+          </div>
         ) : body.trim() ? (
-          <p className="text-[15px] leading-[1.7] text-[var(--ink-2)] whitespace-pre-wrap">
-            {body}
-          </p>
+          <div className="text-[15px] leading-[1.7] text-[var(--ink-2)]">
+            <Markdown>{body}</Markdown>
+          </div>
         ) : (
           <p className="text-[15px] text-[var(--muted)]">
             Empty. Click Edit to start writing.
@@ -755,6 +856,52 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
 // ──────────────────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Strip the common markdown markers for plain-text previews, so a bolded
+ * note shows "46k NIS" in the sidebar rather than "**46k** NIS".
+ */
+function plainPreview(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/\[\[([^\]]+)\]\]/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^>\s+/gm, "")
+    .replace(/^[-*]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .trim();
+}
+
+function FormatButton({
+  label,
+  shortcut,
+  onClick,
+  children,
+}: {
+  label: string;
+  shortcut: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      // Keep the textarea's selection — don't let the button steal focus.
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      title={`${label} (${shortcut})`}
+      aria-label={`${label} (${shortcut})`}
+      className="grid place-items-center w-8 h-8 rounded-[7px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] active:bg-[var(--bg-2)] transition"
+    >
+      {children}
+    </button>
+  );
+}
 
 function groupByRecency(rows: StoredItem[]) {
   const now = Date.now();
