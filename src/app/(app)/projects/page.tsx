@@ -9,6 +9,7 @@ import { FolderKanban, Compass, Calendar, Clock, ExternalLink } from "lucide-rea
 import { NewProject } from "./new-project";
 import { parseRepo } from "@/lib/github";
 import { RepoGlyph } from "@/components/repo-glyph";
+import { ProgressRing } from "@/components/progress-ring";
 
 type ProjectTasks = { open: StoredItem[]; done: StoredItem[] };
 
@@ -98,10 +99,21 @@ export default function ProjectsPage() {
     [projects],
   );
   const active = projects.length - completed.length;
-  const completedPct =
-    projects.length > 0
-      ? Math.round((completed.length / projects.length) * 100)
-      : 0;
+
+  // Aggregate task completion across every project — drives the portfolio ring.
+  const portfolio = useMemo(() => {
+    let done = 0;
+    let total = 0;
+    for (const bucket of tasksByProject.values()) {
+      done += bucket.done.length;
+      total += bucket.open.length + bucket.done.length;
+    }
+    return {
+      done,
+      total,
+      pct: total > 0 ? Math.round((done / total) * 100) : 0,
+    };
+  }, [tasksByProject]);
 
   // Group projects by area name (string field, opt-in).
   const grouped = useMemo(() => {
@@ -150,57 +162,52 @@ export default function ProjectsPage() {
         <EmptyHero />
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 life-stagger mb-8">
-            <Stat
-              label="Active"
-              value={active}
-              tone="ink"
-              hint={`of ${projects.length} total`}
-            />
-            <Stat
-              label="Tasks open"
-              value={openTasks.length}
-              tone="terra"
-              hint="across all"
-            />
-            <Stat
-              label="Completed"
-              value={completed.length}
-              tone="sage"
-              hint={`${completedPct}% across all`}
-            />
-            <Stat label="Areas" value={areas.length} tone="ink" />
-          </div>
+          <PortfolioBand
+            pct={portfolio.pct}
+            done={portfolio.done}
+            total={portfolio.total}
+            active={active}
+            projectTotal={projects.length}
+            openTasks={openTasks.length}
+            completed={completed.length}
+            areas={areas.length}
+          />
 
           {grouped.length === 0 ? (
             <NoProjectsHint />
           ) : (
-            grouped.map(([areaName, list]) => (
-              <section key={areaName} className="mb-10">
-                <div className="flex items-center gap-3 mb-3">
-                  <h2 className="text-[18px] font-semibold tracking-[-0.015em] text-[var(--ink)]">
-                    {areaName}
-                  </h2>
-                  <span
-                    aria-hidden
-                    className="flex-1 h-px"
-                    style={{ background: "var(--line)" }}
-                  />
-                  <span className="font-mono text-[11px] text-[var(--muted)] tabular-nums">
-                    {list.length} project{list.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 life-stagger">
-                  {list.map((p) => (
-                    <ProjectCard
-                      key={p.id}
-                      project={p}
-                      tasks={tasksByProject.get(p.id) ?? null}
+            grouped.map(([areaName, list]) => {
+              const displayName =
+                areaName === "Uncategorized" && grouped.length === 1
+                  ? "All projects"
+                  : areaName;
+              return (
+                <section key={areaName} className="mb-10">
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <h2 className="text-[18px] font-semibold tracking-[-0.015em] text-[var(--ink)]">
+                      {displayName}
+                    </h2>
+                    <span className="inline-flex items-center justify-center min-w-[22px] h-[20px] px-1.5 rounded-full bg-[var(--bg-2)] text-[11px] font-mono font-semibold text-[var(--muted)] tabular-nums">
+                      {list.length}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="flex-1 h-px"
+                      style={{ background: "var(--line)" }}
                     />
-                  ))}
-                </div>
-              </section>
-            ))
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 life-stagger">
+                    {list.map((p) => (
+                      <ProjectCard
+                        key={p.id}
+                        project={p}
+                        tasks={tasksByProject.get(p.id) ?? null}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })
           )}
 
           {/* Areas — keep as a separate section for area-kind items */}
@@ -224,19 +231,30 @@ export default function ProjectsPage() {
               </span>
             </div>
             {areas.length === 0 ? (
-              <div className="rounded-[12px] border border-dashed border-[var(--line-2)] p-6 text-center">
-                <div className="mx-auto mb-3 grid place-items-center w-12 h-12 rounded-full bg-[var(--paper)] text-[var(--plum)]"
-                  style={{ boxShadow: "var(--shadow-1)" }}
+              <div className="rounded-[12px] border border-dashed border-[var(--line-2)] px-5 py-5 flex items-center gap-4">
+                <div
+                  className="grid place-items-center w-11 h-11 rounded-[11px] bg-[var(--plum-tint)] text-[var(--plum)] shrink-0"
+                  style={{
+                    border:
+                      "1px solid color-mix(in oklch, var(--plum) 26%, transparent)",
+                  }}
                 >
                   <Compass size={20} strokeWidth={1.6} />
                 </div>
-                <div className="text-[14px] text-[var(--ink)] font-medium">
-                  Areas are ongoing parts of life.
+                <div className="min-w-0">
+                  <div className="text-[14px] text-[var(--ink)] font-medium">
+                    No areas yet
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] text-[var(--muted)] leading-relaxed">
+                    Areas are the ongoing parts of life — Health, Work,
+                    Finances. They don&apos;t end, they just need tending. Add
+                    one from{" "}
+                    <span className="font-medium text-[var(--ink-2)]">
+                      New project → Area
+                    </span>
+                    .
+                  </p>
                 </div>
-                <p className="mt-1 text-[12.5px] text-[var(--muted)] max-w-md mx-auto">
-                  Health, Work, Relationships, Finances — they don't end, they
-                  just need tending.
-                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 life-stagger">
@@ -307,10 +325,17 @@ function ProjectCard({
     >
       <span
         aria-hidden
-        className="absolute inset-x-0 top-0 h-[3px]"
+        className="absolute inset-x-0 top-0 h-[3px] z-[2]"
         style={{ background: color }}
       />
-      <div className="p-5 flex flex-col gap-4 flex-1">
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-24 pointer-events-none"
+        style={{
+          background: `linear-gradient(180deg, color-mix(in oklch, ${color} 7%, transparent), transparent)`,
+        }}
+      />
+      <div className="relative p-5 flex flex-col gap-4 flex-1">
         <div className="flex items-start gap-3">
           <div
             className="grid place-items-center w-10 h-10 rounded-[10px] text-[16px] font-semibold tracking-[-0.01em] shrink-0"
@@ -337,30 +362,30 @@ function ProjectCard({
           <StatusPill status={status} />
         </div>
 
-        <div className="mt-auto flex flex-col gap-3">
+        <div className="mt-auto flex flex-col gap-2.5">
           {totalTasks > 0 ? (
-            <PipPreview total={totalTasks} done={doneCount} color={color} />
+            <>
+              <PipPreview total={totalTasks} done={doneCount} color={color} />
+              <div className="flex items-center justify-between text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[var(--muted-2)]">
+                <span className="font-mono">
+                  {doneCount} / {totalTasks} done
+                </span>
+                <span className="font-mono" style={{ color }}>
+                  {progress}%
+                </span>
+              </div>
+            </>
           ) : (
-            <div
-              className="h-[6px] rounded-full overflow-hidden"
-              style={{ background: "var(--bg-2)" }}
-            >
-              <div
-                className="h-full transition-all"
-                style={{ width: `${progress}%`, background: color }}
+            <div className="flex items-center gap-2.5">
+              <span
+                className="flex-1 h-[6px] rounded-full"
+                style={{ background: "var(--bg-2)" }}
               />
+              <span className="text-[10px] uppercase tracking-[0.12em] font-semibold text-[var(--muted-2)] shrink-0">
+                No tasks yet
+              </span>
             </div>
           )}
-          <div className="flex items-center justify-between text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[var(--muted-2)]">
-            <span className="font-mono">
-              {totalTasks > 0
-                ? `${doneCount} / ${totalTasks}`
-                : "Progress"}
-            </span>
-            <span className="font-mono" style={{ color }}>
-              {progress}%
-            </span>
-          </div>
         </div>
 
         {nextUp && <NextUpRow task={nextUp} color={color} />}
@@ -570,38 +595,96 @@ function AreaCard({ area }: { area: StoredItem }) {
 // Atoms
 // ──────────────────────────────────────────────────────────────────────
 
-function Stat({
+function PortfolioBand({
+  pct,
+  done,
+  total,
+  active,
+  projectTotal,
+  openTasks,
+  completed,
+  areas,
+}: {
+  pct: number;
+  done: number;
+  total: number;
+  active: number;
+  projectTotal: number;
+  openTasks: number;
+  completed: number;
+  areas: number;
+}) {
+  return (
+    <section className="life-card p-6 mb-9 flex flex-col sm:flex-row sm:items-center gap-x-8 gap-y-6">
+      {/* Aggregate completion ring */}
+      <div className="flex items-center gap-5 shrink-0">
+        <ProgressRing value={pct} color="var(--terra)" size={86} stroke={8} />
+        <div>
+          <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+            Task completion
+          </div>
+          <div className="mt-1.5 text-[15px] text-[var(--ink)] leading-tight">
+            {total > 0 ? (
+              <>
+                <span className="font-semibold tabular-nums">{done}</span>
+                <span className="text-[var(--muted)]"> of {total} done</span>
+              </>
+            ) : (
+              <span className="text-[var(--muted)]">No tasks tracked yet</span>
+            )}
+          </div>
+          <div className="mt-0.5 text-[12px] text-[var(--muted-2)]">
+            across {projectTotal} project{projectTotal === 1 ? "" : "s"}
+          </div>
+        </div>
+      </div>
+
+      <span className="hidden sm:block w-px self-stretch bg-[var(--line)]" />
+
+      {/* Headline counts */}
+      <div className="grid grid-cols-2 sm:flex sm:flex-1 sm:justify-around gap-x-6 gap-y-5">
+        <PortfolioStat label="Active" value={active} hint={`of ${projectTotal}`} />
+        <PortfolioStat
+          label="Open tasks"
+          value={openTasks}
+          accent="var(--terra)"
+        />
+        <PortfolioStat
+          label="Completed"
+          value={completed}
+          accent="var(--sage)"
+          hint="projects"
+        />
+        <PortfolioStat label="Areas" value={areas} accent="var(--plum)" />
+      </div>
+    </section>
+  );
+}
+
+function PortfolioStat({
   label,
   value,
-  tone,
+  accent,
   hint,
 }: {
   label: string;
   value: number;
-  tone: "ink" | "terra" | "gold" | "sage";
+  accent?: string;
   hint?: string;
 }) {
-  const color =
-    tone === "terra"
-      ? "var(--terra)"
-      : tone === "gold"
-      ? "var(--gold)"
-      : tone === "sage"
-      ? "var(--sage)"
-      : "var(--ink)";
   return (
-    <div className="life-card p-5 flex flex-col">
+    <div className="flex flex-col">
       <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
         {label}
       </div>
       <div
-        className="mt-2 text-[34px] font-semibold tabular-nums tracking-[-0.02em] leading-none"
-        style={{ color }}
+        className="mt-1.5 text-[30px] font-semibold tabular-nums tracking-[-0.02em] leading-none"
+        style={{ color: accent ?? "var(--ink)" }}
       >
         {value}
       </div>
       {hint && (
-        <div className="mt-2 text-[11px] text-[var(--muted)]">{hint}</div>
+        <div className="mt-1.5 text-[11px] text-[var(--muted-2)]">{hint}</div>
       )}
     </div>
   );

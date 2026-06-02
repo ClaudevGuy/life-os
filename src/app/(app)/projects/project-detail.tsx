@@ -30,6 +30,7 @@ import { PhotoGallery } from "@/components/photo-gallery";
 import { Backlinks } from "@/components/backlinks";
 import { RecentTracker } from "@/components/recently-viewed";
 import { RepoGlyph } from "@/components/repo-glyph";
+import { ProgressRing } from "@/components/progress-ring";
 import {
   parseRepo,
   normalizeRepoUrl,
@@ -584,59 +585,6 @@ function StatusPill({ status }: { status: ProjectStatus }) {
       />
       {m.label}
     </span>
-  );
-}
-
-function ProgressRing({
-  value,
-  color,
-  size = 96,
-  stroke = 9,
-}: {
-  value: number;
-  color: string;
-  size?: number;
-  stroke?: number;
-}) {
-  const clamped = Math.max(0, Math.min(100, Math.round(value)));
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - clamped / 100);
-  const c = size / 2;
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={c}
-          cy={c}
-          r={r}
-          fill="none"
-          stroke="var(--bg-2)"
-          strokeWidth={stroke}
-        />
-        <circle
-          cx={c}
-          cy={c}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset .55s cubic-bezier(.4,0,.2,1)" }}
-        />
-      </svg>
-      <div className="absolute inset-0 grid place-items-center">
-        <span
-          className="text-[23px] font-semibold tabular-nums tracking-[-0.02em] leading-none"
-          style={{ color }}
-        >
-          {clamped}
-          <span className="text-[13px] font-medium opacity-70">%</span>
-        </span>
-      </div>
-    </div>
   );
 }
 
