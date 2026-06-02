@@ -234,11 +234,15 @@ export function Markdown({ children }: { children: string }) {
     }
     blocks.push(
       <p key={key++} className="my-3 text-[var(--text-muted)] leading-relaxed">
-        {para.flatMap((l, j) =>
-          j === 0
-            ? inline(l)
-            : [<br key={`br-${j}`} />, ...inline(l)],
-        )}
+        {/* Wrap each line in a keyed Fragment so inline()'s per-call key
+            counter (which restarts at 0 every call) can't collide across
+            lines that share this one <p>. */}
+        {para.map((l, j) => (
+          <React.Fragment key={j}>
+            {j > 0 && <br />}
+            {inline(l)}
+          </React.Fragment>
+        ))}
       </p>,
     );
   }
