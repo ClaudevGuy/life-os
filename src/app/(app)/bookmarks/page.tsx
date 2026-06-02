@@ -10,6 +10,8 @@ import {
   Star,
   Hash,
   Inbox,
+  Search,
+  X,
 } from "lucide-react";
 import {
   useItemsOfKind,
@@ -72,6 +74,7 @@ export default function BookmarksPage() {
   const rows = (useItemsOfKind("bookmark") ?? []) as StoredItem[];
   const [editing, setEditing] = useState<StoredItem | null>(null);
   const [filter, setFilter] = useState<Filter>({ kind: "all" });
+  const [query, setQuery] = useState("");
   const [, startTransition] = useTransition();
 
   const bookmarks = useMemo(
@@ -131,6 +134,20 @@ export default function BookmarksPage() {
     }
   }, [bookmarks, filter]);
 
+  // Free-text search layered on top of the sidebar filter.
+  const searched = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return visible;
+    return visible.filter(
+      (b) =>
+        b.title.toLowerCase().includes(q) ||
+        b.host.toLowerCase().includes(q) ||
+        b.platform.toLowerCase().includes(q) ||
+        (b.description?.toLowerCase().includes(q) ?? false) ||
+        b.tags.some((t) => t.toLowerCase().includes(q)),
+    );
+  }, [visible, query]);
+
   type Section = {
     name: string;
     color: string;
@@ -141,13 +158,13 @@ export default function BookmarksPage() {
 
   const sections = useMemo<Section[]>(() => {
     if (filter.kind === "platform") {
-      const first = visible[0];
+      const first = searched[0];
       return [
         {
           name: filter.name,
           color: first?.color ?? "var(--muted)",
           host: first?.host ?? "",
-          items: visible,
+          items: searched,
         },
       ];
     }
@@ -157,7 +174,7 @@ export default function BookmarksPage() {
           name: "Reading list",
           color: "var(--gold)",
           host: "",
-          items: visible,
+          items: searched,
           accent: "gold",
         },
       ];
@@ -168,14 +185,14 @@ export default function BookmarksPage() {
           name: `#${filter.name}`,
           color: "var(--terra)",
           host: "",
-          items: visible,
+          items: searched,
         },
       ];
     }
     // All — pinned shelf first, then platforms by count
     const groups = new Map<string, DerivedBookmark[]>();
     const pinned: DerivedBookmark[] = [];
-    for (const b of visible) {
+    for (const b of searched) {
       if (b.pinned) {
         pinned.push(b);
         continue;
@@ -206,7 +223,7 @@ export default function BookmarksPage() {
       });
     }
     return list;
-  }, [visible, filter]);
+  }, [searched, filter]);
 
   function togglePin(b: DerivedBookmark) {
     startTransition(async () => {
@@ -330,6 +347,36 @@ export default function BookmarksPage() {
           <div className="min-w-0">
             <AddBar />
 
+            {/* Search toolbar */}
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex-1 flex items-center gap-2 rounded-[10px] bg-[var(--paper)] border border-[var(--line)] focus-within:border-[var(--terra)] px-3 h-9 transition">
+                <Search
+                  size={15}
+                  strokeWidth={1.6}
+                  className="text-[var(--muted)] shrink-0"
+                />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search title, site, or tag…"
+                  className="flex-1 bg-transparent text-[13.5px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none"
+                />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label="Clear search"
+                    className="grid place-items-center w-5 h-5 rounded-[5px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition shrink-0"
+                  >
+                    <X size={13} strokeWidth={1.8} />
+                  </button>
+                )}
+              </div>
+              <span className="hidden sm:block text-[11.5px] font-mono tabular-nums text-[var(--muted-2)] shrink-0">
+                {searched.length} {searched.length === 1 ? "link" : "links"}
+              </span>
+            </div>
+
             {activeFilterLabel && (
               <div className="mb-4 flex items-center gap-2 text-[12px] text-[var(--muted)]">
                 <span>Showing</span>
@@ -341,7 +388,7 @@ export default function BookmarksPage() {
                 >
                   {activeFilterLabel}
                   <span className="font-mono text-[var(--muted-2)]">
-                    {visible.length}
+                    {searched.length}
                   </span>
                 </span>
                 <button
@@ -354,10 +401,16 @@ export default function BookmarksPage() {
               </div>
             )}
 
-            {visible.length === 0 ? (
-              <EmptyFiltered onReset={() => setFilter({ kind: "all" })} />
+            {searched.length === 0 ? (
+              <EmptyFiltered
+                query={query}
+                onReset={() => {
+                  setFilter({ kind: "all" });
+                  setQuery("");
+                }}
+              />
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-7">
                 {sections.map((s) => (
                   <ListSection
                     key={s.name}
@@ -485,35 +538,52 @@ function ListSection({
 }) {
   return (
     <section>
-      <header className="mb-3 flex items-center gap-2.5">
-        {section.accent === "gold" ? (
-          <Star
-            size={12}
-            strokeWidth={1.6}
-            fill="var(--gold)"
-            stroke="var(--gold)"
-            className="shrink-0"
-          />
-        ) : null}
-        <span
-          className="text-[11px] uppercase tracking-[0.16em] font-semibold"
-          style={{ color: section.color }}
+      <header className="mb-2.5 flex items-center gap-2.5">
+        <div
+          className="grid place-items-center w-7 h-7 rounded-[8px] shrink-0 overflow-hidden"
+          style={{
+            background: `color-mix(in oklch, ${section.color} 13%, transparent)`,
+            border: `1px solid color-mix(in oklch, ${section.color} 28%, transparent)`,
+          }}
         >
+          {section.accent === "gold" ? (
+            <Star
+              size={13}
+              strokeWidth={1.6}
+              fill="var(--gold)"
+              stroke="var(--gold)"
+            />
+          ) : section.host ? (
+            <FaviconImg
+              host={section.host}
+              size={15}
+              color={section.color}
+              initial={section.name}
+            />
+          ) : (
+            <Hash
+              size={13}
+              strokeWidth={1.8}
+              style={{ color: section.color }}
+            />
+          )}
+        </div>
+        <span className="text-[14px] font-semibold tracking-[-0.01em] text-[var(--ink)]">
           {section.name}
         </span>
-        <span className="text-[10.5px] font-mono tabular-nums text-[var(--muted-2)]">
+        <span className="inline-flex items-center justify-center min-w-[20px] h-[18px] px-1.5 rounded-full bg-[var(--bg-2)] text-[10.5px] font-mono font-semibold text-[var(--muted)] tabular-nums">
           {section.items.length}
         </span>
         {section.host && (
-          <span className="text-[10.5px] font-mono text-[var(--muted-2)]">
-            · {section.host}
+          <span className="text-[11px] font-mono text-[var(--muted-2)]">
+            {section.host}
           </span>
         )}
         <span
           aria-hidden
           className="flex-1 h-px self-center"
           style={{
-            background: `color-mix(in oklch, ${section.color} 22%, var(--line))`,
+            background: `color-mix(in oklch, ${section.color} 18%, var(--line))`,
           }}
         />
       </header>
@@ -525,6 +595,7 @@ function ListSection({
             section.accent === "gold"
               ? `color-mix(in oklch, var(--gold) 35%, var(--line))`
               : "var(--line)",
+          boxShadow: "var(--shadow-1)",
         }}
       >
         {section.items.map((b, i) => (
@@ -554,11 +625,11 @@ function BookmarkRow({
 }) {
   return (
     <div
-      className={`group relative flex items-start gap-4 p-4 transition-colors hover:bg-[var(--paper-2)] ${
+      className={`group relative flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-[var(--paper-2)] ${
         divider ? "border-t border-[var(--line)]" : ""
       }`}
     >
-      {/* Color rail */}
+      {/* Color rail on hover */}
       <span
         aria-hidden
         className="absolute left-0 top-0 bottom-0 w-[3px] opacity-0 group-hover:opacity-100 transition"
@@ -566,15 +637,15 @@ function BookmarkRow({
       />
 
       <div
-        className="grid place-items-center w-[46px] h-[46px] rounded-[10px] shrink-0 overflow-hidden mt-0.5"
+        className="grid place-items-center w-10 h-10 rounded-[9px] shrink-0 overflow-hidden"
         style={{
-          background: `color-mix(in oklch, ${b.color} 14%, transparent)`,
-          border: `1px solid color-mix(in oklch, ${b.color} 30%, transparent)`,
+          background: `color-mix(in oklch, ${b.color} 13%, transparent)`,
+          border: `1px solid color-mix(in oklch, ${b.color} 28%, transparent)`,
         }}
       >
         <FaviconImg
           host={b.host}
-          size={22}
+          size={20}
           color={b.color}
           initial={b.platform}
         />
@@ -586,101 +657,91 @@ function BookmarkRow({
         rel="noopener noreferrer"
         className="min-w-0 flex-1 block"
       >
-        <div className="flex items-start gap-2">
-          <h3 className="text-[15px] font-semibold leading-snug text-[var(--ink)] group-hover:text-[var(--terra)] transition flex-1 min-w-0">
-            {b.title}
-          </h3>
+        {/* Title */}
+        <div className="flex items-center gap-1.5 min-w-0">
           {b.pinned && (
             <Star
-              size={13}
+              size={12}
               strokeWidth={1.6}
               fill="var(--gold)"
               stroke="var(--gold)"
-              className="shrink-0 mt-1"
+              className="shrink-0"
             />
           )}
+          <h3 className="min-w-0 text-[14.5px] font-semibold leading-snug text-[var(--ink)] group-hover:text-[var(--terra)] transition truncate">
+            {b.title}
+          </h3>
+          <ExternalLink
+            size={11}
+            strokeWidth={1.7}
+            className="shrink-0 text-[var(--muted-2)] opacity-0 group-hover:opacity-100 transition"
+          />
         </div>
 
-        {b.description && (
-          <p className="mt-1 text-[13px] text-[var(--muted)] line-clamp-2 leading-relaxed">
-            {b.description}
-          </p>
-        )}
-
-        <div className="mt-2 flex items-center gap-x-2 gap-y-1 text-[11.5px] flex-wrap">
-          <span
-            className="inline-flex items-center gap-1 font-medium uppercase tracking-[0.1em] text-[10px] px-1.5 py-0.5 rounded-full"
-            style={{
-              background: `color-mix(in oklch, ${b.color} 12%, transparent)`,
-              color: b.color,
-            }}
-          >
-            {b.platform}
-          </span>
-          <span className="inline-flex items-center gap-1 font-mono text-[var(--muted-2)]">
+        {/* Meta: host · description · tags */}
+        <div className="mt-0.5 flex items-center gap-1.5 text-[12px] min-w-0">
+          <span className="font-mono text-[var(--muted-2)] shrink-0">
             {b.host}
-            <ExternalLink
-              size={10}
-              strokeWidth={1.6}
-              className="opacity-0 group-hover:opacity-100 transition"
-            />
           </span>
-          <span className="text-[var(--line-2)]">·</span>
-          <span className="tabular-nums font-mono text-[var(--muted-2)]">
-            {relDate(b.item.capturedAt)}
-          </span>
-          {b.tags.length > 0 && (
+          {b.description && (
             <>
-              <span className="text-[var(--line-2)]">·</span>
-              <span className="inline-flex items-center gap-1.5 flex-wrap">
-                {b.tags.slice(0, 5).map((t) => (
-                  <span
-                    key={t}
-                    className="inline-flex items-center gap-0.5 text-[10.5px] font-mono lowercase text-[var(--muted)]"
-                  >
-                    <Hash
-                      size={9}
-                      strokeWidth={1.8}
-                      className="opacity-60"
-                    />
-                    {t}
-                  </span>
-                ))}
+              <span className="text-[var(--line-2)] shrink-0">·</span>
+              <span className="min-w-0 text-[var(--muted)] truncate">
+                {b.description}
               </span>
             </>
+          )}
+          {b.tags.length > 0 && (
+            <span className="hidden md:inline-flex items-center gap-1.5 shrink-0">
+              {b.tags.slice(0, 3).map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[10px] font-mono lowercase text-[var(--muted)] bg-[var(--bg-2)]"
+                >
+                  <Hash size={8} strokeWidth={2} className="opacity-60" />
+                  {t}
+                </span>
+              ))}
+            </span>
           )}
         </div>
       </a>
 
-      <div className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 flex items-center gap-1 shrink-0 self-start mt-0.5 transition">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            onTogglePin();
-          }}
-          aria-label={b.pinned ? "Unpin" : "Pin to reading list"}
-          title={b.pinned ? "Unpin from reading list" : "Pin to reading list"}
-          className={`grid place-items-center w-7 h-7 rounded-[7px] transition ${
-            b.pinned
-              ? "text-[var(--gold)]"
-              : "text-[var(--muted)] hover:text-[var(--gold)] hover:bg-[var(--paper)]"
-          }`}
-        >
-          <Star
-            size={13}
-            strokeWidth={1.6}
-            fill={b.pinned ? "var(--gold)" : "none"}
-          />
-        </button>
-        <button
-          type="button"
-          onClick={onEdit}
-          aria-label="Edit"
-          className="grid place-items-center w-7 h-7 rounded-[7px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition"
-        >
-          <Pencil size={12} strokeWidth={1.6} />
-        </button>
+      {/* Right zone: actions (hover) + time */}
+      <div className="flex items-center gap-1 shrink-0 self-center pl-2">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onTogglePin();
+            }}
+            aria-label={b.pinned ? "Unpin" : "Pin to reading list"}
+            title={b.pinned ? "Unpin from reading list" : "Pin to reading list"}
+            className={`grid place-items-center w-7 h-7 rounded-[7px] transition ${
+              b.pinned
+                ? "text-[var(--gold)]"
+                : "text-[var(--muted)] hover:text-[var(--gold)] hover:bg-[var(--paper)]"
+            }`}
+          >
+            <Star
+              size={13}
+              strokeWidth={1.6}
+              fill={b.pinned ? "var(--gold)" : "none"}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label="Edit"
+            className="grid place-items-center w-7 h-7 rounded-[7px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition"
+          >
+            <Pencil size={12} strokeWidth={1.6} />
+          </button>
+        </div>
+        <span className="text-[11px] tabular-nums font-mono text-[var(--muted-2)] w-9 text-right shrink-0">
+          {relDate(b.item.capturedAt)}
+        </span>
       </div>
     </div>
   );
@@ -894,11 +955,27 @@ function EmptyHero() {
   );
 }
 
-function EmptyFiltered({ onReset }: { onReset: () => void }) {
+function EmptyFiltered({
+  query,
+  onReset,
+}: {
+  query: string;
+  onReset: () => void;
+}) {
   return (
     <div className="rounded-[12px] border border-dashed border-[var(--line-2)] py-10 px-6 text-center">
       <p className="text-[13px] text-[var(--muted)]">
-        Nothing matches that filter yet.
+        {query.trim() ? (
+          <>
+            No bookmarks match “
+            <span className="text-[var(--ink)] font-medium">
+              {query.trim()}
+            </span>
+            ”.
+          </>
+        ) : (
+          "Nothing matches that filter yet."
+        )}
       </p>
       <button
         type="button"
