@@ -500,7 +500,12 @@ function SetupGuide() {
       <p className="mt-2 text-[13.5px] text-[var(--muted)] leading-relaxed">
         YouTube Music has no public API, so Life OS connects through Google
         OAuth + the YouTube Data API. You need your own free Google Cloud
-        credentials (≈ 5–10 minutes). It all stays local.
+        credentials (≈ 5–10 minutes). It all stays local. Google recently
+        renamed the OAuth consent screen to{" "}
+        <span className="font-medium text-[var(--ink-2)]">
+          Google Auth Platform
+        </span>{" "}
+        — the steps below use its current tabs.
       </p>
 
       <ol className="mt-5 space-y-3">
@@ -519,23 +524,36 @@ function SetupGuide() {
           , enable <Code>YouTube Data API v3</Code>.
         </Step>
         <Step n={3}>
-          Under <Code>OAuth consent screen</Code>, choose <Code>External</Code>,
-          fill the basics, add the scope <Code>youtube.readonly</Code>, and add
-          your own email as a <Code>Test user</Code>. Leave it in Testing.
+          Open{" "}
+          <ExtLink href="https://console.cloud.google.com/auth/overview">
+            Google Auth Platform
+          </ExtLink>
+          . First time through, the wizard asks for an app name, your email,
+          and <Code>User type → External</Code>.
         </Step>
         <Step n={4}>
-          Under <Code>Credentials → Create credentials → OAuth client ID</Code>,
-          pick <Code>Web application</Code>. Add this Authorized redirect URI:
-          <Code block>http://localhost:3000/api/youtube/callback</Code>
+          On the <Code>Audience</Code> tab: make sure <Code>User type</Code> is{" "}
+          <Code>External</Code> (keep status <Code>Testing</Code>), then under{" "}
+          <Code>Test users</Code> click <Code>Add users</Code> and add your own
+          Google account.
         </Step>
         <Step n={5}>
-          Copy the Client ID + Client secret into a{" "}
-          <Code>.env.local</Code> file in the project root:
+          On the <Code>Data access</Code> tab: <Code>Add or remove scopes</Code>{" "}
+          → add <Code>youtube.readonly</Code> → Update &amp; Save.
+        </Step>
+        <Step n={6}>
+          On the <Code>Clients</Code> tab: <Code>Create client</Code> →{" "}
+          <Code>Web application</Code>. Add this Authorized redirect URI:
+          <Code block>http://localhost:3000/api/youtube/callback</Code>
+        </Step>
+        <Step n={7}>
+          Copy the Client ID + secret into a <Code>.env.local</Code> file in the
+          project root:
           <Code block>
             {`YOUTUBE_CLIENT_ID=your-id\nYOUTUBE_CLIENT_SECRET=your-secret`}
           </Code>
         </Step>
-        <Step n={6}>
+        <Step n={8}>
           Restart the dev server, refresh this page, and hit{" "}
           <span className="font-medium text-[var(--ink)]">Connect</span>.
         </Step>
