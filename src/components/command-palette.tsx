@@ -22,6 +22,7 @@ import {
   Compass,
   CreditCard,
   Bookmark,
+  Music,
 } from "lucide-react";
 import { db } from "@/lib/store/db";
 import { Portal } from "@/components/portal";
@@ -52,6 +53,7 @@ const NAV: Array<{
   { href: "/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/files", label: "Files", icon: Files },
   { href: "/ask", label: "Ask my notes", icon: MessageSquare },
+  { href: "/music", label: "Music", icon: Music },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

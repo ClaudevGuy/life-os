@@ -20,6 +20,7 @@ import {
   Files,
   CreditCard,
   Bookmark,
+  Music,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -94,6 +95,7 @@ const SECTIONS: RailSection[] = [
     heading: "Explore",
     items: [
       { href: "/ask", label: "Ask my notes", icon: MessageSquare },
+      { href: "/music", label: "Music", icon: Music },
       { href: "/stats", label: "Stats", icon: BarChart3 },
     ],
   },

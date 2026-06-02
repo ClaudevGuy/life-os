@@ -9,6 +9,7 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { PersistBootstrap } from "@/components/persist-bootstrap";
 import { SyncBootstrap } from "@/components/sync-bootstrap";
 import { LogoMark } from "@/components/logo-mark";
+import { MusicProvider } from "@/components/music-player";
 
 export default function AppLayout({
   children,
@@ -70,7 +71,7 @@ export default function AppLayout({
 
       <main className="flex-1 overflow-y-auto min-w-0">
         <TopBar />
-        {children}
+        <MusicProvider>{children}</MusicProvider>
       </main>
 
       <QuickCapture />
