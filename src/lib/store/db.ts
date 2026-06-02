@@ -82,10 +82,18 @@ export type StoredTombstone = {
   deletedAt: Date;
 };
 
+/**
+ * A soft-deleted item. `deleteItem` moves the whole record here (and out of
+ * `items`) so it vanishes from every list automatically but can still be
+ * restored. Permanent deletion clears it from here.
+ */
+export type StoredTrash = StoredItem & { trashedAt: Date };
+
 class LifeOSDB extends Dexie {
   items!: EntityTable<StoredItem, "id">;
   blobs!: EntityTable<StoredBlob, "id">;
   tombstones!: EntityTable<StoredTombstone, "id">;
+  trash!: EntityTable<StoredTrash, "id">;
 
   constructor() {
     super("life-os");
@@ -100,6 +108,13 @@ class LifeOSDB extends Dexie {
       items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
       blobs: "id, createdAt",
       tombstones: "id, deletedAt",
+    });
+    // v3: add a trash table for recoverable soft-deletes.
+    this.version(3).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
+      trash: "id, trashedAt, kind",
     });
   }
 }

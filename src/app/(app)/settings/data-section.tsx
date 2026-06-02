@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Download,
+  Upload,
   Database,
   Trash2,
   Shield,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { db } from "@/lib/store/db";
+import { importItems } from "@/lib/store/items";
 import {
   isStoragePersisted,
   requestPersistentStorage,
@@ -21,10 +23,12 @@ import {
 
 export function DataSection() {
   const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [persisted, setPersisted] = useState<boolean | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [estimate, setEstimate] = useState<StorageEstimate | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function refreshStorageStatus() {
     const [p, e] = await Promise.all([isStoragePersisted(), getStorageEstimate()]);
@@ -67,6 +71,26 @@ export function DataSection() {
     }
   }
 
+  async function handleImportFile(file: File) {
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const arr = Array.isArray(data) ? data : data?.items;
+      if (!Array.isArray(arr)) {
+        toast.error("That doesn't look like a Life OS export");
+        return;
+      }
+      const n = await importItems(arr);
+      toast.success(`Imported ${n} item${n === 1 ? "" : "s"}`);
+      await refreshStorageStatus();
+    } catch {
+      toast.error("Couldn't read that file");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function requestPersist() {
     setRequesting(true);
     try {
@@ -96,6 +120,7 @@ export function DataSection() {
     try {
       await db.items.clear();
       await db.blobs.clear();
+      await db.trash.clear();
       toast.success("All data cleared");
       await refreshStorageStatus();
     } finally {
@@ -116,6 +141,40 @@ export function DataSection() {
           <div className="text-sm font-medium">Export everything</div>
           <p className="text-xs text-[var(--text-muted)] mt-0.5">
             Download every item as one JSON file. Take your data with you.
+          </p>
+        </div>
+        <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-wide">
+          .json
+        </span>
+      </button>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void handleImportFile(f);
+          e.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={importing}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-card-hover)] transition text-left disabled:opacity-50"
+      >
+        {importing ? (
+          <Loader2 size={14} className="text-[var(--accent)] animate-spin" />
+        ) : (
+          <Upload size={14} className="text-[var(--accent)]" />
+        )}
+        <div className="flex-1">
+          <div className="text-sm font-medium">Import / restore</div>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">
+            Load a Life OS export back in. Merges by id — safe to recover after
+            a wipe or to move to a new machine.
           </p>
         </div>
         <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-wide">

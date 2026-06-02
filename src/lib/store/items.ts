@@ -7,10 +7,16 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { nanoid } from "nanoid";
-import { db, type StoredItem, type ItemKind, type ItemStatus } from "./db";
+import {
+  db,
+  type StoredItem,
+  type ItemKind,
+  type ItemStatus,
+  type StoredTrash,
+} from "./db";
 import { schedulePushIfConfigured } from "@/lib/sync/gist";
 
-export type { StoredItem, ItemKind, ItemStatus } from "./db";
+export type { StoredItem, ItemKind, ItemStatus, StoredTrash } from "./db";
 
 // ---------- Writes ----------
 
@@ -73,9 +79,85 @@ export async function updateItem(
  * on the next sync — recoverable.
  */
 export async function deleteItem(id: string): Promise<void> {
+  // Soft delete: move the whole record into `trash` (so it disappears from
+  // every list) but keep it recoverable. Still write a tombstone so the
+  // deletion propagates on sync, exactly as before.
+  const item = await db.items.get(id);
+  if (item) {
+    await db.trash.put({ ...item, trashedAt: new Date() });
+  }
   await db.items.delete(id);
   await db.tombstones.put({ id, deletedAt: new Date() });
   schedulePushIfConfigured();
+}
+
+/** Move a trashed item back into the live store. */
+export async function restoreItem(id: string): Promise<void> {
+  const t = await db.trash.get(id);
+  if (!t) return;
+  const { trashedAt: _trashedAt, ...item } = t;
+  void _trashedAt;
+  await db.items.put({ ...item, updatedAt: new Date() });
+  await db.trash.delete(id);
+  // Cancel the tombstone so sync doesn't re-delete the restored item.
+  await db.tombstones.delete(id);
+  schedulePushIfConfigured();
+}
+
+/** Permanently remove a single trashed item. */
+export async function deleteForever(id: string): Promise<void> {
+  await db.trash.delete(id);
+  await db.tombstones.put({ id, deletedAt: new Date() });
+  schedulePushIfConfigured();
+}
+
+/** Permanently remove everything in the trash. */
+export async function emptyTrash(): Promise<void> {
+  const all = await db.trash.toArray();
+  if (all.length === 0) return;
+  const now = new Date();
+  await db.tombstones.bulkPut(all.map((t) => ({ id: t.id, deletedAt: now })));
+  await db.trash.clear();
+  schedulePushIfConfigured();
+}
+
+/** Auto-purge trashed items older than `days`. Returns how many were purged. */
+export async function purgeOldTrash(days = 30): Promise<number> {
+  const cutoff = new Date(Date.now() - days * 86_400_000);
+  const old = await db.trash.where("trashedAt").below(cutoff).toArray();
+  if (old.length === 0) return 0;
+  const now = new Date();
+  await db.tombstones.bulkPut(old.map((t) => ({ id: t.id, deletedAt: now })));
+  await db.trash.bulkDelete(old.map((t) => t.id));
+  schedulePushIfConfigured();
+  return old.length;
+}
+
+/**
+ * Restore items from a Life OS JSON export. Upserts by id (merge), reviving
+ * the Date fields that JSON flattened to strings. Returns how many imported.
+ */
+export async function importItems(rawItems: unknown[]): Promise<number> {
+  const revive = (v: unknown): Date =>
+    v ? new Date(v as string) : new Date();
+  const items = rawItems
+    .filter(
+      (r): r is StoredItem =>
+        !!r &&
+        typeof r === "object" &&
+        typeof (r as { id?: unknown }).id === "string",
+    )
+    .map((r) => ({
+      ...r,
+      capturedAt: revive(r.capturedAt),
+      createdAt: revive(r.createdAt),
+      updatedAt: revive(r.updatedAt),
+    }));
+  if (items.length > 0) {
+    await db.items.bulkPut(items);
+    schedulePushIfConfigured();
+  }
+  return items.length;
 }
 
 export async function togglePin(id: string): Promise<void> {
@@ -102,6 +184,18 @@ export function useAllItems(): StoredItem[] | undefined {
   return useLiveQuery(() =>
     db.items.orderBy("capturedAt").reverse().toArray(),
   );
+}
+
+/** Trashed items, most recently deleted first. */
+export function useTrash(): StoredTrash[] | undefined {
+  return useLiveQuery(() =>
+    db.trash.orderBy("trashedAt").reverse().toArray(),
+  );
+}
+
+/** Count of items currently in the trash. */
+export function useTrashCount(): number | undefined {
+  return useLiveQuery(() => db.trash.count());
 }
 
 /** One item by id. Returns undefined while loading, null if not found. */
