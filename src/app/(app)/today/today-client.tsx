@@ -1,20 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   ListTodo,
   Flame,
   CalendarDays,
   Bell,
   CreditCard,
-  GripVertical,
   X,
   Plus,
   SlidersHorizontal,
   Check,
   RotateCcw,
+  GripVertical,
+  Maximize2,
+  Minimize2,
+  NotebookPen,
+  Bookmark,
+  Music,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   useRecentItems,
   useItemsOfKind,
@@ -22,6 +50,7 @@ import {
   useOnThisDay,
   useWeekCounts,
   useAllItems,
+  captureItem,
   type StoredItem as Item,
 } from "@/lib/store/items";
 import {
@@ -30,6 +59,7 @@ import {
   nextChargeLabel,
   readSubscription,
 } from "@/lib/subscriptions";
+import { useMusic } from "@/components/music-player";
 import { Brief } from "./brief";
 import { TodayHero } from "./hero";
 import { WeekStrip } from "./week-strip";
@@ -47,6 +77,10 @@ type WidgetId =
   | "agenda"
   | "topTasks"
   | "habits"
+  | "music"
+  | "quickNote"
+  | "notes"
+  | "bookmarks"
   | "resurface"
   | "onThisDay"
   | "subscriptions";
@@ -58,6 +92,10 @@ const WIDGET_META: Record<WidgetId, string> = {
   agenda: "Next 7 days",
   topTasks: "Top tasks",
   habits: "Habits to check",
+  music: "Music",
+  quickNote: "Quick note",
+  notes: "Recent notes",
+  bookmarks: "Bookmarks",
   resurface: "Resurfaced highlight",
   onThisDay: "On this day",
   subscriptions: "Subscriptions",
@@ -65,42 +103,85 @@ const WIDGET_META: Record<WidgetId, string> = {
 
 const ALL_IDS = Object.keys(WIDGET_META) as WidgetId[];
 
-type Layout = { columns: [WidgetId[], WidgetId[]]; hidden: WidgetId[] };
+type Width = "half" | "full";
+type Placed = { id: WidgetId; w: Width };
+type Layout = { items: Placed[]; hidden: WidgetId[] };
 
 const DEFAULT_LAYOUT: Layout = {
-  columns: [
-    ["whatNow", "brief", "resurface", "onThisDay"],
-    ["weekStrip", "agenda", "topTasks", "habits", "subscriptions"],
+  items: [
+    { id: "whatNow", w: "full" },
+    { id: "weekStrip", w: "full" },
+    { id: "brief", w: "half" },
+    { id: "agenda", w: "half" },
+    { id: "topTasks", w: "half" },
+    { id: "habits", w: "half" },
+    { id: "music", w: "half" },
+    { id: "notes", w: "half" },
+    { id: "resurface", w: "half" },
+    { id: "onThisDay", w: "half" },
+    { id: "subscriptions", w: "half" },
   ],
-  hidden: [],
+  hidden: ["quickNote", "bookmarks"],
 };
 
-const LS_KEY = "lifeos.today.layout.v1";
+const LS_KEY = "lifeos.today.layout.v2";
+const LS_KEY_V1 = "lifeos.today.layout.v1";
+
+function isId(x: unknown): x is WidgetId {
+  return typeof x === "string" && (ALL_IDS as string[]).includes(x);
+}
+
+function sanitize(rawItems: unknown, rawHidden: unknown): Layout {
+  const seen = new Set<WidgetId>();
+  const items: Placed[] = [];
+  if (Array.isArray(rawItems)) {
+    for (const it of rawItems) {
+      const id = (it as { id?: unknown })?.id;
+      const w: Width = (it as { w?: unknown })?.w === "full" ? "full" : "half";
+      if (isId(id) && !seen.has(id)) {
+        seen.add(id);
+        items.push({ id, w });
+      }
+    }
+  }
+  const hidden: WidgetId[] = [];
+  if (Array.isArray(rawHidden)) {
+    for (const id of rawHidden) {
+      if (isId(id) && !seen.has(id)) {
+        seen.add(id);
+        hidden.push(id);
+      }
+    }
+  }
+  // New widgets the saved layout doesn't know about → park in hidden.
+  for (const id of ALL_IDS) if (!seen.has(id)) hidden.push(id);
+  return { items, hidden };
+}
 
 function loadLayout(): Layout {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return DEFAULT_LAYOUT;
-    const parsed = JSON.parse(raw) as Partial<Layout>;
-    const seen = new Set<WidgetId>();
-    const clean = (arr: unknown): WidgetId[] =>
-      (Array.isArray(arr) ? arr : []).filter(
-        (id): id is WidgetId =>
-          ALL_IDS.includes(id as WidgetId) &&
-          !seen.has(id as WidgetId) &&
-          (seen.add(id as WidgetId), true),
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<Layout>;
+      return sanitize(parsed.items, parsed.hidden);
+    }
+    // Migrate the old two-column format if present.
+    const v1 = localStorage.getItem(LS_KEY_V1);
+    if (v1) {
+      const old = JSON.parse(v1) as {
+        columns?: [unknown[], unknown[]];
+        hidden?: unknown[];
+      };
+      const flat = [...(old.columns?.[0] ?? []), ...(old.columns?.[1] ?? [])];
+      return sanitize(
+        flat.map((id) => ({ id, w: "half" })),
+        old.hidden,
       );
-    const columns: [WidgetId[], WidgetId[]] = [
-      clean(parsed.columns?.[0]),
-      clean(parsed.columns?.[1]),
-    ];
-    const hidden = clean(parsed.hidden);
-    // Any new widget the saved layout doesn't know about → park in hidden.
-    for (const id of ALL_IDS) if (!seen.has(id)) hidden.push(id);
-    return { columns, hidden };
+    }
   } catch {
-    return DEFAULT_LAYOUT;
+    /* ignore */
   }
+  return DEFAULT_LAYOUT;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -134,6 +215,8 @@ export function TodayClient() {
   const allTasks = useItemsOfKind("task") ?? [];
   const subscriptions = useItemsOfKind("subscription") ?? [];
   const habits = useItemsOfKind("habit") ?? [];
+  const notes = useItemsOfKind("note") ?? [];
+  const bookmarks = useItemsOfKind("bookmark") ?? [];
   const oldHighlights = useOldHighlights() ?? [];
   const onThisDayRows = useOnThisDay() ?? [];
   const weekCounts = useWeekCounts(7) ?? new Array(7).fill(0);
@@ -142,9 +225,13 @@ export function TodayClient() {
   const [mounted, setMounted] = useState(false);
   const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT);
   const [editing, setEditing] = useState(false);
-  const [dragId, setDragId] = useState<WidgetId | null>(null);
-  const [drop, setDrop] = useState<{ col: 0 | 1; before: WidgetId | null } | null>(
-    null,
+  const [activeId, setActiveId] = useState<WidgetId | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   useEffect(() => {
@@ -216,7 +303,6 @@ export function TodayClient() {
 
   const activeSubs = subscriptions.filter((s) => s.status !== "archived");
 
-  // Collapse widgets that would render nothing (unless arranging).
   function isEmpty(id: WidgetId): boolean {
     switch (id) {
       case "resurface":
@@ -238,162 +324,64 @@ export function TodayClient() {
         return <WeekStrip />;
       case "brief":
         return <Brief recentCount={recent.length} />;
-      case "resurface":
-        return <SrsHighlight pool={oldHighlights} />;
-      case "onThisDay":
-        return <OnThisDay items={onThisDayRows} />;
       case "agenda":
         return <AgendaCard upcoming={upcoming} startOfToday={startOfToday} />;
       case "topTasks":
         return <TopTasksCard openTasks={openTasks} />;
       case "habits":
         return <HabitsCard habits={habits} today={today} />;
+      case "music":
+        return <MusicCard />;
+      case "quickNote":
+        return <QuickNoteCard />;
+      case "notes":
+        return <NotesCard notes={notes} />;
+      case "bookmarks":
+        return <BookmarksCard bookmarks={bookmarks} />;
+      case "resurface":
+        return <SrsHighlight pool={oldHighlights} />;
+      case "onThisDay":
+        return <OnThisDay items={onThisDayRows} />;
       case "subscriptions":
         return <SubscriptionsTile items={subscriptions} />;
     }
   }
 
   // ── Layout mutations ──
-  function applyMove(id: WidgetId, col: 0 | 1, before: WidgetId | null) {
-    setLayout((prev) => {
-      const columns: [WidgetId[], WidgetId[]] = [
-        prev.columns[0].filter((x) => x !== id),
-        prev.columns[1].filter((x) => x !== id),
-      ];
-      const hidden = prev.hidden.filter((x) => x !== id);
-      const target = columns[col];
-      if (before == null) target.push(id);
-      else {
-        const i = target.indexOf(before);
-        if (i === -1) target.push(id);
-        else target.splice(i, 0, id);
-      }
-      return { columns, hidden };
-    });
-  }
   function hideWidget(id: WidgetId) {
     setLayout((prev) => ({
-      columns: [
-        prev.columns[0].filter((x) => x !== id),
-        prev.columns[1].filter((x) => x !== id),
-      ],
+      items: prev.items.filter((p) => p.id !== id),
       hidden: prev.hidden.includes(id) ? prev.hidden : [...prev.hidden, id],
     }));
   }
   function showWidget(id: WidgetId) {
+    setLayout((prev) => ({
+      items: [...prev.items, { id, w: "half" }],
+      hidden: prev.hidden.filter((x) => x !== id),
+    }));
+  }
+  function setWidth(id: WidgetId, w: Width) {
+    setLayout((prev) => ({
+      ...prev,
+      items: prev.items.map((p) => (p.id === id ? { ...p, w } : p)),
+    }));
+  }
+  function handleDragEnd(e: DragEndEvent) {
+    setActiveId(null);
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
     setLayout((prev) => {
-      const col = prev.columns[0].length <= prev.columns[1].length ? 0 : 1;
-      const columns: [WidgetId[], WidgetId[]] = [
-        [...prev.columns[0]],
-        [...prev.columns[1]],
-      ];
-      columns[col].push(id);
-      return { columns, hidden: prev.hidden.filter((x) => x !== id) };
+      const ids = prev.items.map((p) => p.id);
+      const from = ids.indexOf(active.id as WidgetId);
+      const to = ids.indexOf(over.id as WidgetId);
+      if (from === -1 || to === -1) return prev;
+      return { ...prev, items: arrayMove(prev.items, from, to) };
     });
   }
-  function setDropTarget(col: 0 | 1, before: WidgetId | null) {
-    setDrop((p) =>
-      p && p.col === col && p.before === before ? p : { col, before },
-    );
-  }
-  function doDrop(col: 0 | 1, before: WidgetId | null) {
-    if (dragId) applyMove(dragId, col, before);
-    setDragId(null);
-    setDrop(null);
-  }
 
-  function column(col: 0 | 1) {
-    const ids = layout.columns[col].filter((id) => editing || !isEmpty(id));
-    return (
-      <div className="flex flex-col gap-5">
-        {ids.map((id) => {
-          const isTarget = drop?.col === col && drop.before === id;
-          const empty = isEmpty(id);
-          return (
-            <div
-              key={id}
-              draggable={editing}
-              onDragStart={(e) => {
-                if (!editing) return;
-                setDragId(id);
-                e.dataTransfer.effectAllowed = "move";
-                e.dataTransfer.setData("text/plain", id);
-              }}
-              onDragEnd={() => {
-                setDragId(null);
-                setDrop(null);
-              }}
-              onDragOver={
-                editing
-                  ? (e) => {
-                      e.preventDefault();
-                      setDropTarget(col, id);
-                    }
-                  : undefined
-              }
-              onDrop={
-                editing
-                  ? (e) => {
-                      e.preventDefault();
-                      doDrop(col, id);
-                    }
-                  : undefined
-              }
-              className={`relative transition ${
-                editing ? "cursor-grab active:cursor-grabbing" : ""
-              } ${dragId === id ? "opacity-40" : ""}`}
-            >
-              {isTarget && (
-                <div className="absolute -top-2.5 inset-x-0 h-[3px] rounded-full bg-[var(--accent)] z-10" />
-              )}
-              {editing && (
-                <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
-                  <span className="grid place-items-center w-6 h-6 rounded-md bg-[var(--bg-card)] border border-[var(--border-soft)] text-[var(--text-faint)]">
-                    <GripVertical size={12} />
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => hideWidget(id)}
-                    title="Remove widget"
-                    className="grid place-items-center w-6 h-6 rounded-md bg-[var(--bg-card)] border border-[var(--border-soft)] text-[var(--text-faint)] hover:text-red-500/90 hover:border-red-500/40 transition"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              )}
-              <div className={editing ? "pointer-events-none select-none" : ""}>
-                {empty && editing ? (
-                  <EmptyPlaceholder id={id} />
-                ) : (
-                  renderWidget(id)
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {editing && (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDropTarget(col, null);
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              doDrop(col, null);
-            }}
-            className={`rounded-[12px] border border-dashed grid place-items-center min-h-[48px] text-[10px] uppercase tracking-[0.14em] transition ${
-              drop?.col === col && drop.before === null
-                ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-glow)]"
-                : "border-[var(--border-soft)] text-[var(--text-faint)]"
-            }`}
-          >
-            drop here
-          </div>
-        )}
-      </div>
-    );
-  }
+  const rendered = editing
+    ? layout.items
+    : layout.items.filter((p) => !isEmpty(p.id));
 
   return (
     <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-5">
@@ -468,17 +456,315 @@ export function TodayClient() {
       </div>
 
       {/* Widget grid */}
-      <div
-        className={`grid lg:grid-cols-2 gap-5 items-start ${
-          editing
-            ? "rounded-[16px] p-3 -m-3 bg-[var(--bg-rail)] ring-1 ring-[var(--border-soft)]"
-            : ""
-        }`}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={(e) => setActiveId(e.active.id as WidgetId)}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
       >
-        {column(0)}
-        {column(1)}
+        <SortableContext
+          items={rendered.map((p) => p.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div
+            className={`grid grid-cols-1 lg:grid-cols-2 gap-5 items-start ${
+              editing
+                ? "rounded-[16px] p-3 -m-3 bg-[var(--bg-rail)] ring-1 ring-[var(--border-soft)]"
+                : ""
+            }`}
+          >
+            {rendered.map((p) => {
+              const empty = isEmpty(p.id);
+              return (
+                <SortableWidget
+                  key={p.id}
+                  id={p.id}
+                  width={p.w}
+                  editing={editing}
+                  onRemove={() => hideWidget(p.id)}
+                  onToggleWidth={() =>
+                    setWidth(p.id, p.w === "full" ? "half" : "full")
+                  }
+                >
+                  {empty && editing ? (
+                    <EmptyPlaceholder id={p.id} />
+                  ) : (
+                    renderWidget(p.id)
+                  )}
+                </SortableWidget>
+              );
+            })}
+          </div>
+        </SortableContext>
+        <DragOverlay>
+          {activeId ? (
+            <div className="opacity-95 rotate-1" style={{ cursor: "grabbing" }}>
+              {renderWidget(activeId)}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
+  );
+}
+
+// ── Sortable wrapper ─────────────────────────────────────────────────────────
+
+function SortableWidget({
+  id,
+  width,
+  editing,
+  onRemove,
+  onToggleWidth,
+  children,
+}: {
+  id: WidgetId;
+  width: Width;
+  editing: boolean;
+  onRemove: () => void;
+  onToggleWidth: () => void;
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id, disabled: !editing });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  const dragProps = editing ? { ...attributes, ...listeners } : {};
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative ${width === "full" ? "lg:col-span-2" : ""} ${
+        isDragging ? "opacity-50 z-10" : ""
+      } ${editing ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
+      {...dragProps}
+    >
+      {editing && (
+        <>
+          <span className="absolute top-2 left-2 z-20 text-[var(--text-faint)] pointer-events-none">
+            <GripVertical size={14} />
+          </span>
+          <div
+            className="absolute top-2 right-2 z-20 flex items-center gap-1"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={onToggleWidth}
+              title={width === "full" ? "Make half width" : "Make full width"}
+              className="grid place-items-center w-6 h-6 rounded-md bg-[var(--bg-card)] border border-[var(--border-soft)] text-[var(--text-faint)] hover:text-[var(--text)] transition"
+            >
+              {width === "full" ? (
+                <Minimize2 size={12} />
+              ) : (
+                <Maximize2 size={12} />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onRemove}
+              title="Remove widget"
+              className="grid place-items-center w-6 h-6 rounded-md bg-[var(--bg-card)] border border-[var(--border-soft)] text-[var(--text-faint)] hover:text-red-500/90 hover:border-red-500/40 transition"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        </>
+      )}
+      <div className={editing ? "pointer-events-none select-none" : ""}>
+        {children}
       </div>
     </div>
+  );
+}
+
+// ── New widgets ──────────────────────────────────────────────────────────────
+
+function MusicCard() {
+  const m = useMusic();
+  const t = m.current;
+  return (
+    <Card icon={Music} title="Music" href="/music" tint="var(--terra)">
+      {t ? (
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-[8px] overflow-hidden bg-[var(--bg-rail)] shrink-0">
+            {t.thumbnail ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={t.thumbnail}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : null}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13.5px] font-medium text-[var(--text)] truncate">
+              {t.title}
+            </div>
+            <div className="text-[11.5px] text-[var(--text-faint)] truncate">
+              {t.channel}
+            </div>
+          </div>
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={m.prev}
+              aria-label="Previous"
+              className="grid place-items-center w-7 h-7 rounded-md text-[var(--text-muted)] hover:text-[var(--text)] transition"
+            >
+              <SkipBack size={14} fill="currentColor" />
+            </button>
+            <button
+              type="button"
+              onClick={m.toggle}
+              aria-label={m.isPlaying ? "Pause" : "Play"}
+              className="grid place-items-center w-8 h-8 rounded-full bg-[var(--accent)] text-white hover:opacity-90 transition"
+            >
+              {m.isPlaying ? (
+                <Pause size={14} fill="currentColor" />
+              ) : (
+                <Play size={14} fill="currentColor" className="ml-0.5" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={m.next}
+              aria-label="Next"
+              className="grid place-items-center w-7 h-7 rounded-md text-[var(--text-muted)] hover:text-[var(--text)] transition"
+            >
+              <SkipForward size={14} fill="currentColor" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-[var(--text-faint)]">Nothing playing.</p>
+          <Link
+            href="/music"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] px-3 py-1 text-[12px] font-medium hover:opacity-90 transition"
+          >
+            <Play size={12} fill="currentColor" />
+            Open Music
+          </Link>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function QuickNoteCard() {
+  const [text, setText] = useState("");
+  const [pending, start] = useTransition();
+
+  function save() {
+    const t = text.trim();
+    if (!t) return;
+    const [first, ...rest] = t.split("\n");
+    start(async () => {
+      try {
+        await captureItem({
+          kind: "note",
+          title: first.slice(0, 120),
+          body: rest.join("\n").trim() || null,
+          status: "inbox",
+        });
+        setText("");
+        toast.success("Saved to inbox");
+      } catch {
+        toast.error("Couldn't save");
+      }
+    });
+  }
+
+  return (
+    <Card icon={NotebookPen} title="Quick note" tint="var(--accent)">
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            save();
+          }
+        }}
+        rows={3}
+        placeholder="Jot something… ⌘↵ to save"
+        className="w-full bg-transparent text-sm text-[var(--text)] placeholder:text-[var(--text-faint)] resize-none focus:outline-none leading-relaxed"
+      />
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={save}
+          disabled={pending || !text.trim()}
+          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] px-3 py-1 text-[12px] font-medium hover:opacity-90 transition disabled:opacity-40"
+        >
+          <Plus size={12} />
+          Capture
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+function NotesCard({ notes }: { notes: Item[] }) {
+  const recent = notes.slice(0, 4);
+  return (
+    <Card icon={NotebookPen} title="Recent notes" href="/notes" tint="var(--accent)">
+      {recent.length === 0 ? (
+        <p className="text-sm text-[var(--text-faint)]">No notes yet.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {recent.map((n) => (
+            <li key={n.id} className="flex items-center gap-2.5">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[var(--accent)]" />
+              <Link
+                href={`/items/${n.id}`}
+                className="text-sm text-[var(--text)] hover:text-[var(--accent)] truncate"
+              >
+                {n.title?.trim() || "Untitled"}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function BookmarksCard({ bookmarks }: { bookmarks: Item[] }) {
+  const recent = bookmarks.slice(0, 4);
+  return (
+    <Card icon={Bookmark} title="Bookmarks" href="/bookmarks" tint="var(--terra)">
+      {recent.length === 0 ? (
+        <p className="text-sm text-[var(--text-faint)]">No bookmarks yet.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {recent.map((b) => {
+            const url =
+              ((b.metadata ?? {}) as { url?: string }).url ??
+              b.sourceUrl ??
+              "#";
+            return (
+              <li key={b.id} className="flex items-center gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[var(--terra)]" />
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[var(--text)] hover:text-[var(--accent)] truncate"
+                >
+                  {b.title?.trim() || "Untitled"}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
   );
 }
 
