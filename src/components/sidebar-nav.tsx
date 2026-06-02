@@ -16,7 +16,6 @@ import {
   CalendarDays,
   MessageSquare,
   FolderKanban,
-  BookHeart,
   Files,
   CreditCard,
   Bookmark,
@@ -80,7 +79,6 @@ const SECTIONS: RailSection[] = [
   {
     heading: "Reflect",
     items: [
-      { href: "/journal", label: "Journal", icon: BookHeart },
       { href: "/projects", label: "Projects", icon: FolderKanban },
       { href: "/people", label: "People", icon: Users },
       {
