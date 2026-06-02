@@ -337,6 +337,22 @@ html[data-theme="system"] .life-shine {
   animation: life-confetti 600ms ease-out forwards;
 }
 
+/* music player — spinning vinyl + equalizer bars */
+@keyframes vinyl-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.vinyl-spin { animation: vinyl-spin 6s linear infinite; }
+
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.28); }
+  50%      { transform: scaleY(1); }
+}
+.eq-bar {
+  transform-origin: bottom center;
+  animation: eq-bounce 0.9s ease-in-out infinite;
+}
+
 input, textarea, select, button { font: inherit; }
 
 /* cmdk command palette — section headings + caret hint */

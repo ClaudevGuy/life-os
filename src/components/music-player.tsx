@@ -63,11 +63,14 @@ type MusicValue = {
   isPlaying: boolean;
   position: number;
   duration: number;
-  playQueue: (tracks: Track[], startIndex?: number) => void;
+  repeat: boolean;
+  source: string;
+  playQueue: (tracks: Track[], startIndex?: number, source?: string) => void;
   toggle: () => void;
   next: () => void;
   prev: () => void;
   seek: (seconds: number) => void;
+  toggleRepeat: () => void;
   close: () => void;
 };
 
@@ -91,6 +94,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [repeat, setRepeat] = useState(false);
+  const [source, setSource] = useState("");
 
   // Refs mirror state so the (stable) onStateChange closure reads fresh values.
   const queueRef = useRef(queue);
@@ -99,6 +104,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   indexRef.current = index;
   const positionRef = useRef(position);
   positionRef.current = position;
+  const repeatRef = useRef(repeat);
+  repeatRef.current = repeat;
   const pendingRef = useRef<string | null>(null);
 
   const loadIndex = useCallback((i: number) => {
@@ -120,6 +127,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const next = useCallback(() => {
     const ni = indexRef.current + 1;
     if (ni < queueRef.current.length) loadIndex(ni);
+    else if (repeatRef.current && queueRef.current.length > 0) loadIndex(0);
     else setIsPlaying(false);
   }, [loadIndex]);
 
@@ -201,13 +209,21 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   }, [ready]);
 
   const playQueue = useCallback(
-    (tracks: Track[], startIndex = 0) => {
+    (tracks: Track[], startIndex = 0, src = "") => {
       setQueue(tracks);
       queueRef.current = tracks;
+      setSource(src);
       loadIndex(startIndex);
     },
     [loadIndex],
   );
+
+  const toggleRepeat = useCallback(() => {
+    setRepeat((r) => {
+      repeatRef.current = !r;
+      return !r;
+    });
+  }, []);
 
   const toggle = useCallback(() => {
     const p = playerRef.current;
@@ -228,6 +244,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying(false);
     setPosition(0);
     setDuration(0);
+    setSource("");
   }, []);
 
   const current = index >= 0 ? (queue[index] ?? null) : null;
@@ -239,11 +256,14 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     isPlaying,
     position,
     duration,
+    repeat,
+    source,
     playQueue,
     toggle,
     next,
     prev,
     seek,
+    toggleRepeat,
     close,
   };
 
