@@ -15,6 +15,8 @@ import {
   Trash2,
   Plus,
   Check,
+  ExternalLink,
+  Pencil,
 } from "lucide-react";
 import { db } from "@/lib/store/db";
 import {
@@ -27,6 +29,20 @@ import { InlineBody } from "@/components/inline-edit";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { Backlinks } from "@/components/backlinks";
 import { RecentTracker } from "@/components/recently-viewed";
+import { RepoGlyph } from "@/components/repo-glyph";
+import {
+  parseRepo,
+  normalizeRepoUrl,
+  providerLabel,
+  type GitProvider,
+} from "@/lib/github";
+
+const PROVIDER_ACCENT: Record<GitProvider, string> = {
+  github: "var(--ink)",
+  gitlab: "var(--terra)",
+  bitbucket: "var(--sky)",
+  other: "var(--muted)",
+};
 
 type ProjectStatus = "active" | "shipping" | "paused";
 type Milestone = { title: string; date?: string; done?: boolean };
@@ -89,6 +105,7 @@ export function ProjectDetail({ project }: { project: StoredItem }) {
     progress?: number;
     status?: ProjectStatus;
     milestones?: Milestone[];
+    repoUrl?: string;
   };
   const color = projectColor(project);
   const tint = STUDIO_TINTS[color] ?? "var(--paper-2)";
@@ -96,6 +113,7 @@ export function ProjectDetail({ project }: { project: StoredItem }) {
   const archived = project.status === "archived";
   const areaLabel = meta.area?.trim() || project.topic?.trim() || null;
   const monogram = (project.title?.trim()?.[0] ?? "·").toUpperCase();
+  const repo = parseRepo(meta.repoUrl);
 
   // Tasks linked to this project via metadata.projectId
   const linkedTasks =
@@ -205,6 +223,23 @@ export function ProjectDetail({ project }: { project: StoredItem }) {
                     Archived
                   </span>
                 )}
+                {repo && (
+                  <a
+                    href={repo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={repo.url}
+                    className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)] hover:text-[var(--ink)] bg-[var(--bg-2)] transition"
+                  >
+                    <RepoGlyph provider={repo.provider} size={12} />
+                    {repo.repo || repo.host}
+                    <ExternalLink
+                      size={10}
+                      strokeWidth={1.6}
+                      className="opacity-0 group-hover:opacity-100 transition"
+                    />
+                  </a>
+                )}
               </div>
               <InlineProjectTitle project={project} />
               {project.summary && (
@@ -270,6 +305,7 @@ export function ProjectDetail({ project }: { project: StoredItem }) {
         />
 
         <div className="flex flex-col gap-6">
+          <RepoCard project={project} />
           <AboutCard project={project} />
           <MilestonesCard project={project} milestones={milestones} color={color} />
           <PhotosCard project={project} />
@@ -944,6 +980,206 @@ function AboutCard({ project }: { project: StoredItem }) {
       <div className="text-[14px] leading-[1.7] text-[var(--ink-2)]">
         <InlineBody id={project.id} value={project.body} />
       </div>
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Repository card
+// ──────────────────────────────────────────────────────────────────────
+
+function RepoCard({ project }: { project: StoredItem }) {
+  const meta = (project.metadata ?? {}) as { repoUrl?: string };
+  const repo = parseRepo(meta.repoUrl);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(meta.repoUrl ?? "");
+  const [pending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setDraft(meta.repoUrl ?? "");
+  }, [meta.repoUrl]);
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  const preview = useMemo(() => parseRepo(draft), [draft]);
+  const showEditor = editing || !repo;
+  const accent = PROVIDER_ACCENT[(preview ?? repo)?.provider ?? "github"];
+
+  function save() {
+    const url = normalizeRepoUrl(draft);
+    startTransition(async () => {
+      try {
+        const next = { ...(project.metadata ?? {}) } as Record<string, unknown>;
+        if (url) next.repoUrl = url;
+        else delete next.repoUrl;
+        await updateItem(project.id, { metadata: next });
+        toast.success(url ? "Repository linked" : "Repository removed");
+        setEditing(false);
+      } catch {
+        toast.error("Couldn't save");
+      }
+    });
+  }
+
+  function remove() {
+    const next = { ...(project.metadata ?? {}) } as Record<string, unknown>;
+    delete next.repoUrl;
+    startTransition(async () => {
+      try {
+        await updateItem(project.id, { metadata: next });
+        toast.success("Repository removed");
+        setDraft("");
+        setEditing(false);
+      } catch {
+        toast.error("Couldn't save");
+      }
+    });
+  }
+
+  return (
+    <section className="life-card p-5">
+      <header className="flex items-center justify-between mb-3">
+        <h3 className="text-[18px] font-semibold tracking-[-0.015em] text-[var(--ink)]">
+          Repository
+        </h3>
+        {repo && !editing && (
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(meta.repoUrl ?? "");
+              setEditing(true);
+            }}
+            className="inline-flex items-center gap-1 text-[12px] text-[var(--muted)] hover:text-[var(--ink)] transition"
+          >
+            <Pencil size={12} strokeWidth={1.6} />
+            Edit
+          </button>
+        )}
+      </header>
+
+      {showEditor ? (
+        <div>
+          <div className="flex items-center gap-2 rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] focus-within:border-[var(--terra)] px-3 transition">
+            <span className="shrink-0" style={{ color: accent }}>
+              <RepoGlyph provider={preview?.provider ?? "github"} size={15} />
+            </span>
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  save();
+                }
+                if (e.key === "Escape") {
+                  setDraft(meta.repoUrl ?? "");
+                  setEditing(false);
+                }
+              }}
+              placeholder="github.com/owner/repo"
+              className="flex-1 bg-transparent py-2 text-[13px] font-mono text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none"
+            />
+          </div>
+          {preview?.owner && preview?.repo && (
+            <div className="mt-2 text-[12px] font-mono text-[var(--muted)] truncate">
+              {preview.owner}
+              <span className="text-[var(--muted-2)]"> / </span>
+              <span className="text-[var(--ink-2)] font-medium">
+                {preview.repo}
+              </span>
+            </div>
+          )}
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <div>
+              {repo && (
+                <button
+                  type="button"
+                  onClick={remove}
+                  disabled={pending}
+                  className="inline-flex items-center gap-1 text-[12px] text-[var(--muted)] hover:text-[var(--bad)] transition"
+                >
+                  <Trash2 size={12} strokeWidth={1.6} />
+                  Remove
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {editing && repo && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraft(meta.repoUrl ?? "");
+                    setEditing(false);
+                  }}
+                  className="life-btn life-btn-sm life-btn-ghost"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={save}
+                disabled={pending || !preview}
+                className="life-btn life-btn-sm life-btn-primary"
+              >
+                {repo ? "Save" : "Link repo"}
+              </button>
+            </div>
+          </div>
+          {!repo && (
+            <p className="mt-3 text-[11.5px] text-[var(--muted-2)] leading-relaxed">
+              Paste a GitHub, GitLab, or Bitbucket URL — or just{" "}
+              <span className="font-mono text-[var(--muted)]">owner/repo</span>.
+            </p>
+          )}
+        </div>
+      ) : (
+        repo && (
+          <a
+            href={repo.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-3.5 rounded-[10px] -m-1 p-1 hover:bg-[var(--paper-2)] transition"
+          >
+            <div
+              className="grid place-items-center w-11 h-11 rounded-[11px] shrink-0"
+              style={{
+                background: `color-mix(in oklch, ${accent} 12%, transparent)`,
+                border: `1px solid color-mix(in oklch, ${accent} 26%, transparent)`,
+                color: accent,
+              }}
+            >
+              <RepoGlyph provider={repo.provider} size={22} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+                {providerLabel(repo.provider)}
+              </div>
+              <div className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--ink)] truncate group-hover:text-[var(--terra)] transition">
+                {repo.owner && repo.repo ? (
+                  <>
+                    {repo.owner}
+                    <span className="text-[var(--muted-2)] font-normal"> / </span>
+                    {repo.repo}
+                  </>
+                ) : (
+                  repo.host
+                )}
+              </div>
+              <div className="text-[11.5px] font-mono text-[var(--muted-2)] truncate">
+                {repo.host}
+              </div>
+            </div>
+            <span className="life-btn life-btn-sm life-btn-secondary shrink-0">
+              <ExternalLink size={12} strokeWidth={1.8} />
+              Open
+            </span>
+          </a>
+        )
+      )}
     </section>
   );
 }

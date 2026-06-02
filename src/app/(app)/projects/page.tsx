@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/store/db";
 import type { StoredItem } from "@/lib/store/items";
-import { FolderKanban, Compass, Calendar, Clock } from "lucide-react";
+import { FolderKanban, Compass, Calendar, Clock, ExternalLink } from "lucide-react";
 import { NewProject } from "./new-project";
+import { parseRepo } from "@/lib/github";
+import { RepoGlyph } from "@/components/repo-glyph";
 
 type ProjectTasks = { open: StoredItem[]; done: StoredItem[] };
 
@@ -265,7 +267,9 @@ function ProjectCard({
     targetDate?: string;
     progress?: number;
     area?: string;
+    repoUrl?: string;
   };
+  const repo = parseRepo(meta.repoUrl);
   const color = projectColor(p);
   const tint = STUDIO_TINTS[color] ?? "var(--paper-2)";
   const status = projectStatus(p);
@@ -377,6 +381,32 @@ function ProjectCard({
               due {dueLabel(due)}
             </span>
           </>
+        )}
+        {repo && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(repo.url, "_blank", "noopener,noreferrer");
+            }}
+            title={`Open ${repo.host}/${repo.owner}/${repo.repo}`}
+            className="group/repo ml-auto inline-flex items-center gap-1.5 max-w-[55%] rounded-full px-2 py-1 -my-1 normal-case tracking-normal text-[11px] font-mono text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
+          >
+            <RepoGlyph
+              provider={repo.provider}
+              size={13}
+              className="shrink-0"
+            />
+            <span className="truncate">
+              {repo.owner && repo.repo ? `${repo.owner}/${repo.repo}` : repo.host}
+            </span>
+            <ExternalLink
+              size={10}
+              strokeWidth={1.6}
+              className="shrink-0 opacity-0 group-hover/repo:opacity-100 transition"
+            />
+          </button>
         )}
       </div>
     </Link>
