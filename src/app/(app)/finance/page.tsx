@@ -83,7 +83,7 @@ function catIcon(c: string): IconCmp {
 }
 
 type Quotes = {
-  crypto: Record<string, { price: number; change: number }>;
+  crypto: Record<string, { price: number; change: number; image?: string | null }>;
   stocks: Record<string, { price: number; change: number; currency: string }>;
 };
 
@@ -98,6 +98,7 @@ type HoldingView = {
   meta: HoldingMeta;
   price: number | null;
   change: number | null;
+  image: string | null;
   valueUsd: number | null;
   valueBase: number | null;
   pnlUsd: number | null;
@@ -256,6 +257,10 @@ export default function FinancePage() {
               : undefined;
         const price = q?.price ?? null;
         const change = q?.change ?? null;
+        const image =
+          meta.assetClass === "crypto" && meta.coinId
+            ? quotes?.crypto[meta.coinId]?.image ?? null
+            : null;
         const valueUsd = price != null ? price * meta.quantity : null;
         const valueBase =
           valueUsd != null ? convert(valueUsd, "USD", base, fx) : null;
@@ -272,6 +277,7 @@ export default function FinancePage() {
           meta,
           price,
           change,
+          image,
           valueUsd,
           valueBase,
           pnlUsd,
@@ -1013,7 +1019,7 @@ function HoldingRow({
   loading: boolean;
   onEdit: () => void;
 }) {
-  const { item, meta, price, change, valueBase, pnlUsd, pnlPct } = view;
+  const { item, meta, price, change, image, valueBase, pnlUsd, pnlPct } = view;
   const isCrypto = meta.assetClass === "crypto";
   const color = isCrypto ? "var(--gold)" : "var(--sky)";
   const up = (change ?? 0) >= 0;
@@ -1026,16 +1032,26 @@ function HoldingRow({
     >
       {/* Asset */}
       <div className="min-w-0 flex items-center gap-3">
-        <span
-          className="grid place-items-center w-10 h-10 rounded-[11px] shrink-0 text-[12px] font-bold font-mono"
-          style={{
-            background: `color-mix(in oklch, ${color} 14%, transparent)`,
-            color,
-            border: `1px solid color-mix(in oklch, ${color} 28%, transparent)`,
-          }}
-        >
-          {meta.symbol.slice(0, 4)}
-        </span>
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt=""
+            loading="lazy"
+            className="w-10 h-10 rounded-full shrink-0 bg-[var(--bg-2)]"
+          />
+        ) : (
+          <span
+            className="grid place-items-center w-10 h-10 rounded-[11px] shrink-0 text-[12px] font-bold font-mono"
+            style={{
+              background: `color-mix(in oklch, ${color} 14%, transparent)`,
+              color,
+              border: `1px solid color-mix(in oklch, ${color} 28%, transparent)`,
+            }}
+          >
+            {meta.symbol.slice(0, 4)}
+          </span>
+        )}
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-[14.5px] font-medium text-[var(--ink)] truncate">

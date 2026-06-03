@@ -13,6 +13,14 @@ import { db } from "@/lib/store/db";
 import { aiHeaders } from "@/lib/ai-key";
 import { captureItem } from "@/lib/store/items";
 import { detectPlatform, normalizeUrl } from "@/lib/bookmarks";
+import {
+  COIN_CATALOG,
+  ASSET_CATEGORIES,
+  LIABILITY_CATEGORIES,
+  fmtMoney,
+  fmtQty,
+  type AccountType,
+} from "@/lib/finance";
 
 export type Source = {
   id: string;
@@ -120,6 +128,13 @@ export async function streamAsk(
 function str(v: unknown): string | undefined {
   if (typeof v === "string" && v.trim()) return v.trim();
   return undefined;
+}
+
+function num(v: unknown): number | null {
+  if (typeof v === "number" && isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "" && isFinite(Number(v)))
+    return Number(v);
+  return null;
 }
 
 function toISO(date?: string, time?: string): string | undefined {
@@ -233,6 +248,101 @@ export async function executeAction(
           label: "Bookmark saved",
           sub: `${str(i.title) ?? detected.host}`,
           href: "/bookmarks",
+        };
+      }
+      case "addAccount": {
+        const name = str(i.name);
+        const balance = num(i.balance);
+        if (!name || balance == null) return null;
+        const accountType: AccountType =
+          i.accountType === "liability" ? "liability" : "asset";
+        const cats =
+          accountType === "asset" ? ASSET_CATEGORIES : LIABILITY_CATEGORIES;
+        const wanted = str(i.category)?.toLowerCase();
+        const category =
+          (cats as readonly string[]).find((c) => c.toLowerCase() === wanted) ??
+          (accountType === "asset" ? "Cash" : "Other debt");
+        const currency = (str(i.currency) ?? "USD").toUpperCase();
+        const amount = Math.abs(balance);
+        await captureItem({
+          kind: "account",
+          title: name,
+          status: "active",
+          metadata: {
+            accountType,
+            category,
+            balance: amount,
+            currency,
+            institution: str(i.institution),
+          },
+        });
+        return {
+          label: accountType === "asset" ? "Account added" : "Debt added",
+          sub: `${name} · ${fmtMoney(amount, currency)}`,
+          href: "/finance",
+        };
+      }
+      case "addHolding": {
+        const symbolRaw = str(i.symbol);
+        const quantity = num(i.quantity);
+        if (!symbolRaw || quantity == null || quantity <= 0) return null;
+        const assetClass = i.assetClass === "stock" ? "stock" : "crypto";
+        const costBasis = num(i.costBasis) ?? undefined;
+        let meta: Record<string, unknown>;
+        let title: string;
+        if (assetClass === "crypto") {
+          const q = symbolRaw.toLowerCase();
+          const nameQ = str(i.name)?.toLowerCase();
+          const coin = COIN_CATALOG.find(
+            (c) =>
+              c.symbol.toLowerCase() === q ||
+              c.id === q ||
+              (nameQ ? c.name.toLowerCase() === nameQ : false),
+          );
+          if (coin) {
+            meta = {
+              assetClass: "crypto",
+              symbol: coin.symbol,
+              coinId: coin.id,
+              quantity,
+              costBasis,
+              currency: "USD",
+            };
+            title = coin.name;
+          } else {
+            // Unknown coin: still save it, guessing the id from the input.
+            const sym = symbolRaw.toUpperCase();
+            meta = {
+              assetClass: "crypto",
+              symbol: sym,
+              coinId: q,
+              quantity,
+              costBasis,
+              currency: "USD",
+            };
+            title = str(i.name) ?? sym;
+          }
+        } else {
+          const sym = symbolRaw.toUpperCase();
+          meta = {
+            assetClass: "stock",
+            symbol: sym,
+            quantity,
+            costBasis,
+            currency: "USD",
+          };
+          title = str(i.name) ?? sym;
+        }
+        await captureItem({
+          kind: "holding",
+          title,
+          status: "active",
+          metadata: meta,
+        });
+        return {
+          label: "Holding added",
+          sub: `${fmtQty(quantity)} ${meta.symbol as string}`,
+          href: "/finance",
         };
       }
       default:

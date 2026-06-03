@@ -65,28 +65,37 @@ export async function GET(req: Request) {
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean);
 
-  const crypto: Record<string, { price: number; change: number }> = {};
+  const crypto: Record<
+    string,
+    { price: number; change: number; image: string | null }
+  > = {};
   const stockOut: Record<string, { price: number; change: number; currency: string }> = {};
 
   await Promise.all([
     (async () => {
       if (coins.length === 0) return;
       try {
+        // /coins/markets (not simple/price) so we also get each coin's logo.
         const res = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${coins.join(
+          `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${coins.join(
             ",",
-          )}&vs_currencies=usd&include_24hr_change=true`,
+          )}&price_change_percentage=24h`,
           { headers: { accept: "application/json" }, next: { revalidate: 30 } },
         );
         if (res.ok) {
-          const j = (await res.json()) as Record<
-            string,
-            { usd?: number; usd_24h_change?: number }
-          >;
-          for (const id of coins) {
-            const row = j[id];
-            if (row && typeof row.usd === "number") {
-              crypto[id] = { price: row.usd, change: row.usd_24h_change ?? 0 };
+          const j = (await res.json()) as Array<{
+            id: string;
+            image?: string;
+            current_price?: number;
+            price_change_percentage_24h?: number | null;
+          }>;
+          for (const row of j) {
+            if (row && typeof row.current_price === "number") {
+              crypto[row.id] = {
+                price: row.current_price,
+                change: row.price_change_percentage_24h ?? 0,
+                image: row.image ?? null,
+              };
             }
           }
         }

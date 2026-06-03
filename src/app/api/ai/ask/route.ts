@@ -64,7 +64,7 @@ export async function POST(req: Request) {
 
 You can do TWO things:
 1. ANSWER questions using ONLY the saved items listed below. Cite items by their number in square brackets like [3]. If the items don't contain the answer, say so honestly and briefly — don't invent facts.
-2. TAKE ACTIONS when the user asks you to add / create / remind / save / note something. Call the matching tool. Convert relative dates ("tomorrow", "next Friday", "in 2 days") into an absolute YYYY-MM-DD using today's date. Prefer actually calling the tool over describing what you'd do. A brief one-line confirmation afterwards is plenty.
+2. TAKE ACTIONS when the user asks you to add / create / remind / save / note / track something — including financial accounts (assets the user owns or liabilities they owe) and crypto or stock holdings for the Finance page. Call the matching tool. Convert relative dates ("tomorrow", "next Friday", "in 2 days") into an absolute YYYY-MM-DD using today's date. Prefer actually calling the tool over describing what you'd do. A brief one-line confirmation afterwards is plenty.
 
 SAVED ITEMS:
 ${sourceLines || "(none provided)"}`;
@@ -115,6 +115,51 @@ ${sourceLines || "(none provided)"}`;
       inputSchema: z.object({
         url: z.string(),
         title: z.string().optional(),
+      }),
+    }),
+    addAccount: tool({
+      description:
+        "Add a financial account to the Finance page — something the user owns (asset) or owes (liability), with a balance. Use for cash, checking, savings, investments, retirement, real estate, vehicles, credit cards, loans, mortgages.",
+      inputSchema: z.object({
+        name: z.string().describe("Account name, e.g. 'Chase Checking'"),
+        accountType: z
+          .enum(["asset", "liability"])
+          .describe("asset = the user owns it; liability = the user owes it"),
+        category: z
+          .string()
+          .describe(
+            "One of: Cash, Checking, Savings, Investments, Retirement, Crypto, Real estate, Vehicle, Other asset, Credit card, Loan, Mortgage, Other debt",
+          ),
+        balance: z
+          .number()
+          .describe("Current balance or amount owed, as a positive number"),
+        currency: z
+          .string()
+          .optional()
+          .describe("ISO code, e.g. USD, EUR, ILS. Defaults to USD."),
+        institution: z
+          .string()
+          .optional()
+          .describe("Bank or broker name, optional"),
+      }),
+    }),
+    addHolding: tool({
+      description:
+        "Add a crypto or stock holding to the Finance page; it's valued live. Use when the user says they hold / own / bought a quantity of a coin or stock.",
+      inputSchema: z.object({
+        assetClass: z.enum(["crypto", "stock"]),
+        symbol: z
+          .string()
+          .describe("Ticker or coin symbol, e.g. BTC, ETH, SOL, AAPL, TSLA"),
+        name: z
+          .string()
+          .optional()
+          .describe("Full name if known, e.g. Bitcoin, Apple"),
+        quantity: z.number().describe("How many coins or shares"),
+        costBasis: z
+          .number()
+          .optional()
+          .describe("Total USD paid, if the user mentions it"),
       }),
     }),
   };

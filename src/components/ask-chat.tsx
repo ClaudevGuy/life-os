@@ -11,6 +11,8 @@ import {
   Users,
   Lightbulb,
   NotebookPen,
+  Coins,
+  Wallet,
 } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import {
@@ -204,6 +206,18 @@ export const SUGGESTIONS: Suggestion[] = [
     question: "Make a note titled 'Launch checklist'",
     icon: NotebookPen,
     tint: "var(--accent)",
+  },
+  {
+    category: "Holdings",
+    question: "Add 0.5 BTC to my holdings",
+    icon: Coins,
+    tint: "var(--gold)",
+  },
+  {
+    category: "Accounts",
+    question: "Add a savings account at Chase with $5,000",
+    icon: Wallet,
+    tint: "var(--sage)",
   },
 ];
 
