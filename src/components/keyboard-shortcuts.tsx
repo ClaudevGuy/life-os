@@ -34,7 +34,6 @@ const MAP: Record<string, { href: string; label: string }> = {
   h: { href: "/habits", label: "Habits" },
   a: { href: "/ask", label: "Ask my notes" },
   k: { href: "/calendar", label: "Calendar" },
-  s: { href: "/stats", label: "Stats" },
   r: { href: "/reviews", label: "Reviews" },
   l: { href: "/highlights", label: "Highlights" },
   m: { href: "/templates", label: "Templates" },

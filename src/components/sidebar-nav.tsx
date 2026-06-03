@@ -12,7 +12,6 @@ import {
   ListTodo,
   Flame,
   Users,
-  BarChart3,
   CalendarDays,
   MessageSquare,
   FolderKanban,
@@ -94,7 +93,6 @@ const SECTIONS: RailSection[] = [
     items: [
       { href: "/ask", label: "Ask my notes", icon: MessageSquare },
       { href: "/music", label: "Music", icon: Music },
-      { href: "/stats", label: "Stats", icon: BarChart3 },
     ],
   },
 ];
