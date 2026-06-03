@@ -292,6 +292,18 @@ export function TodayClient() {
   }
   upcoming.sort((a, b) => a.when.getTime() - b.when.getTime());
 
+  const todayStr = ymd();
+  const dueToday = upcoming.filter((u) => ymd(u.when) === todayStr).length;
+  const nextUp = upcoming[0]
+    ? {
+        title: upcoming[0].title,
+        whenLabel: `${relDay(upcoming[0].when, startOfToday)} ${upcoming[0].when.toLocaleTimeString(
+          undefined,
+          { hour: "numeric", minute: "2-digit" },
+        )}`,
+      }
+    : null;
+
   const openTasks = allTasks.filter((t) => {
     const m = (t.metadata ?? {}) as { completedAt?: string | null };
     return !m.completedAt;
@@ -403,6 +415,8 @@ export function TodayClient() {
         habitsDoneToday={habitsDoneToday}
         habitTotal={habits.length}
         streak={bestStreak}
+        dueToday={dueToday}
+        nextUp={nextUp}
         weekCounts={weekCounts}
       />
 

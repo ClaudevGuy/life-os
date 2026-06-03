@@ -1,21 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { greetingFor, TOD_CLASS, timeOfDay } from "@/lib/time-of-day";
+import { ListTodo, Flame, ArrowRight, Moon } from "lucide-react";
+import {
+  greetingFor,
+  TOD_CLASS,
+  timeOfDay,
+  type TimeOfDay,
+} from "@/lib/time-of-day";
+
+type NextUp = { title: string; whenLabel: string };
 
 export function TodayHero({
   openTaskCount,
   habitsDoneToday,
   habitTotal,
   streak,
-  quote,
+  dueToday = 0,
+  nextUp = null,
   weekCounts,
 }: {
   openTaskCount: number;
   habitsDoneToday: number;
   habitTotal: number;
   streak: number;
-  quote?: string | null;
+  dueToday?: number;
+  nextUp?: NextUp | null;
   /** captures per day for last 7 days, oldest → newest */
   weekCounts?: number[];
 }) {
@@ -27,7 +37,9 @@ export function TodayHero({
   }, []);
 
   if (!now) {
-    return <div className="h-44 rounded-2xl border border-[var(--border-soft)] bg-[var(--bg-card)]" />;
+    return (
+      <div className="h-48 rounded-2xl border border-[var(--border-soft)] bg-[var(--bg-card)]" />
+    );
   }
 
   const tod = timeOfDay(now);
@@ -42,47 +54,60 @@ export function TodayHero({
     minute: "2-digit",
   });
 
-  // Day-of-year + day progress
+  // Day-of-year + year progress
   const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const dayOfYear = Math.floor(
-    (now.getTime() - startOfYear.getTime()) / 86_400_000,
-  ) + 1;
+  const dayOfYear =
+    Math.floor((now.getTime() - startOfYear.getTime()) / 86_400_000) + 1;
   const daysInYear =
     (now.getFullYear() % 4 === 0 && now.getFullYear() % 100 !== 0) ||
     now.getFullYear() % 400 === 0
       ? 366
       : 365;
   const yearPct = (dayOfYear / daysInYear) * 100;
-
-  // ISO week number
   const weekNum = isoWeekNumber(now);
 
-  // Day-progress: % through current 24h
+  // % through the current 24h
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
-  const dayProgress = ((now.getTime() - startOfDay.getTime()) / 86_400_000) * 100;
+  const dayProgress =
+    ((now.getTime() - startOfDay.getTime()) / 86_400_000) * 100;
 
+  // The real 7-day window ending today (fixes the old hard-coded Mon–Sun row).
   const week = weekCounts ?? [];
   const weekTotal = week.reduce((s, n) => s + n, 0);
   const weekMax = Math.max(...week, 1);
+  const days7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (6 - i));
+    return d;
+  });
+
+  const habitsLeft = Math.max(0, habitTotal - habitsDoneToday);
+  const habitsAllDone = habitTotal > 0 && habitsLeft === 0;
+  const line = heroLine(tod, {
+    open: openTaskCount,
+    due: dueToday,
+    habitsLeft,
+    habitTotal,
+  });
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-[var(--border-soft)] ${TOD_CLASS[tod]}`}
+      className={`relative overflow-hidden rounded-2xl border border-white/10 ${TOD_CLASS[tod]}`}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/35 to-black/10" />
-      <div className="absolute -bottom-10 -right-10 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
-      <div className="relative p-7 sm:p-9 grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-6">
-        {/* Left: greeting + stats */}
-        <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-[0.16em] text-white/70">
+      {/* Atmosphere */}
+      <SkyDecor tod={tod} />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/30 to-transparent" />
+
+      <div className="relative p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-6 lg:gap-8">
+        {/* ── Left: greeting, context, stats ── */}
+        <div className="min-w-0 flex flex-col">
+          <div className="text-[11px] uppercase tracking-[0.16em] text-white/60">
             {dateLabel} · {timeLabel}
           </div>
           <h1
-            className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight"
+            className="mt-1.5 text-3xl sm:text-[2.5rem] leading-[1.05] font-semibold tracking-tight"
             style={{
-              // The hero gradient is dark in every theme (it's a "sky"), so
-              // the greeting needs to be bright regardless of light/dark mode.
               background:
                 "linear-gradient(135deg, #FBF7EE 0%, #FAE2D6 55%, #E4B871 100%)",
               WebkitBackgroundClip: "text",
@@ -92,94 +117,155 @@ export function TodayHero({
           >
             {greeting}
           </h1>
-          {quote && (
-            <p className="mt-3 max-w-xl text-sm text-white/80 italic">
-              “{quote}”
-            </p>
-          )}
+          <p className="mt-2 text-[14px] text-white/75 max-w-md leading-snug">
+            {line}
+          </p>
 
-          <div className="mt-6 grid grid-cols-3 max-w-md gap-3">
-            <HeroStat
-              label="Open tasks"
+          {/* Next up */}
+          <div className="mt-4">
+            {nextUp ? (
+              <div className="inline-flex items-center gap-2.5 rounded-full bg-white/[0.08] border border-white/[0.12] backdrop-blur pl-3 pr-3.5 py-1.5 max-w-full">
+                <span className="text-[9.5px] uppercase tracking-[0.16em] text-white/55 shrink-0">
+                  Next
+                </span>
+                <span className="w-px h-3 bg-white/15 shrink-0" />
+                <span className="text-[13px] text-white font-medium truncate">
+                  {nextUp.title}
+                </span>
+                <span className="text-[12px] text-[#F0C998] tabular-nums shrink-0">
+                  {nextUp.whenLabel}
+                </span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 text-[12.5px] text-white/55">
+                <span className="w-1.5 h-1.5 rounded-full bg-white/30" />
+                Nothing scheduled — the day is yours.
+              </div>
+            )}
+          </div>
+
+          {/* Stats */}
+          <div className="mt-auto pt-6 grid grid-cols-3 gap-2.5 max-w-lg">
+            <StatChip
+              icon={<ListTodo size={13} strokeWidth={1.8} />}
+              label="Tasks"
               value={openTaskCount}
-              tone={openTaskCount > 5 ? "warn" : "ok"}
+              hint={
+                dueToday > 0
+                  ? `${dueToday} due today`
+                  : openTaskCount === 0
+                    ? "all clear"
+                    : "none due today"
+              }
+              accent={dueToday > 0}
             />
-            <HeroStat
+            <StatChip
+              icon={
+                <HabitRing done={habitsDoneToday} total={habitTotal} />
+              }
               label="Habits"
               value={`${habitsDoneToday}/${habitTotal}`}
-              tone={habitsDoneToday === habitTotal && habitTotal > 0 ? "good" : "ok"}
+              hint={
+                habitTotal === 0
+                  ? "none yet"
+                  : habitsAllDone
+                    ? "all done"
+                    : `${habitsLeft} left`
+              }
+              accent={habitsAllDone}
             />
-            <HeroStat
+            <StatChip
+              icon={
+                <Flame
+                  size={13}
+                  strokeWidth={1.8}
+                  className={streak > 0 ? "text-[#F0A878]" : ""}
+                  fill={streak > 0 ? "#F0A878" : "none"}
+                />
+              }
               label="Streak"
-              value={streak > 0 ? `${streak}🔥` : "0"}
-              tone={streak > 2 ? "good" : "ok"}
+              value={streak}
+              hint={streak > 0 ? "days going" : "start today"}
+              accent={streak > 2}
             />
           </div>
         </div>
 
-        {/* Right: momentum sparkline + day/week context */}
-        <div className="min-w-0 flex flex-col gap-3 self-stretch">
-          <div className="rounded-xl bg-black/35 backdrop-blur border border-white/10 p-4 flex-1 min-h-[112px]">
-            <div className="flex items-baseline justify-between text-[10px] uppercase tracking-[0.14em] text-white/65">
-              <span>7-day momentum</span>
-              <span className="text-white tabular-nums normal-case tracking-normal text-base font-semibold">
+        {/* ── Right: momentum + time progress ── */}
+        <div className="min-w-0 flex flex-col gap-3">
+          {/* Momentum */}
+          <div className="rounded-xl bg-white/[0.06] backdrop-blur border border-white/[0.12] p-4 flex-1">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[10px] uppercase tracking-[0.14em] text-white/60">
+                7-day momentum
+              </span>
+              <span className="text-white tabular-nums text-[15px] font-semibold">
                 {weekTotal}
+                <span className="text-white/45 text-[11px] font-normal">
+                  {" "}
+                  captured
+                </span>
               </span>
             </div>
-            <div className="mt-3 flex items-end gap-1.5 h-12">
-              {week.length === 0
-                ? Array.from({ length: 7 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex-1 rounded-t bg-white/10"
-                      style={{ height: "30%" }}
-                    />
-                  ))
-                : week.map((n, i) => {
-                    const isToday = i === week.length - 1;
-                    return (
-                      <div
-                        key={i}
-                        className={`flex-1 rounded-t transition ${
-                          isToday ? "bg-white" : "bg-white/40"
-                        }`}
-                        style={{
-                          height: `${Math.max(8, (n / weekMax) * 100)}%`,
-                          opacity: n === 0 ? 0.25 : 1,
-                        }}
-                        title={`${n} item${n === 1 ? "" : "s"}`}
-                      />
-                    );
-                  })}
+            <div className="mt-3 grid grid-cols-7 gap-1.5 items-end h-14">
+              {days7.map((d, i) => {
+                const n = week[i] ?? 0;
+                const isToday = i === 6;
+                return (
+                  <div
+                    key={i}
+                    className="rounded-md w-full transition-all"
+                    style={{
+                      height: `${Math.max(7, (n / weekMax) * 100)}%`,
+                      background: isToday
+                        ? "linear-gradient(to top, #E4B871, #FAE2D6)"
+                        : "rgba(255,255,255,0.32)",
+                      opacity: n === 0 && !isToday ? 0.35 : 1,
+                    }}
+                    title={`${d.toLocaleDateString(undefined, {
+                      weekday: "long",
+                    })} · ${n} item${n === 1 ? "" : "s"}`}
+                  />
+                );
+              })}
             </div>
-            <div className="mt-1.5 flex items-center justify-between text-[9px] text-white/50 uppercase tracking-wide font-mono">
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-              <span>Sun</span>
+            <div className="mt-1.5 grid grid-cols-7 gap-1.5 text-[9px] uppercase tracking-wide font-mono">
+              {days7.map((d, i) => {
+                const isToday = i === 6;
+                return (
+                  <span
+                    key={i}
+                    className={`text-center ${
+                      isToday ? "text-[#F0C998] font-semibold" : "text-white/45"
+                    }`}
+                  >
+                    {d.toLocaleDateString(undefined, { weekday: "short" })}
+                  </span>
+                );
+              })}
             </div>
           </div>
 
-          <div className="rounded-xl bg-black/35 backdrop-blur border border-white/10 p-3.5">
-            <div className="flex items-baseline justify-between text-[10px] uppercase tracking-[0.14em] text-white/65">
+          {/* Time progress */}
+          <div className="rounded-xl bg-white/[0.06] backdrop-blur border border-white/[0.12] p-4">
+            <div className="flex items-baseline justify-between text-[10px] uppercase tracking-[0.14em] text-white/60">
               <span>Week {weekNum}</span>
               <span className="tabular-nums">
                 Day {dayOfYear}
                 <span className="text-white/40"> / {daysInYear}</span>
               </span>
             </div>
-            <div className="mt-2 h-1 rounded-full bg-white/10 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-white/70 transition-all duration-1000"
-                style={{ width: `${yearPct}%` }}
+            <div className="mt-3 space-y-2.5">
+              <MiniProgress
+                label="Through today"
+                pct={dayProgress}
+                color="rgba(255,255,255,0.85)"
               />
-            </div>
-            <div className="mt-2 flex items-center justify-between text-[10px] text-white/55 font-mono tabular-nums">
-              <span>{Math.floor(dayProgress)}% through today</span>
-              <span>{Math.floor(yearPct)}% through year</span>
+              <MiniProgress
+                label="Through year"
+                pct={yearPct}
+                color="#E4B871"
+              />
             </div>
           </div>
         </div>
@@ -188,31 +274,189 @@ export function TodayHero({
   );
 }
 
-function HeroStat({
+// ──────────────────────────────────────────────────────────────────────
+
+function StatChip({
+  icon,
   label,
   value,
-  tone,
+  hint,
+  accent,
 }: {
+  icon: React.ReactNode;
   label: string;
   value: string | number;
-  tone: "ok" | "good" | "warn";
+  hint: string;
+  accent?: boolean;
 }) {
-  const c =
-    tone === "good"
-      ? "text-emerald-300"
-      : tone === "warn"
-      ? "text-amber-200"
-      : "text-white";
   return (
-    <div className="rounded-xl bg-black/35 backdrop-blur border border-white/10 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-[0.14em] text-white/65">
-        {label}
+    <div className="rounded-xl bg-white/[0.06] backdrop-blur border border-white/[0.12] px-3 py-2.5">
+      <div className="flex items-center gap-1.5 text-white/55">
+        <span className="text-white/70">{icon}</span>
+        <span className="text-[9.5px] uppercase tracking-[0.14em]">{label}</span>
       </div>
-      <div className={`mt-1 text-xl font-semibold tabular-nums ${c}`}>
+      <div
+        className={`mt-1.5 text-[22px] leading-none font-semibold tabular-nums ${
+          accent ? "text-[#F5D9AE]" : "text-white"
+        }`}
+      >
         {value}
+      </div>
+      <div className="mt-1 text-[10px] text-white/50 truncate">{hint}</div>
+    </div>
+  );
+}
+
+function HabitRing({ done, total }: { done: number; total: number }) {
+  const size = 13;
+  const stroke = 2;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = total > 0 ? done / total : 0;
+  return (
+    <svg width={size} height={size} className="-rotate-90" aria-hidden>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="rgba(255,255,255,0.25)"
+        strokeWidth={stroke}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="#7FD0A6"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={c * (1 - pct)}
+      />
+    </svg>
+  );
+}
+
+function MiniProgress({
+  label,
+  pct,
+  color,
+}: {
+  label: string;
+  pct: number;
+  color: string;
+}) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  return (
+    <div>
+      <div className="flex items-center justify-between text-[10.5px] mb-1">
+        <span className="text-white/60">{label}</span>
+        <span className="tabular-nums text-white/80 font-mono">
+          {Math.floor(clamped)}%
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-1000"
+          style={{ width: `${clamped}%`, background: color }}
+        />
       </div>
     </div>
   );
+}
+
+// A soft sun/moon glow + stars at night, behind the content.
+function SkyDecor({ tod }: { tod: TimeOfDay }) {
+  const orb: Record<TimeOfDay, { glow: string; core: string; size: number }> = {
+    dawn: { glow: "rgba(242,192,168,0.55)", core: "#F4CBB2", size: 96 },
+    morning: { glow: "rgba(233,210,164,0.5)", core: "#F2DCAE", size: 104 },
+    day: { glow: "rgba(251,239,208,0.55)", core: "#FBEFD0", size: 120 },
+    evening: { glow: "rgba(231,119,93,0.5)", core: "#EE9A7E", size: 104 },
+    night: { glow: "rgba(200,214,235,0.4)", core: "#D6E0F0", size: 84 },
+  };
+  const o = orb[tod];
+  const stars = tod === "night" || tod === "dawn";
+
+  return (
+    <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* glow halo */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          top: -70,
+          right: 90,
+          width: 260,
+          height: 260,
+          background: `radial-gradient(circle, ${o.glow} 0%, transparent 68%)`,
+          filter: "blur(6px)",
+        }}
+      />
+      {/* core disc */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          top: 26,
+          right: 150,
+          width: o.size,
+          height: o.size,
+          background: `radial-gradient(circle at 38% 34%, ${o.core} 0%, ${o.core} 55%, transparent 72%)`,
+          boxShadow: `0 0 50px ${o.glow}`,
+          opacity: tod === "night" ? 0.85 : 0.65,
+        }}
+      />
+      {/* soft corner wash */}
+      <div className="absolute -bottom-16 -right-16 w-72 h-72 rounded-full bg-white/5 blur-3xl" />
+      {/* stars */}
+      {stars &&
+        STARS.map((s, i) => (
+          <span
+            key={i}
+            className="absolute rounded-full bg-white animate-pulse"
+            style={{
+              top: s.top,
+              left: s.left,
+              width: s.size,
+              height: s.size,
+              opacity: s.o,
+              animationDelay: s.d,
+              animationDuration: "3.5s",
+            }}
+          />
+        ))}
+    </div>
+  );
+}
+
+const STARS = [
+  { top: "14%", left: "52%", size: 2, o: 0.8, d: "0s" },
+  { top: "22%", left: "70%", size: 1.5, o: 0.6, d: "0.6s" },
+  { top: "31%", left: "61%", size: 2, o: 0.5, d: "1.2s" },
+  { top: "17%", left: "83%", size: 1.5, o: 0.7, d: "0.3s" },
+  { top: "42%", left: "76%", size: 1, o: 0.5, d: "0.9s" },
+  { top: "26%", left: "46%", size: 1, o: 0.45, d: "1.5s" },
+  { top: "11%", left: "66%", size: 1.5, o: 0.65, d: "0.4s" },
+  { top: "47%", left: "88%", size: 1.5, o: 0.5, d: "1.1s" },
+] as const;
+
+function heroLine(
+  tod: TimeOfDay,
+  o: { open: number; due: number; habitsLeft: number; habitTotal: number },
+): string {
+  if (tod === "night") {
+    return o.open > 0 || o.habitsLeft > 0
+      ? "A late one — leave the rest for tomorrow-you."
+      : "A late one — rest easy, you're on top of it.";
+  }
+  if (o.due > 0) return `${o.due} thing${o.due > 1 ? "s" : ""} due today.`;
+  if (o.habitsLeft > 0)
+    return `${o.habitsLeft} habit${o.habitsLeft > 1 ? "s" : ""} still to check off.`;
+  if (o.open > 0)
+    return `${o.open} open task${o.open > 1 ? "s" : ""} whenever you're ready.`;
+  if (o.habitTotal > 0) return "All done for today. Beautifully clear.";
+  return tod === "morning"
+    ? "A clean slate. What matters most today?"
+    : "Nothing pressing — enjoy the space.";
 }
 
 function isoWeekNumber(d: Date): number {
