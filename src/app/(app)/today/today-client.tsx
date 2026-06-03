@@ -24,6 +24,8 @@ import {
   Pause,
   SkipBack,
   SkipForward,
+  ArrowRight,
+  Disc3,
 } from "lucide-react";
 import {
   DndContext,
@@ -584,75 +586,175 @@ function SortableWidget({
 
 // ── New widgets ──────────────────────────────────────────────────────────────
 
+function fmtClock(s: number): string {
+  if (!s || !isFinite(s)) return "0:00";
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+}
+
 function MusicCard() {
   const m = useMusic();
   const t = m.current;
+  const pct = m.duration > 0 ? Math.min(100, (m.position / m.duration) * 100) : 0;
+
   return (
-    <Card icon={Music} title="Music" href="/music" tint="var(--terra)">
-      {t ? (
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-[8px] overflow-hidden bg-[var(--bg-rail)] shrink-0">
-            {t.thumbnail ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={t.thumbnail}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : null}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[13.5px] font-medium text-[var(--text)] truncate">
-              {t.title}
-            </div>
-            <div className="text-[11.5px] text-[var(--text-faint)] truncate">
-              {t.channel}
-            </div>
-          </div>
-          <div className="flex items-center gap-0.5 shrink-0">
-            <button
-              type="button"
-              onClick={m.prev}
-              aria-label="Previous"
-              className="grid place-items-center w-7 h-7 rounded-md text-[var(--text-muted)] hover:text-[var(--text)] transition"
+    <div className="life-card relative overflow-hidden p-0">
+      {/* music-tab gradient */}
+      <span
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(130% 130% at 100% 0%, color-mix(in oklch, var(--terra) 20%, var(--paper)) 0%, var(--paper) 60%)",
+        }}
+      />
+      <div className="relative p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="inline-flex items-center gap-2">
+            <span
+              className="grid place-items-center w-6 h-6 rounded-[7px]"
+              style={{
+                background: "color-mix(in oklch, var(--terra) 15%, transparent)",
+                color: "var(--terra)",
+              }}
             >
-              <SkipBack size={14} fill="currentColor" />
-            </button>
-            <button
-              type="button"
-              onClick={m.toggle}
-              aria-label={m.isPlaying ? "Pause" : "Play"}
-              className="grid place-items-center w-8 h-8 rounded-full bg-[var(--accent)] text-white hover:opacity-90 transition"
-            >
-              {m.isPlaying ? (
-                <Pause size={14} fill="currentColor" />
-              ) : (
-                <Play size={14} fill="currentColor" className="ml-0.5" />
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={m.next}
-              aria-label="Next"
-              className="grid place-items-center w-7 h-7 rounded-md text-[var(--text-muted)] hover:text-[var(--text)] transition"
-            >
-              <SkipForward size={14} fill="currentColor" />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-[var(--text-faint)]">Nothing playing.</p>
+              <Music size={12} />
+            </span>
+            <span className="text-[11px] uppercase tracking-[0.14em] font-semibold text-[var(--text-muted)]">
+              Music
+            </span>
+          </h2>
           <Link
             href="/music"
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] px-3 py-1 text-[12px] font-medium hover:opacity-90 transition"
+            className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-[0.12em] font-medium text-[var(--text-faint)] hover:text-[var(--accent)] transition"
           >
-            <Play size={12} fill="currentColor" />
-            Open Music
+            view
+            <ArrowRight size={10} />
           </Link>
         </div>
-      )}
-    </Card>
+
+        {t ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-14 h-14 rounded-[10px] overflow-hidden bg-black shrink-0"
+                style={{ boxShadow: "var(--shadow-2)" }}
+              >
+                {t.thumbnail ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={t.thumbnail}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full grid place-items-center bg-[var(--terra)]">
+                    <Music size={18} className="text-white" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14px] font-semibold text-[var(--text)] truncate">
+                  {t.title}
+                </div>
+                <div className="text-[12px] text-[var(--text-muted)] truncate">
+                  {t.channel}
+                </div>
+                {m.source && (
+                  <div className="mt-0.5 text-[10.5px] text-[var(--text-faint)] truncate">
+                    from {m.source}
+                  </div>
+                )}
+              </div>
+              <Equalizer color="var(--terra)" playing={m.isPlaying} />
+            </div>
+
+            {/* Progress */}
+            <div>
+              <button
+                type="button"
+                aria-label="Seek"
+                onClick={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  const ratio = (e.clientX - r.left) / r.width;
+                  if (m.duration > 0) m.seek(ratio * m.duration);
+                }}
+                className="block w-full h-1.5 rounded-full bg-[var(--bg-2)] overflow-hidden"
+              >
+                <span
+                  className="block h-full rounded-full transition-[width]"
+                  style={{ width: `${pct}%`, background: "var(--terra)" }}
+                />
+              </button>
+              <div className="mt-1 flex justify-between text-[10px] font-mono tabular-nums text-[var(--text-faint)]">
+                <span>{fmtClock(m.position)}</span>
+                <span>{fmtClock(m.duration)}</span>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-4">
+              <button
+                type="button"
+                onClick={m.prev}
+                aria-label="Previous"
+                className="grid place-items-center w-8 h-8 rounded-full text-[var(--text-muted)] hover:text-[var(--text)] transition"
+              >
+                <SkipBack size={16} fill="currentColor" />
+              </button>
+              <button
+                type="button"
+                onClick={m.toggle}
+                aria-label={m.isPlaying ? "Pause" : "Play"}
+                className="grid place-items-center w-10 h-10 rounded-full bg-[var(--terra)] text-white shadow-md hover:scale-105 active:scale-95 transition"
+              >
+                {m.isPlaying ? (
+                  <Pause size={17} fill="currentColor" />
+                ) : (
+                  <Play size={17} fill="currentColor" className="ml-0.5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={m.next}
+                aria-label="Next"
+                className="grid place-items-center w-8 h-8 rounded-full text-[var(--text-muted)] hover:text-[var(--text)] transition"
+              >
+                <SkipForward size={16} fill="currentColor" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3.5 py-1">
+            <div
+              className="grid place-items-center w-14 h-14 rounded-full shrink-0"
+              style={{
+                background: "color-mix(in oklch, var(--terra) 12%, transparent)",
+                color: "var(--terra)",
+              }}
+            >
+              <Disc3 size={26} strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-semibold text-[var(--text)]">
+                Nothing playing
+              </div>
+              <div className="text-[12px] text-[var(--text-muted)]">
+                Your YouTube Music, one click away.
+              </div>
+            </div>
+            <Link
+              href="/music"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--terra)] text-white px-3.5 py-2 text-[12.5px] font-medium hover:opacity-90 transition shrink-0"
+            >
+              <Play size={13} fill="currentColor" />
+              Open
+            </Link>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -682,29 +784,32 @@ function QuickNoteCard() {
 
   return (
     <Card icon={NotebookPen} title="Quick note" tint="var(--accent)">
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-            e.preventDefault();
-            save();
-          }
-        }}
-        rows={3}
-        placeholder="Jot something… ⌘↵ to save"
-        className="w-full bg-transparent text-sm text-[var(--text)] placeholder:text-[var(--text-faint)] resize-none focus:outline-none leading-relaxed"
-      />
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={save}
-          disabled={pending || !text.trim()}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] px-3 py-1 text-[12px] font-medium hover:opacity-90 transition disabled:opacity-40"
-        >
-          <Plus size={12} />
-          Capture
-        </button>
+      <div className="rounded-[10px] bg-[var(--bg-rail)] border border-[var(--border-soft)] focus-within:border-[var(--accent)] transition p-2.5">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              save();
+            }
+          }}
+          rows={3}
+          placeholder="Jot something…"
+          className="w-full bg-transparent text-sm text-[var(--text)] placeholder:text-[var(--text-faint)] resize-none focus:outline-none leading-relaxed"
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-[10.5px] text-[var(--text-faint)]">⌘↵ to save</span>
+          <button
+            type="button"
+            onClick={save}
+            disabled={pending || !text.trim()}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] text-white px-3 py-1 text-[12px] font-medium hover:opacity-90 transition disabled:opacity-40"
+          >
+            <Plus size={12} />
+            Capture
+          </button>
+        </div>
       </div>
     </Card>
   );
@@ -992,34 +1097,63 @@ function Card({
   tint?: string;
   children: React.ReactNode;
 }) {
-  const head = (
-    <h2 className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-      <Icon size={11} style={tint ? { color: tint } : undefined} />
-      {title}
-    </h2>
-  );
+  const color = tint ?? "var(--text-muted)";
   return (
     <div className="life-card p-4 relative overflow-hidden">
-      {tint && (
-        <div
-          className="absolute -top-px left-0 right-0 h-px pointer-events-none"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${tint}, transparent)`,
-          }}
-        />
-      )}
-      <div className="mb-3 flex items-center justify-between">
-        {head}
+      {/* Faint accent wash in the corner so each card has identity */}
+      <span
+        aria-hidden
+        className="absolute right-0 top-0 w-28 h-28 pointer-events-none"
+        style={{
+          background: `radial-gradient(80% 80% at 100% 0%, color-mix(in oklch, ${color} 12%, transparent), transparent)`,
+        }}
+      />
+      <div className="relative mb-3 flex items-center justify-between">
+        <h2 className="inline-flex items-center gap-2">
+          <span
+            className="grid place-items-center w-6 h-6 rounded-[7px] shrink-0"
+            style={{
+              background: `color-mix(in oklch, ${color} 15%, transparent)`,
+              color,
+            }}
+          >
+            <Icon size={12} />
+          </span>
+          <span className="text-[11px] uppercase tracking-[0.14em] font-semibold text-[var(--text-muted)]">
+            {title}
+          </span>
+        </h2>
         {href && (
           <Link
             href={href}
-            className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] hover:text-[var(--accent)]"
+            className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-[0.12em] font-medium text-[var(--text-faint)] hover:text-[var(--accent)] transition"
           >
-            view →
+            view
+            <ArrowRight size={10} />
           </Link>
         )}
       </div>
-      {children}
+      <div className="relative">{children}</div>
     </div>
+  );
+}
+
+// Animated equalizer bars (reuses the .eq-bar keyframes from globals.css).
+function Equalizer({ color, playing }: { color: string; playing: boolean }) {
+  return (
+    <span className="flex items-end gap-[2px] h-4 shrink-0" aria-hidden>
+      {[0, 1, 2, 3].map((i) => (
+        <span
+          key={i}
+          className={playing ? "eq-bar w-[3px] h-full rounded-full" : "w-[3px] rounded-full"}
+          style={{
+            background: color,
+            height: playing ? "100%" : `${[40, 70, 50, 30][i]}%`,
+            animationDelay: `${i * 0.14}s`,
+            animationDuration: `${0.7 + (i % 3) * 0.12}s`,
+          }}
+        />
+      ))}
+    </span>
   );
 }
