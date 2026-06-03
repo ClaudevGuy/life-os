@@ -12,7 +12,8 @@ export default function InboxPage() {
           Inbox
         </h1>
         <p className="text-[14.5px] text-[var(--muted)] mt-1 max-w-xl">
-          Triage what you've captured. Swipe to archive or file — or use the buttons.
+          Triage what you&apos;ve captured. File it to keep, archive to dismiss
+          — hover for actions, or drag a row to swipe.
         </p>
       </header>
 
