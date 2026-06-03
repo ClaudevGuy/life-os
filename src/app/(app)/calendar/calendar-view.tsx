@@ -7,7 +7,6 @@ import { captureItem } from "@/lib/store/items";
 import {
   ChevronLeft,
   ChevronRight,
-  CalendarDays,
   LayoutGrid,
   Rows3,
   Columns3,
@@ -16,14 +15,32 @@ import {
   Bell,
 } from "lucide-react";
 
-type CalItem = {
+export type CalEventType =
+  | "reminder"
+  | "task"
+  | "deadline"
+  | "subscription"
+  | "birthday";
+
+export type CalItem = {
   id: string;
   kind: string;
   title: string | null;
   summary: string | null;
   isoDate: string; // YYYY-MM-DD the item sits on
-  via: "captured" | "due" | "review"; // why it shows up
-  status: string; // "active" | "archived" | … — archived renders struck-through
+  time: string | null; // "HH:MM" for timed items, else all-day
+  type: CalEventType;
+  status: string; // "archived" → struck-through (also used for completed)
+  href: string;
+  meta: string | null; // small trailing label, e.g. "$9.99" / "turns 30"
+};
+
+const EVENT_META: Record<CalEventType, { label: string; color: string }> = {
+  reminder: { label: "Reminder", color: "var(--terra)" },
+  task: { label: "Task", color: "var(--sky)" },
+  deadline: { label: "Deadline", color: "var(--sage)" },
+  subscription: { label: "Renewal", color: "var(--gold)" },
+  birthday: { label: "Birthday", color: "var(--plum)" },
 };
 
 type ViewMode = "month" | "week" | "agenda";
@@ -45,7 +62,26 @@ export function CalendarView({ items }: { items: CalItem[] }) {
       arr.push(it);
       m.set(it.isoDate, arr);
     }
+    // Sort each day: timed first (by time), then all-day; archived last.
+    for (const arr of m.values()) {
+      arr.sort((a, b) => {
+        const aDone = a.status === "archived" ? 1 : 0;
+        const bDone = b.status === "archived" ? 1 : 0;
+        if (aDone !== bDone) return aDone - bDone;
+        const at = a.time ?? "99:99";
+        const bt = b.time ?? "99:99";
+        return at.localeCompare(bt);
+      });
+    }
     return m;
+  }, [items]);
+
+  const presentTypes = useMemo(() => {
+    const set = new Set<CalEventType>();
+    for (const it of items) set.add(it.type);
+    return (Object.keys(EVENT_META) as CalEventType[]).filter((t) =>
+      set.has(t),
+    );
   }, [items]);
 
   const today = ymd(new Date());
@@ -53,7 +89,6 @@ export function CalendarView({ items }: { items: CalItem[] }) {
   function shift(delta: number) {
     const d = new Date(cursor);
     if (view === "month") d.setMonth(d.getMonth() + delta);
-    else if (view === "week") d.setDate(d.getDate() + delta * 7);
     else d.setDate(d.getDate() + delta * 7);
     setCursor(d);
   }
@@ -63,7 +98,6 @@ export function CalendarView({ items }: { items: CalItem[] }) {
     d.setHours(12, 0, 0, 0);
     if (view === "month") d.setDate(1);
     setCursor(d);
-    // Always also reveal today's items so the click does something visible
     setSelectedDay(today);
   }
 
@@ -78,7 +112,9 @@ export function CalendarView({ items }: { items: CalItem[] }) {
         onView={setView}
       />
 
-      <div className="mt-4">
+      {presentTypes.length > 0 && <Legend types={presentTypes} />}
+
+      <div className="mt-3">
         {view === "month" && (
           <MonthGrid
             cursor={cursor}
@@ -116,6 +152,27 @@ export function CalendarView({ items }: { items: CalItem[] }) {
   );
 }
 
+// ---------- legend ----------
+
+function Legend({ types }: { types: CalEventType[] }) {
+  return (
+    <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mb-4">
+      {types.map((t) => (
+        <span
+          key={t}
+          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--muted)]"
+        >
+          <span
+            className="w-2 h-2 rounded-full"
+            style={{ background: EVENT_META[t].color }}
+          />
+          {EVENT_META[t].label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // ---------- toolbar ----------
 
 function Toolbar({
@@ -137,16 +194,11 @@ function Toolbar({
     view === "month"
       ? cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" })
       : view === "week"
-      ? weekLabel(cursor)
-      : `Agenda from ${cursor.toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-        })}`;
-
-  const todayDate = new Date();
-  const onCurrentMonth =
-    cursor.getFullYear() === todayDate.getFullYear() &&
-    cursor.getMonth() === todayDate.getMonth();
+        ? weekLabel(cursor)
+        : `Agenda from ${cursor.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          })}`;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -163,15 +215,6 @@ function Toolbar({
           <button
             type="button"
             onClick={onToday}
-            title={
-              onCurrentMonth
-                ? `Open today (${todayDate.toLocaleDateString(undefined, {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })})`
-                : "Jump to today"
-            }
             className="px-3 py-1 rounded-[7px] text-[12.5px] font-medium text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
           >
             Today
@@ -230,6 +273,43 @@ function ViewBtn({
   );
 }
 
+// ---------- event chip ----------
+
+function EventChip({ it }: { it: CalItem }) {
+  const archived = it.status === "archived";
+  const color = archived ? "var(--muted-2)" : EVENT_META[it.type].color;
+  return (
+    <span
+      className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-[5px] min-w-0"
+      style={{
+        background: archived
+          ? "transparent"
+          : `color-mix(in oklch, ${color} 15%, transparent)`,
+      }}
+    >
+      <span
+        className="w-1 h-1 rounded-full shrink-0"
+        style={{ background: color }}
+      />
+      {it.time && !archived && (
+        <span
+          className="text-[9.5px] font-mono tabular-nums shrink-0"
+          style={{ color }}
+        >
+          {fmtTime(it.time)}
+        </span>
+      )}
+      <span
+        className={`text-[10.5px] truncate ${
+          archived ? "line-through text-[var(--muted-2)]" : "text-[var(--ink-2)]"
+        }`}
+      >
+        {it.title ?? "untitled"}
+      </span>
+    </span>
+  );
+}
+
 // ---------- month view ----------
 
 function MonthGrid({
@@ -243,8 +323,6 @@ function MonthGrid({
   itemsByDay: Map<string, CalItem[]>;
   onSelectDay: (day: string) => void;
 }) {
-  // Build the full 6-row grid including spillover from prev/next month so
-  // the calendar feels complete instead of having empty leading cells.
   const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
   const startDay = first.getDay();
   const daysInMonth = new Date(
@@ -304,6 +382,8 @@ function MonthGrid({
           const iso = ymd(c.date);
           const dayItems = itemsByDay.get(iso) ?? [];
           const isToday = iso === today;
+          const dow = c.date.getDay();
+          const weekend = dow === 0 || dow === 6;
           const cellTime = new Date(c.date);
           cellTime.setHours(0, 0, 0, 0);
           const isPast = !isToday && cellTime.getTime() < todayDate.getTime();
@@ -313,27 +393,26 @@ function MonthGrid({
               key={`${iso}-${i}`}
               type="button"
               onClick={() => onSelectDay(iso)}
-              className="group text-left min-h-[108px] rounded-[10px] border p-2.5 transition relative overflow-hidden"
+              className="group text-left min-h-[112px] rounded-[10px] border p-2.5 transition relative overflow-hidden hover:border-[var(--line-2)]"
               style={{
                 background: isToday
                   ? "color-mix(in oklch, var(--terra-tint) 55%, var(--paper))"
                   : c.outside
-                  ? "transparent"
-                  : "var(--paper)",
+                    ? "transparent"
+                    : weekend
+                      ? "color-mix(in oklch, var(--bg-2) 45%, var(--paper))"
+                      : "var(--paper)",
                 borderColor: isToday
                   ? "color-mix(in oklch, var(--terra) 35%, transparent)"
                   : "var(--line)",
-                opacity: c.outside ? 0.45 : isPast ? 0.78 : 1,
+                opacity: c.outside ? 0.45 : isPast ? 0.82 : 1,
               }}
             >
               <div className="flex items-start justify-between gap-1.5">
                 {isToday ? (
                   <span
                     className="grid place-items-center w-[22px] h-[22px] rounded-full text-[11.5px] tabular-nums font-semibold"
-                    style={{
-                      background: "var(--terra)",
-                      color: "var(--paper)",
-                    }}
+                    style={{ background: "var(--terra)", color: "var(--paper)" }}
                   >
                     {c.date.getDate()}
                   </span>
@@ -344,57 +423,25 @@ function MonthGrid({
                       color: c.outside
                         ? "var(--muted-2)"
                         : isPast
-                        ? "var(--muted)"
-                        : "var(--ink-2)",
+                          ? "var(--muted)"
+                          : "var(--ink-2)",
                     }}
                   >
                     {c.date.getDate()}
                   </span>
                 )}
                 {dayItems.length > 0 && (
-                  <span
-                    className="text-[9.5px] tabular-nums font-mono font-semibold px-1.5 py-px rounded-full"
-                    style={{
-                      background: "var(--bg-2)",
-                      color: "var(--muted)",
-                    }}
-                  >
+                  <span className="text-[9.5px] tabular-nums font-mono font-semibold px-1.5 py-px rounded-full bg-[var(--bg-2)] text-[var(--muted)]">
                     {dayItems.length}
                   </span>
                 )}
               </div>
               <ul className="mt-1.5 space-y-1">
-                {dayItems.slice(0, 3).map((it) => {
-                  const archived = it.status === "archived";
-                  const dot = archived
-                    ? "var(--muted-2)"
-                    : `var(--kind-${it.kind})`;
-                  return (
-                    <li
-                      key={`${it.id}-${it.via}`}
-                      className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-[5px]"
-                      style={{
-                        background: archived
-                          ? "transparent"
-                          : `color-mix(in oklch, ${dot} 16%, transparent)`,
-                      }}
-                    >
-                      <span
-                        className="w-1 h-1 rounded-full shrink-0"
-                        style={{ background: dot }}
-                      />
-                      <span
-                        className={`text-[10.5px] truncate ${
-                          archived
-                            ? "line-through text-[var(--muted-2)]"
-                            : "text-[var(--ink-2)]"
-                        }`}
-                      >
-                        {it.title ?? "untitled"}
-                      </span>
-                    </li>
-                  );
-                })}
+                {dayItems.slice(0, 3).map((it) => (
+                  <li key={`${it.id}-${it.type}-${it.isoDate}`}>
+                    <EventChip it={it} />
+                  </li>
+                ))}
                 {dayItems.length > 3 && (
                   <li className="text-[10px] uppercase tracking-[0.1em] font-semibold text-[var(--muted-2)] pl-1.5">
                     +{dayItems.length - 3} more
@@ -441,49 +488,34 @@ function WeekStrip({
             key={iso}
             type="button"
             onClick={() => onSelectDay(iso)}
-            className={`text-left min-h-[260px] rounded-lg border p-3 transition ${
-              isToday
-                ? "border-[var(--accent)] bg-[var(--accent-glow)]"
-                : "border-[var(--border-soft)] bg-[var(--bg-card)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-card-hover)]"
-            }`}
+            className="text-left min-h-[280px] rounded-[10px] border p-3 transition"
+            style={{
+              borderColor: isToday
+                ? "color-mix(in oklch, var(--terra) 35%, transparent)"
+                : "var(--line)",
+              background: isToday
+                ? "color-mix(in oklch, var(--terra-tint) 50%, var(--paper))"
+                : "var(--paper)",
+            }}
           >
-            <div className="text-[10px] uppercase tracking-wide text-[var(--text-faint)]">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
               {d.toLocaleDateString(undefined, { weekday: "short" })}
             </div>
             <div
               className={`mt-1 text-lg font-semibold tabular-nums ${
-                isToday ? "text-[var(--accent)]" : "text-[var(--text)]"
+                isToday ? "text-[var(--terra)]" : "text-[var(--ink)]"
               }`}
             >
               {d.getDate()}
             </div>
             <ul className="mt-2 space-y-1">
-              {dayItems.map((it) => {
-                const archived = it.status === "archived";
-                return (
-                  <li key={`${it.id}-${it.via}`} className="flex items-start gap-1.5">
-                    <span
-                      className="mt-1 w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{
-                        background: archived
-                          ? "var(--muted-2)"
-                          : `var(--kind-${it.kind})`,
-                      }}
-                    />
-                    <span
-                      className={`text-[11px] truncate ${
-                        archived
-                          ? "line-through text-[var(--muted-2)]"
-                          : "text-[var(--text-muted)]"
-                      }`}
-                    >
-                      {it.title ?? "untitled"}
-                    </span>
-                  </li>
-                );
-              })}
+              {dayItems.map((it) => (
+                <li key={`${it.id}-${it.type}-${it.isoDate}`}>
+                  <EventChip it={it} />
+                </li>
+              ))}
               {dayItems.length === 0 && (
-                <li className="text-[10px] text-[var(--text-faint)]">—</li>
+                <li className="text-[10px] text-[var(--muted-2)]">—</li>
               )}
             </ul>
           </button>
@@ -506,8 +538,7 @@ function Agenda({
   itemsByDay: Map<string, CalItem[]>;
   onSelectDay: (day: string) => void;
 }) {
-  // Show items from cursor forward, plus 14 days
-  const days = Array.from({ length: 21 }).map((_, i) => {
+  const days = Array.from({ length: 28 }).map((_, i) => {
     const d = new Date(cursor);
     d.setDate(cursor.getDate() + i);
     return d;
@@ -518,8 +549,8 @@ function Agenda({
 
   if (populated.length === 0) {
     return (
-      <div className="life-card p-6 text-center text-sm text-[var(--text-faint)]">
-        Nothing scheduled in the next three weeks.
+      <div className="life-card p-6 text-center text-sm text-[var(--muted)]">
+        Nothing scheduled in the next four weeks.
       </div>
     );
   }
@@ -538,54 +569,69 @@ function Agenda({
             <div className="flex items-baseline gap-3">
               <div
                 className={`text-2xl font-semibold tabular-nums ${
-                  isToday ? "text-[var(--accent)]" : "text-[var(--text)]"
+                  isToday ? "text-[var(--terra)]" : "text-[var(--ink)]"
                 }`}
               >
                 {d.getDate()}
               </div>
-              <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
                 {d.toLocaleDateString(undefined, {
                   weekday: "long",
                   month: "short",
                 })}
                 {isToday && (
-                  <span className="ml-2 text-[var(--accent)]">· today</span>
+                  <span className="ml-2 text-[var(--terra)]">· today</span>
                 )}
               </div>
-              <span className="ml-auto text-[10px] text-[var(--text-faint)] tabular-nums">
+              <span className="ml-auto text-[10px] text-[var(--muted-2)] tabular-nums">
                 {items.length}
               </span>
             </div>
-            <ul className="mt-3 space-y-1">
+            <ul className="mt-3 space-y-1.5">
               {items.map((it) => {
                 const archived = it.status === "archived";
+                const color = archived
+                  ? "var(--muted-2)"
+                  : EVENT_META[it.type].color;
                 return (
-                  <li key={`${it.id}-${it.via}`} className="flex items-center gap-2">
+                  <li
+                    key={`${it.id}-${it.type}-${it.isoDate}`}
+                    className="flex items-center gap-2"
+                  >
+                    {it.time && !archived ? (
+                      <span
+                        className="text-[11px] font-mono tabular-nums w-10 shrink-0 text-right"
+                        style={{ color }}
+                      >
+                        {fmtTime(it.time)}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] uppercase tracking-wide text-[var(--muted-2)] w-10 shrink-0 text-right">
+                        {archived ? "" : "all-day"}
+                      </span>
+                    )}
                     <span
                       className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{
-                        background: archived
-                          ? "var(--muted-2)"
-                          : `var(--kind-${it.kind})`,
-                      }}
+                      style={{ background: color }}
                     />
                     <span
                       className={`text-sm truncate ${
                         archived
                           ? "line-through text-[var(--muted)]"
-                          : "text-[var(--text)]"
+                          : "text-[var(--ink)]"
                       }`}
                     >
                       {it.title ?? "untitled"}
                     </span>
-                    {it.via !== "captured" && !archived && (
-                      <span className="text-[10px] uppercase tracking-wide text-[var(--accent)]">
-                        · {it.via}
-                      </span>
-                    )}
-                    {archived && (
-                      <span className="text-[10px] uppercase tracking-wide text-[var(--muted-2)]">
-                        · archived
+                    <span
+                      className="text-[10px] uppercase tracking-wide ml-1 shrink-0"
+                      style={{ color: archived ? "var(--muted-2)" : color }}
+                    >
+                      {archived ? "done" : EVENT_META[it.type].label}
+                    </span>
+                    {it.meta && !archived && (
+                      <span className="ml-auto text-[11px] tabular-nums text-[var(--muted)] shrink-0">
+                        {it.meta}
                       </span>
                     )}
                   </li>
@@ -601,8 +647,6 @@ function Agenda({
 
 // ---------- day drawer ----------
 
-type QuickKind = "reminder" | "task" | "note" | "decision";
-
 function DayDrawer({
   day,
   items,
@@ -613,7 +657,6 @@ function DayDrawer({
   onClose: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [open, setOpen] = useState<QuickKind | null>("reminder");
   const [reminderTime, setReminderTime] = useState("09:00");
 
   const date = new Date(`${day}T12:00:00`);
@@ -626,44 +669,30 @@ function DayDrawer({
   const isToday = day === ymd(new Date());
   const isPast = date < new Date() && !isToday;
 
-  function quickCreate(kind: QuickKind, title: string) {
+  function quickCreateReminder(title: string) {
     if (!title.trim()) return;
     startTransition(async () => {
-      const metadata: Record<string, unknown> = {};
-      // Reminders are stored as tasks with reminder:true and a specific time.
-      const storeKind: "task" | "note" | "decision" =
-        kind === "reminder" ? "task" : kind;
-      if (kind === "reminder") {
-        const [h, m] = reminderTime.split(":");
-        const due = new Date(`${day}T${h.padStart(2, "0")}:${(m ?? "00").padStart(2, "0")}:00`);
-        metadata.dueDate = due.toISOString();
-        metadata.priority = "medium";
-        metadata.completedAt = null;
-        metadata.reminder = true;
-      } else if (kind === "task") {
-        metadata.dueDate = new Date(`${day}T09:00:00`).toISOString();
-        metadata.priority = "medium";
-        metadata.completedAt = null;
-      } else if (kind === "decision") {
-        metadata.reviewAt = new Date(`${day}T09:00:00`).toISOString();
-        metadata.outcome = "pending";
-      }
-      // Reminders are not inbox items — they belong on the calendar/Today,
-      // not in the triage list. Tasks and decisions created here also have a
-      // concrete date, so they bypass inbox triage too.
+      const [h, m] = reminderTime.split(":");
+      const due = new Date(
+        `${day}T${h.padStart(2, "0")}:${(m ?? "00").padStart(2, "0")}:00`,
+      );
       try {
         await captureItem({
-          kind: storeKind,
+          kind: "task",
           title: title.trim(),
-          metadata,
           status: "active",
+          metadata: {
+            dueDate: due.toISOString(),
+            priority: "medium",
+            completedAt: null,
+            reminder: true,
+          },
         });
       } catch {
         toast.error("Couldn't save");
         return;
       }
-      toast.success(kind === "reminder" ? "Reminder set" : "Added");
-      setOpen(null);
+      toast.success("Reminder set");
     });
   }
 
@@ -671,20 +700,22 @@ function DayDrawer({
     <div className="fixed inset-0 z-40" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
       <div
-        className="absolute top-0 right-0 bottom-0 w-full sm:w-[420px] bg-[var(--bg-card)] border-l border-[var(--border-strong)] shadow-2xl overflow-y-auto life-rise"
+        className="absolute top-0 right-0 bottom-0 w-full sm:w-[420px] bg-[var(--paper)] border-l border-[var(--line-2)] shadow-2xl overflow-y-auto life-rise"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 bg-[var(--bg-card)]/95 backdrop-blur border-b border-[var(--border-soft)] px-5 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-[var(--paper)] border-b border-[var(--line)] px-5 py-3 flex items-center justify-between">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted-2)]">
               {isToday ? "today" : isPast ? "past" : "upcoming"}
             </div>
-            <h3 className="text-sm font-semibold text-[var(--text)] mt-0.5">{label}</h3>
+            <h3 className="text-sm font-semibold text-[var(--ink)] mt-0.5">
+              {label}
+            </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-card-hover)]"
+            className="rounded-md p-1.5 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)]"
             aria-label="Close"
           >
             <X size={14} />
@@ -692,62 +723,59 @@ function DayDrawer({
         </div>
 
         <div className="px-5 py-4">
-          <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-2">
-            Reminders · {items.length}
+          <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted-2)] mb-2">
+            On this day · {items.length}
           </h4>
           {items.length === 0 ? (
-            <p className="text-sm text-[var(--text-faint)]">Nothing yet.</p>
+            <p className="text-sm text-[var(--muted)]">Nothing scheduled.</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="space-y-1">
               {items.map((it) => {
-                const isReminder = it.kind === "task" && it.via === "due";
                 const archived = it.status === "archived";
+                const color = archived
+                  ? "var(--muted-2)"
+                  : EVENT_META[it.type].color;
                 return (
-                  <li key={`${it.id}-${it.via}`}>
+                  <li key={`${it.id}-${it.type}-${it.isoDate}`}>
                     <Link
-                      href={`/items/${it.id}`}
-                      className="block rounded-md p-2 hover:bg-[var(--bg-card-hover)] transition"
+                      href={it.href}
+                      className="block rounded-md p-2 hover:bg-[var(--paper-2)] transition"
                     >
                       <div className="flex items-center gap-2">
                         <span
                           className="w-1.5 h-1.5 rounded-full shrink-0"
-                          style={{
-                            background: archived
-                              ? "var(--muted-2)"
-                              : `var(--kind-${it.kind})`,
-                          }}
+                          style={{ background: color }}
                         />
+                        {it.time && !archived && (
+                          <span
+                            className="text-[11px] font-mono tabular-nums shrink-0"
+                            style={{ color }}
+                          >
+                            {fmtTime(it.time)}
+                          </span>
+                        )}
                         <span
                           className={`text-sm truncate ${
                             archived
                               ? "line-through text-[var(--muted)]"
-                              : "text-[var(--text)]"
+                              : "text-[var(--ink)]"
                           }`}
                         >
                           {it.title ?? "untitled"}
                         </span>
-                        {archived ? (
-                          <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--muted-2)]">
-                            archived
-                          </span>
-                        ) : (
-                          it.via !== "captured" && (
-                            <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--accent)]">
-                              {isReminder && <Bell size={9} />}
-                              {it.via}
-                            </span>
-                          )
-                        )}
-                      </div>
-                      {it.summary && (
-                        <p
-                          className={`mt-0.5 ml-3.5 text-xs line-clamp-1 ${
-                            archived
-                              ? "line-through text-[var(--muted-2)]"
-                              : "text-[var(--text-muted)]"
-                          }`}
+                        <span
+                          className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide shrink-0"
+                          style={{
+                            color: archived ? "var(--muted-2)" : color,
+                          }}
                         >
-                          {it.summary}
+                          {it.type === "reminder" && <Bell size={9} />}
+                          {archived ? "done" : EVENT_META[it.type].label}
+                        </span>
+                      </div>
+                      {(it.summary || it.meta) && (
+                        <p className="mt-0.5 ml-3.5 text-xs text-[var(--muted)] line-clamp-1">
+                          {it.meta ?? it.summary}
                         </p>
                       )}
                     </Link>
@@ -758,16 +786,14 @@ function DayDrawer({
           )}
         </div>
 
-        <div className="px-5 py-4 border-t border-[var(--border-soft)]">
-          <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3 inline-flex items-center gap-1.5">
-            <Bell size={11} className="text-[var(--accent)]" />
+        <div className="px-5 py-4 border-t border-[var(--line)]">
+          <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted-2)] mb-1 inline-flex items-center gap-1.5">
+            <Bell size={11} className="text-[var(--terra)]" />
             Add a reminder
           </h4>
-          <QuickAddInput
-            kind="reminder"
+          <QuickAddReminder
             pending={pending}
-            onSubmit={(t) => quickCreate("reminder", t)}
-            onCancel={() => setOpen(null)}
+            onSubmit={quickCreateReminder}
             reminderTime={reminderTime}
             onReminderTimeChange={setReminderTime}
           />
@@ -777,70 +803,55 @@ function DayDrawer({
   );
 }
 
-
-function QuickAddInput({
-  kind,
+function QuickAddReminder({
   pending,
   onSubmit,
-  onCancel,
   reminderTime,
   onReminderTimeChange,
 }: {
-  kind: QuickKind;
   pending: boolean;
   onSubmit: (title: string) => void;
-  onCancel: () => void;
   reminderTime: string;
   onReminderTimeChange: (t: string) => void;
 }) {
   const [text, setText] = useState("");
-  const isReminder = kind === "reminder";
+  function submit() {
+    if (!text.trim()) return;
+    onSubmit(text);
+    setText("");
+  }
   return (
     <div className="mt-3 space-y-2">
       <input
-        autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") onSubmit(text);
-          if (e.key === "Escape") onCancel();
+          if (e.key === "Enter") submit();
         }}
-        placeholder={
-          isReminder
-            ? "Remind me to…"
-            : kind === "task"
-            ? "Task due that day…"
-            : kind === "decision"
-            ? "Decision to review that day…"
-            : "Note title…"
-        }
-        className="w-full rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-3 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition"
+        placeholder="Remind me to…"
+        className="w-full rounded-md bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
       />
       <div className="flex items-center gap-2">
-        {isReminder && (
-          <input
-            type="time"
-            value={reminderTime}
-            onChange={(e) => onReminderTimeChange(e.target.value)}
-            className="rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] px-2 py-2 text-sm focus:outline-none focus:border-[var(--accent)] transition tabular-nums"
-            title="Time for the reminder"
-          />
-        )}
+        <input
+          type="time"
+          value={reminderTime}
+          onChange={(e) => onReminderTimeChange(e.target.value)}
+          className="rounded-md bg-[var(--paper-2)] border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink)] focus:outline-none focus:border-[var(--terra)] transition tabular-nums"
+          title="Time for the reminder"
+        />
         <button
           type="button"
           disabled={pending || !text.trim()}
-          onClick={() => onSubmit(text)}
+          onClick={submit}
           className="life-btn life-btn-primary ml-auto"
         >
           <Plus size={12} strokeWidth={3} />
-          {isReminder ? "Set reminder" : "Add"}
+          Set reminder
         </button>
       </div>
-      {isReminder && (
-        <p className="text-[11px] leading-snug text-[var(--text-faint)] px-1">
-          Shows up in Today and on this day in the calendar — kept out of the Tasks list.
-        </p>
-      )}
+      <p className="text-[11px] leading-snug text-[var(--muted-2)] px-1">
+        Shows up in Today and on this day — kept out of the Tasks list.
+      </p>
     </div>
   );
 }
@@ -852,6 +863,16 @@ function ymd(d: Date) {
   const m = (d.getMonth() + 1).toString().padStart(2, "0");
   const day = d.getDate().toString().padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function fmtTime(t: string): string {
+  const [hRaw, mRaw] = t.split(":");
+  const h = Number(hRaw);
+  const m = Number(mRaw);
+  if (isNaN(h)) return t;
+  const ap = h < 12 ? "a" : "p";
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${hh}${ap}` : `${hh}:${m.toString().padStart(2, "0")}${ap}`;
 }
 
 function weekLabel(d: Date) {
