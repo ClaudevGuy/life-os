@@ -44,14 +44,16 @@ export function DataSection() {
     setExporting(true);
     try {
       const items = await db.items.toArray();
+      const dayNotes = await db.dayNotes.toArray();
       const blob = new Blob(
         [
           JSON.stringify(
             {
               exportedAt: new Date().toISOString(),
-              version: 1,
+              version: 2,
               count: items.length,
               items,
+              dayNotes,
             },
             null,
             2,
@@ -82,6 +84,22 @@ export function DataSection() {
         return;
       }
       const n = await importItems(arr);
+      // Day-note scratchpads, if the export carried them.
+      if (Array.isArray(data?.dayNotes)) {
+        const notes = data.dayNotes
+          .filter(
+            (x: unknown): x is { date: string; body: string; updatedAt?: string } =>
+              !!x &&
+              typeof (x as { date?: unknown }).date === "string" &&
+              typeof (x as { body?: unknown }).body === "string",
+          )
+          .map((x: { date: string; body: string; updatedAt?: string }) => ({
+            date: x.date,
+            body: x.body,
+            updatedAt: x.updatedAt ? new Date(x.updatedAt) : new Date(),
+          }));
+        if (notes.length) await db.dayNotes.bulkPut(notes);
+      }
       toast.success(`Imported ${n} item${n === 1 ? "" : "s"}`);
       await refreshStorageStatus();
     } catch {
@@ -121,6 +139,7 @@ export function DataSection() {
       await db.items.clear();
       await db.blobs.clear();
       await db.trash.clear();
+      await db.dayNotes.clear();
       toast.success("All data cleared");
       await refreshStorageStatus();
     } finally {

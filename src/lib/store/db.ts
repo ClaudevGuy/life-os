@@ -89,11 +89,22 @@ export type StoredTombstone = {
  */
 export type StoredTrash = StoredItem & { trashedAt: Date };
 
+/**
+ * A free-text scratchpad attached to a calendar day (keyed by YYYY-MM-DD).
+ * Talking points, reminders-to-self, anything you want pinned to a date.
+ */
+export type StoredDayNote = {
+  date: string; // YYYY-MM-DD (primary key)
+  body: string;
+  updatedAt: Date;
+};
+
 class LifeOSDB extends Dexie {
   items!: EntityTable<StoredItem, "id">;
   blobs!: EntityTable<StoredBlob, "id">;
   tombstones!: EntityTable<StoredTombstone, "id">;
   trash!: EntityTable<StoredTrash, "id">;
+  dayNotes!: EntityTable<StoredDayNote, "date">;
 
   constructor() {
     super("life-os");
@@ -115,6 +126,14 @@ class LifeOSDB extends Dexie {
       blobs: "id, createdAt",
       tombstones: "id, deletedAt",
       trash: "id, trashedAt, kind",
+    });
+    // v4: per-day scratchpad notes for the calendar.
+    this.version(4).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
+      trash: "id, trashedAt, kind",
+      dayNotes: "date, updatedAt",
     });
   }
 }

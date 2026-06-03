@@ -1,9 +1,14 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { captureItem } from "@/lib/store/items";
+import {
+  useDayNote,
+  useDayNoteDates,
+  saveDayNote,
+} from "@/lib/store/day-notes";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,6 +18,10 @@ import {
   X,
   Plus,
   Bell,
+  CalendarDays,
+  NotebookPen,
+  PenLine,
+  Check,
 } from "lucide-react";
 
 export type CalEventType =
@@ -44,6 +53,8 @@ const EVENT_META: Record<CalEventType, { label: string; color: string }> = {
 };
 
 type ViewMode = "month" | "week" | "agenda";
+
+const EMPTY_SET: ReadonlySet<string> = new Set<string>();
 
 export function CalendarView({ items }: { items: CalItem[] }) {
   const [cursor, setCursor] = useState(() => {
@@ -85,6 +96,7 @@ export function CalendarView({ items }: { items: CalItem[] }) {
   }, [items]);
 
   const today = ymd(new Date());
+  const noteDates = useDayNoteDates() ?? EMPTY_SET;
 
   function shift(delta: number) {
     const d = new Date(cursor);
@@ -120,6 +132,7 @@ export function CalendarView({ items }: { items: CalItem[] }) {
             cursor={cursor}
             today={today}
             itemsByDay={itemsByDay}
+            noteDates={noteDates}
             onSelectDay={setSelectedDay}
           />
         )}
@@ -316,11 +329,13 @@ function MonthGrid({
   cursor,
   today,
   itemsByDay,
+  noteDates,
   onSelectDay,
 }: {
   cursor: Date;
   today: string;
   itemsByDay: Map<string, CalItem[]>;
+  noteDates: ReadonlySet<string>;
   onSelectDay: (day: string) => void;
 }) {
   const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
@@ -382,6 +397,7 @@ function MonthGrid({
           const iso = ymd(c.date);
           const dayItems = itemsByDay.get(iso) ?? [];
           const isToday = iso === today;
+          const hasNote = noteDates.has(iso);
           const dow = c.date.getDay();
           const weekend = dow === 0 || dow === 6;
           const cellTime = new Date(c.date);
@@ -430,11 +446,20 @@ function MonthGrid({
                     {c.date.getDate()}
                   </span>
                 )}
-                {dayItems.length > 0 && (
-                  <span className="text-[9.5px] tabular-nums font-mono font-semibold px-1.5 py-px rounded-full bg-[var(--bg-2)] text-[var(--muted)]">
-                    {dayItems.length}
-                  </span>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  {hasNote && (
+                    <PenLine
+                      size={11}
+                      strokeWidth={1.8}
+                      style={{ color: "var(--terra)" }}
+                    />
+                  )}
+                  {dayItems.length > 0 && (
+                    <span className="text-[9.5px] tabular-nums font-mono font-semibold px-1.5 py-px rounded-full bg-[var(--bg-2)] text-[var(--muted)]">
+                      {dayItems.length}
+                    </span>
+                  )}
+                </div>
               </div>
               <ul className="mt-1.5 space-y-1">
                 {dayItems.slice(0, 3).map((it) => (
@@ -660,8 +685,8 @@ function DayDrawer({
   const [reminderTime, setReminderTime] = useState("09:00");
 
   const date = new Date(`${day}T12:00:00`);
-  const label = date.toLocaleDateString(undefined, {
-    weekday: "long",
+  const weekday = date.toLocaleDateString(undefined, { weekday: "long" });
+  const longLabel = date.toLocaleDateString(undefined, {
     month: "long",
     day: "numeric",
     year: "numeric",
@@ -696,40 +721,63 @@ function DayDrawer({
     });
   }
 
+  const tag = isToday ? "Today" : isPast ? "Past" : "Upcoming";
+  const tagColor = isToday ? "var(--terra)" : "var(--muted)";
+  const accent = isToday ? "var(--terra)" : "var(--sky)";
+
   return (
     <div className="fixed inset-0 z-40" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
       <div
-        className="absolute top-0 right-0 bottom-0 w-full sm:w-[420px] bg-[var(--paper)] border-l border-[var(--line-2)] shadow-2xl overflow-y-auto life-rise"
+        className="absolute top-0 right-0 bottom-0 w-full sm:w-[440px] bg-[var(--paper)] border-l border-[var(--line-2)] shadow-2xl overflow-y-auto life-rise"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 bg-[var(--paper)] border-b border-[var(--line)] px-5 py-3 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted-2)]">
-              {isToday ? "today" : isPast ? "past" : "upcoming"}
+        {/* Header with a soft tint */}
+        <div className="relative border-b border-[var(--line)] overflow-hidden">
+          <span
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: `linear-gradient(135deg, color-mix(in oklch, ${accent} 16%, var(--paper)) 0%, var(--paper) 72%)`,
+            }}
+          />
+          <div className="relative px-5 pt-4 pb-4 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2">
+                <span
+                  className="text-[10px] uppercase tracking-[0.16em] font-semibold"
+                  style={{ color: tagColor }}
+                >
+                  {tag}
+                </span>
+                {items.length > 0 && (
+                  <span className="text-[10px] text-[var(--muted-2)] font-mono">
+                    · {items.length} event{items.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
+              <h3 className="mt-1 text-[21px] font-semibold tracking-[-0.02em] text-[var(--ink)] leading-tight">
+                {weekday}
+              </h3>
+              <div className="text-[13px] text-[var(--muted)]">{longLabel}</div>
             </div>
-            <h3 className="text-sm font-semibold text-[var(--ink)] mt-0.5">
-              {label}
-            </h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid place-items-center w-8 h-8 rounded-[8px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition shrink-0"
+              aria-label="Close"
+            >
+              <X size={14} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1.5 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)]"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
         </div>
 
-        <div className="px-5 py-4">
-          <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted-2)] mb-2">
-            On this day · {items.length}
-          </h4>
+        {/* On this day */}
+        <DrawerSection icon={CalendarDays} title="On this day" count={items.length} first>
           {items.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Nothing scheduled.</p>
+            <p className="text-[13px] text-[var(--muted)]">Nothing scheduled.</p>
           ) : (
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {items.map((it) => {
                 const archived = it.status === "archived";
                 const color = archived
@@ -739,7 +787,7 @@ function DayDrawer({
                   <li key={`${it.id}-${it.type}-${it.isoDate}`}>
                     <Link
                       href={it.href}
-                      className="block rounded-md p-2 hover:bg-[var(--paper-2)] transition"
+                      className="block rounded-md p-2 -mx-1 hover:bg-[var(--paper-2)] transition"
                     >
                       <div className="flex items-center gap-2">
                         <span
@@ -765,9 +813,7 @@ function DayDrawer({
                         </span>
                         <span
                           className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide shrink-0"
-                          style={{
-                            color: archived ? "var(--muted-2)" : color,
-                          }}
+                          style={{ color: archived ? "var(--muted-2)" : color }}
                         >
                           {it.type === "reminder" && <Bell size={9} />}
                           {archived ? "done" : EVENT_META[it.type].label}
@@ -784,20 +830,127 @@ function DayDrawer({
               })}
             </ul>
           )}
-        </div>
+        </DrawerSection>
 
-        <div className="px-5 py-4 border-t border-[var(--line)]">
-          <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted-2)] mb-1 inline-flex items-center gap-1.5">
-            <Bell size={11} className="text-[var(--terra)]" />
-            Add a reminder
-          </h4>
+        {/* Day notes — the scratchpad */}
+        <DrawerSection icon={NotebookPen} title="Notes" iconColor="var(--sky)">
+          <DayNoteEditor key={day} date={day} />
+        </DrawerSection>
+
+        {/* Add a reminder */}
+        <DrawerSection icon={Bell} title="Add a reminder" iconColor="var(--terra)">
           <QuickAddReminder
             pending={pending}
             onSubmit={quickCreateReminder}
             reminderTime={reminderTime}
             onReminderTimeChange={setReminderTime}
           />
-        </div>
+        </DrawerSection>
+      </div>
+    </div>
+  );
+}
+
+function DrawerSection({
+  icon: Icon,
+  title,
+  count,
+  iconColor,
+  first,
+  children,
+}: {
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
+  title: string;
+  count?: number;
+  iconColor?: string;
+  first?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={`px-5 py-4 ${first ? "" : "border-t border-[var(--line)]"}`}
+    >
+      <h4 className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted-2)] mb-3 inline-flex items-center gap-1.5">
+        <Icon size={11} style={{ color: iconColor ?? "var(--muted)" }} />
+        {title}
+        {count != null && (
+          <span className="text-[var(--muted-2)] font-mono">· {count}</span>
+        )}
+      </h4>
+      {children}
+    </section>
+  );
+}
+
+function DayNoteEditor({ date }: { date: string }) {
+  const existing = useDayNote(date);
+  const [body, setBody] = useState("");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const seeded = useRef(false);
+  const bodyRef = useRef("");
+  bodyRef.current = body;
+  const dirty = useRef(false);
+  const timer = useRef<number | null>(null);
+
+  // Seed once the stored note has loaded.
+  useEffect(() => {
+    if (!seeded.current && existing !== undefined) {
+      setBody(existing?.body ?? "");
+      seeded.current = true;
+    }
+  }, [existing]);
+
+  // Flush any pending edit if the drawer closes mid-type.
+  useEffect(() => {
+    return () => {
+      if (dirty.current) void saveDayNote(date, bodyRef.current);
+    };
+  }, [date]);
+
+  function onChange(v: string) {
+    setBody(v);
+    dirty.current = true;
+    setStatus("saving");
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      void saveDayNote(date, bodyRef.current).then(() => {
+        dirty.current = false;
+        setStatus("saved");
+      });
+    }, 700);
+  }
+
+  function flush() {
+    if (timer.current) window.clearTimeout(timer.current);
+    if (dirty.current) {
+      void saveDayNote(date, bodyRef.current).then(() => {
+        dirty.current = false;
+        setStatus("saved");
+      });
+    }
+  }
+
+  return (
+    <div>
+      <textarea
+        value={body}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={flush}
+        rows={6}
+        placeholder="Talking points, things to remember, anything tied to this day…"
+        className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2.5 text-[13.5px] leading-relaxed text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] resize-y transition"
+      />
+      <div className="mt-1.5 flex items-center justify-between text-[11px] text-[var(--muted-2)]">
+        <span>Saved to this day · autosaves</span>
+        <span className="inline-flex items-center gap-1">
+          {status === "saving" && "Saving…"}
+          {status === "saved" && (
+            <>
+              <Check size={11} style={{ color: "var(--sage)" }} />
+              Saved
+            </>
+          )}
+        </span>
       </div>
     </div>
   );
