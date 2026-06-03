@@ -62,6 +62,7 @@ import {
   readSubscription,
 } from "@/lib/subscriptions";
 import { useMusic } from "@/components/music-player";
+import { CryptoCard, StocksCard } from "@/components/market-widgets";
 import { Brief } from "./brief";
 import { TodayHero } from "./hero";
 import { WeekStrip } from "./week-strip";
@@ -80,6 +81,8 @@ type WidgetId =
   | "topTasks"
   | "habits"
   | "music"
+  | "crypto"
+  | "stocks"
   | "quickNote"
   | "notes"
   | "bookmarks"
@@ -95,6 +98,8 @@ const WIDGET_META: Record<WidgetId, string> = {
   topTasks: "Top tasks",
   habits: "Habits to check",
   music: "Music",
+  crypto: "Crypto prices",
+  stocks: "Stock prices",
   quickNote: "Quick note",
   notes: "Recent notes",
   bookmarks: "Bookmarks",
@@ -118,6 +123,8 @@ const DEFAULT_LAYOUT: Layout = {
     { id: "topTasks", w: "half" },
     { id: "habits", w: "half" },
     { id: "music", w: "half" },
+    { id: "crypto", w: "half" },
+    { id: "stocks", w: "half" },
     { id: "notes", w: "half" },
     { id: "resurface", w: "half" },
     { id: "onThisDay", w: "half" },
@@ -334,6 +341,10 @@ export function TodayClient() {
         return <HabitsCard habits={habits} today={today} />;
       case "music":
         return <MusicCard />;
+      case "crypto":
+        return <CryptoCard />;
+      case "stocks":
+        return <StocksCard />;
       case "quickNote":
         return <QuickNoteCard />;
       case "notes":
