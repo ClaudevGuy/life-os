@@ -21,7 +21,9 @@ export type ItemKind =
   | "area"
   | "file"
   | "subscription"
-  | "bookmark";
+  | "bookmark"
+  | "account"
+  | "holding";
 
 export type ItemStatus = "inbox" | "active" | "archived" | "reference";
 
@@ -99,12 +101,28 @@ export type StoredDayNote = {
   updatedAt: Date;
 };
 
+/**
+ * A daily snapshot of net worth, so the Finance page can chart a trend over
+ * time. Keyed by YYYY-MM-DD; one row per day, overwritten as the day's figures
+ * change. `base` records the currency the figures are expressed in so a later
+ * base-currency switch doesn't silently mix scales.
+ */
+export type StoredNetWorthSnapshot = {
+  date: string; // YYYY-MM-DD (primary key)
+  base: string;
+  net: number;
+  assets: number;
+  liabilities: number;
+  updatedAt: Date;
+};
+
 class LifeOSDB extends Dexie {
   items!: EntityTable<StoredItem, "id">;
   blobs!: EntityTable<StoredBlob, "id">;
   tombstones!: EntityTable<StoredTombstone, "id">;
   trash!: EntityTable<StoredTrash, "id">;
   dayNotes!: EntityTable<StoredDayNote, "date">;
+  netWorthSnapshots!: EntityTable<StoredNetWorthSnapshot, "date">;
 
   constructor() {
     super("life-os");
@@ -134,6 +152,15 @@ class LifeOSDB extends Dexie {
       tombstones: "id, deletedAt",
       trash: "id, trashedAt, kind",
       dayNotes: "date, updatedAt",
+    });
+    // v5: daily net-worth snapshots for the Finance trend chart.
+    this.version(5).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
+      trash: "id, trashedAt, kind",
+      dayNotes: "date, updatedAt",
+      netWorthSnapshots: "date, updatedAt",
     });
   }
 }
