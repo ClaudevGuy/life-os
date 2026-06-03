@@ -21,9 +21,21 @@ import type { LanguageModel } from "ai";
 type Provider = "anthropic" | "openai";
 
 const DEFAULT_MODEL: Record<Provider, string> = {
-  anthropic: "claude-haiku-4.5",
+  anthropic: "claude-haiku-4-5",
   openai: "gpt-4o-mini",
 };
+
+/**
+ * Anthropic model ids use DASHES between version numbers
+ * (claude-haiku-4-5), but it's easy to save a dotted one (claude-haiku-4.5)
+ * which the API rejects — the request then fails mid-stream and looks like a
+ * hang. Repair dotted Claude ids defensively. (OpenAI ids legitimately use
+ * dots, e.g. gpt-4.1, so only touch claude-*.)
+ */
+function normalizeModelId(id: string): string {
+  if (/^claude/i.test(id)) return id.replace(/(\d)\.(\d)/g, "$1-$2");
+  return id;
+}
 
 export function bearerKey(req: Request): string | null {
   const h = req.headers.get("authorization") ?? req.headers.get("Authorization");
@@ -75,7 +87,7 @@ export function buildModel(
       return openai(stripPrefix(requestedModel, "openai"));
     }
     const anthropic = createAnthropic({ apiKey: key });
-    return anthropic(stripPrefix(requestedModel, "anthropic"));
+    return anthropic(normalizeModelId(stripPrefix(requestedModel, "anthropic")));
   }
 
   // Fallback path: env-driven. The @ai-sdk/* providers each auto-read
@@ -86,5 +98,5 @@ export function buildModel(
   if (provider === "openai") {
     return createOpenAI()(stripPrefix(model, "openai"));
   }
-  return createAnthropic()(stripPrefix(model, "anthropic"));
+  return createAnthropic()(normalizeModelId(stripPrefix(model, "anthropic")));
 }

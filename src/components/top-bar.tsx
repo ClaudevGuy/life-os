@@ -15,6 +15,7 @@ import { SidebarToggle } from "@/components/sidebar-toggle";
 import { SearchTrigger } from "@/components/search-trigger";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PomodoroPill } from "@/components/pomodoro-pill";
+import { AskPopover } from "@/components/ask-popover";
 import { ymd } from "@/lib/ymd";
 
 type Stats = {
@@ -39,6 +40,7 @@ const EMPTY: Stats = {
 
 export function TopBar() {
   const [now, setNow] = useState<Date | null>(null);
+  const [askOpen, setAskOpen] = useState(false);
 
   useEffect(() => {
     setNow(new Date());
@@ -119,8 +121,9 @@ export function TopBar() {
           ml-auto on small screens (when live pills are hidden) so it still
           hugs the edge. md:ml-0 hands the auto margin off to live pills. */}
       <div className="ml-auto md:ml-0 flex items-center gap-2 shrink-0">
-        <Link
-          href="/ask"
+        <button
+          type="button"
+          onClick={() => setAskOpen(true)}
           className="focus-hide inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] text-[13px] font-medium leading-none text-[var(--ink)] hover:text-[var(--terra)] hover:border-[var(--terra)] transition"
           title="Ask my notes"
         >
@@ -131,7 +134,7 @@ export function TopBar() {
           >
             Ask
           </span>
-        </Link>
+        </button>
         <PomodoroPill />
         <ThemeToggle />
         {now && (
@@ -145,6 +148,8 @@ export function TopBar() {
           </div>
         )}
       </div>
+
+      <AskPopover open={askOpen} onClose={() => setAskOpen(false)} />
     </div>
   );
 }

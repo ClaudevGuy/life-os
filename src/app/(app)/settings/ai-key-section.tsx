@@ -33,7 +33,7 @@ const PROVIDERS: Record<AiProvider, ProviderMeta> = {
   anthropic: {
     label: "Anthropic",
     placeholder: "sk-ant-…",
-    defaultModel: "claude-haiku-4.5",
+    defaultModel: "claude-haiku-4-5",
     helpHref: "https://console.anthropic.com/settings/keys",
     helpHost: "console.anthropic.com",
     blurb: "Direct Claude access. Cheap, fast, good at long documents.",
