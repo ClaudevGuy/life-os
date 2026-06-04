@@ -22,6 +22,7 @@ import {
   Wallet,
   Target,
   Shield,
+  HeartPulse,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -76,6 +77,7 @@ const SECTIONS: RailSection[] = [
         icon: Flame,
         badgeKey: "habitsPending",
       },
+      { href: "/health", label: "Health", icon: HeartPulse },
     ],
   },
   {

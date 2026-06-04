@@ -117,6 +117,22 @@ export type StoredNetWorthSnapshot = {
 };
 
 /**
+ * A daily health check-in, keyed by YYYY-MM-DD (one row per day). Weight is
+ * always stored in kg; the UI converts for display.
+ */
+export type StoredHealthLog = {
+  date: string; // YYYY-MM-DD (primary key)
+  mood?: number; // 1–5
+  energy?: number; // 1–5
+  sleepHours?: number;
+  weightKg?: number;
+  activeMin?: number;
+  water?: number; // glasses
+  note?: string;
+  updatedAt: Date;
+};
+
+/**
  * An encrypted vault entry. Only `type` and timestamps are in the clear (for
  * filtering/sorting); the title and all fields live inside `ct`, AES-GCM
  * encrypted under the passcode-derived key. Never synced — local only.
@@ -138,6 +154,7 @@ class LifeOSDB extends Dexie {
   dayNotes!: EntityTable<StoredDayNote, "date">;
   netWorthSnapshots!: EntityTable<StoredNetWorthSnapshot, "date">;
   vault!: EntityTable<StoredVaultItem, "id">;
+  healthLogs!: EntityTable<StoredHealthLog, "date">;
 
   constructor() {
     super("life-os");
@@ -186,6 +203,17 @@ class LifeOSDB extends Dexie {
       dayNotes: "date, updatedAt",
       netWorthSnapshots: "date, updatedAt",
       vault: "id, type, updatedAt",
+    });
+    // v7: daily health check-ins.
+    this.version(7).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
+      trash: "id, trashedAt, kind",
+      dayNotes: "date, updatedAt",
+      netWorthSnapshots: "date, updatedAt",
+      vault: "id, type, updatedAt",
+      healthLogs: "date, updatedAt",
     });
   }
 }
