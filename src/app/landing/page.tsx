@@ -294,46 +294,211 @@ const EVERYTHING: { cat: string; icon: typeof Wallet; items: string[] }[] = [
   },
 ];
 
-const BENTO: {
+function BentoCard({
+  icon: Icon,
+  title,
+  body,
+  color,
+  wide,
+  visual,
+}: {
   icon: typeof Wallet;
   title: string;
   body: string;
   color: string;
-  span?: string;
-}[] = [
-  {
-    icon: Wallet,
-    title: "Finance that's alive",
-    body: "Net worth, live-valued holdings, allocation, and a trend that draws itself — in your base currency.",
-    color: "var(--lp-gold)",
-    span: "sm:col-span-2",
-  },
-  {
-    icon: Shield,
-    title: "An encrypted vault",
-    body: "Logins, cards, recovery codes — sealed with a passcode only you hold.",
-    color: "var(--lp-terra)",
-  },
-  {
-    icon: HeartPulse,
-    title: "Body & mind",
-    body: "Mood, energy, sleep, weight — charted into patterns you can act on.",
-    color: "var(--lp-sky)",
-  },
-  {
-    icon: Target,
-    title: "Goals that track themselves",
-    body: "Tie a goal to who you're becoming; progress rolls up automatically.",
-    color: "var(--lp-violet)",
-  },
-  {
-    icon: Flame,
-    title: "Habits & focus",
-    body: "Streaks, a heatmap, and a focus timer that knows when you'll be done.",
-    color: "var(--lp-terra)",
-    span: "sm:col-span-2",
-  },
-];
+  wide?: boolean;
+  visual: ReactNode;
+}) {
+  const text = (
+    <div className="relative">
+      <span
+        className="grid place-items-center w-11 h-11 rounded-xl mb-4 text-white"
+        style={{
+          background: `linear-gradient(135deg, ${color}, color-mix(in oklch, ${color} 50%, #15131f))`,
+          boxShadow: `0 12px 28px -12px ${color}`,
+        }}
+      >
+        <Icon size={20} />
+      </span>
+      <h3 className="text-[18px] font-semibold tracking-[-0.01em]">{title}</h3>
+      <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>
+        {body}
+      </p>
+    </div>
+  );
+  return (
+    <div className="lp-card lp-card-glow h-full p-6 overflow-hidden relative">
+      <span
+        aria-hidden
+        className="absolute -right-10 -top-10 w-36 h-36 rounded-full pointer-events-none"
+        style={{ background: `radial-gradient(circle, color-mix(in oklch, ${color} 32%, transparent), transparent 70%)` }}
+      />
+      {wide ? (
+        <div className="relative grid sm:grid-cols-[1.05fr_1fr] gap-6 items-center h-full">
+          {text}
+          <div>{visual}</div>
+        </div>
+      ) : (
+        <div className="relative flex flex-col h-full">
+          {text}
+          <div className="mt-5">{visual}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BentoFinance() {
+  return (
+    <div className="lp-glass rounded-xl p-4">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <div className="text-[9.5px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-faint)" }}>Net worth</div>
+          <div className="text-[21px] font-semibold tabular-nums">$182,540</div>
+        </div>
+        <span className="inline-flex items-center gap-1 text-[12px] font-semibold" style={{ color: "#7fd0a6" }}>
+          <TrendingUp size={13} /> +2.4%
+        </span>
+      </div>
+      <Spark />
+      <div className="mt-2.5 grid grid-cols-2 gap-2">
+        {[
+          { i: Coins, n: "BTC", v: "+4.2%", c: "var(--lp-gold)" },
+          { i: LineChart, n: "AAPL", v: "+0.8%", c: "var(--lp-sky)" },
+        ].map((x) => (
+          <div key={x.n} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <x.i size={13} style={{ color: x.c }} />
+            <span className="text-[11.5px]">{x.n}</span>
+            <span className="ml-auto text-[11px] tabular-nums" style={{ color: "var(--lp-muted)" }}>{x.v}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BentoVault() {
+  return (
+    <div className="space-y-2">
+      {[
+        { i: KeyRound, t: "GitHub" },
+        { i: CreditCard, t: "Visa ·1234" },
+        { i: Lock, t: "Recovery codes" },
+      ].map((x) => (
+        <div key={x.t} className="lp-glass rounded-lg px-3 py-2 flex items-center gap-2.5">
+          <x.i size={14} style={{ color: "var(--lp-terra)" }} />
+          <span className="text-[12.5px]">{x.t}</span>
+          <span className="ml-auto font-mono text-[12px] tracking-widest" style={{ color: "var(--lp-faint)" }}>••••••</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BentoMood() {
+  return (
+    <div className="flex items-end justify-between gap-1.5 h-16">
+      {[3, 4, 2, 4, 5, 4, 5].map((v, i) => (
+        <span
+          key={i}
+          className="flex-1 rounded-full"
+          style={{
+            height: `${v * 18}%`,
+            background: "linear-gradient(to top, var(--lp-sky), color-mix(in oklch, var(--lp-violet) 60%, var(--lp-sky)))",
+            opacity: 0.55 + v * 0.09,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function BentoRing({ pct, color, size = 86, stroke = 8 }: { pct: number; color: string; size?: number; stroke?: number }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} />
+      </svg>
+      <div className="absolute inset-0 grid place-items-center text-[17px] font-semibold tabular-nums">{pct}%</div>
+    </div>
+  );
+}
+
+function BentoGoal() {
+  return (
+    <div className="flex items-center gap-4">
+      <BentoRing pct={72} color="var(--lp-violet)" />
+      <div className="text-[12.5px]" style={{ color: "var(--lp-muted)" }}>
+        <div style={{ color: "var(--lp-ink)" }} className="font-medium">Half-marathon</div>
+        <div>8 / 11 long runs</div>
+      </div>
+    </div>
+  );
+}
+
+function BentoHabits() {
+  const lit = [2, 3, 5, 8, 9, 10, 12, 15, 16, 17, 19, 22, 23, 24, 26, 29, 30, 31, 33];
+  const C = 2 * Math.PI * 32;
+  return (
+    <div className="flex items-center gap-5">
+      <div className="grid grid-cols-7 gap-1 flex-1">
+        {Array.from({ length: 35 }).map((_, i) => (
+          <span
+            key={i}
+            className="aspect-square rounded-[3px]"
+            style={{
+              background: lit.includes(i)
+                ? `color-mix(in oklch, var(--lp-terra) ${42 + (i % 4) * 16}%, transparent)`
+                : "rgba(255,255,255,0.05)",
+            }}
+          />
+        ))}
+      </div>
+      <div className="relative grid place-items-center shrink-0" style={{ width: 74, height: 74 }}>
+        <svg width={74} height={74} className="-rotate-90">
+          <circle cx={37} cy={37} r={32} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={5} />
+          <circle cx={37} cy={37} r={32} fill="none" stroke="var(--lp-terra)" strokeWidth={5} strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * 0.4} />
+        </svg>
+        <div className="absolute inset-0 grid place-items-center font-mono text-[13px] tabular-nums">25:00</div>
+      </div>
+    </div>
+  );
+}
+
+function BentoAsk() {
+  return (
+    <div className="lp-glass rounded-xl p-3.5 font-mono text-[12.5px]">
+      <div className="flex items-center gap-2" style={{ color: "var(--lp-muted)" }}>
+        <Sparkles size={13} style={{ color: "var(--lp-terra)" }} />
+        Add 0.5 BTC to holdings
+      </div>
+      <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1" style={{ background: "rgba(86,182,232,0.1)", border: "1px solid rgba(86,182,232,0.25)" }}>
+        <Check size={12} style={{ color: "var(--lp-sky)" }} />
+        <span style={{ color: "var(--lp-sky)" }}>Holding added</span>
+      </div>
+    </div>
+  );
+}
+
+function BentoMusic() {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-12 h-12 rounded-lg shrink-0" style={{ background: "linear-gradient(135deg, var(--lp-terra), var(--lp-violet))" }} />
+      <div className="min-w-0 flex-1">
+        <div className="text-[12.5px] font-medium truncate">Now playing</div>
+        <div className="text-[11px] truncate" style={{ color: "var(--lp-muted)" }}>YouTube Music · in-app</div>
+      </div>
+      <span className="flex items-end gap-[3px] h-6">
+        {[0, 1, 2, 3].map((i) => (
+          <span key={i} className="w-[3px] rounded-full lp-eq" style={{ background: "var(--lp-terra)", height: "100%", animationDelay: `${i * 0.15}s` }} />
+        ))}
+      </span>
+    </div>
+  );
+}
 
 // ───────────────────────────────────────────────────────────────────────────
 // Page
@@ -644,35 +809,36 @@ function Pillars() {
 
 function Bento() {
   return (
-    <section id="features" className="max-w-6xl mx-auto px-5 sm:px-6 py-16">
+    <section id="features" className="max-w-6xl mx-auto px-5 sm:px-6 py-20">
       <Reveal>
         <SectionHead
           kicker="The toolkit"
           title={<>Everything you run your life with, <span className="lp-grad">crafted to perfection.</span></>}
+          sub="Not a wall of features — a set of tools that each feel hand-built, and quietly work together."
         />
       </Reveal>
       <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {BENTO.map((b, i) => (
-          <Reveal key={b.title} delay={i * 70} className={b.span ?? ""}>
-            <div className="lp-card lp-card-glow h-full p-6 overflow-hidden relative">
-              <span
-                aria-hidden
-                className="absolute -right-8 -top-8 w-32 h-32 rounded-full"
-                style={{ background: `radial-gradient(circle, color-mix(in oklch, ${b.color} 30%, transparent), transparent 70%)` }}
-              />
-              <span
-                className="relative grid place-items-center w-11 h-11 rounded-xl mb-4"
-                style={{ background: `color-mix(in oklch, ${b.color} 18%, transparent)`, color: b.color }}
-              >
-                <b.icon size={20} />
-              </span>
-              <h3 className="relative text-[18px] font-semibold">{b.title}</h3>
-              <p className="relative mt-2 text-[14px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>
-                {b.body}
-              </p>
-            </div>
-          </Reveal>
-        ))}
+        <Reveal className="sm:col-span-2">
+          <BentoCard wide icon={Wallet} color="var(--lp-gold)" title="Finance that's alive" body="Net worth, live-valued crypto & stocks, allocation, and a trend that draws itself — all in your base currency." visual={<BentoFinance />} />
+        </Reveal>
+        <Reveal delay={70}>
+          <BentoCard icon={Shield} color="var(--lp-terra)" title="An encrypted vault" body="Logins, cards, recovery codes — sealed with a passcode only you hold." visual={<BentoVault />} />
+        </Reveal>
+        <Reveal delay={70} className="sm:col-span-2">
+          <BentoCard wide icon={Flame} color="var(--lp-terra)" title="Habits & focus" body="Streaks, a year-long heatmap, and a focus timer that knows exactly when you'll be done." visual={<BentoHabits />} />
+        </Reveal>
+        <Reveal delay={140}>
+          <BentoCard icon={Target} color="var(--lp-violet)" title="Goals that track themselves" body="Tie a goal to who you're becoming; progress rolls up on its own." visual={<BentoGoal />} />
+        </Reveal>
+        <Reveal delay={70}>
+          <BentoCard icon={HeartPulse} color="var(--lp-sky)" title="Body & mind" body="Mood, energy, sleep, weight — charted into patterns you can act on." visual={<BentoMood />} />
+        </Reveal>
+        <Reveal delay={140}>
+          <BentoCard icon={Sparkles} color="var(--lp-violet)" title="AI that acts" body="Ask in plain words — it does the work and confirms, instead of just chatting." visual={<BentoAsk />} />
+        </Reveal>
+        <Reveal delay={210}>
+          <BentoCard icon={Music} color="var(--lp-terra)" title="Music, built in" body="Your YouTube Music, with a player that follows you across the app." visual={<BentoMusic />} />
+        </Reveal>
       </div>
     </section>
   );
