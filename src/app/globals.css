@@ -376,6 +376,16 @@ html[data-theme="system"] .life-shine {
   .tb-twinkle, .tb-colon, .tb-live { animation: none !important; }
 }
 
+/* vault — wrong-passcode shake */
+@keyframes vault-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-7px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(3px); }
+}
+.vault-shake { animation: vault-shake 0.4s ease-in-out; }
+
 input, textarea, select, button { font: inherit; }
 
 /* cmdk command palette — section headings + caret hint */

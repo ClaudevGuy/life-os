@@ -116,6 +116,20 @@ export type StoredNetWorthSnapshot = {
   updatedAt: Date;
 };
 
+/**
+ * An encrypted vault entry. Only `type` and timestamps are in the clear (for
+ * filtering/sorting); the title and all fields live inside `ct`, AES-GCM
+ * encrypted under the passcode-derived key. Never synced — local only.
+ */
+export type StoredVaultItem = {
+  id: string;
+  type: string; // login | card | note | codes | secret
+  iv: string;
+  ct: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 class LifeOSDB extends Dexie {
   items!: EntityTable<StoredItem, "id">;
   blobs!: EntityTable<StoredBlob, "id">;
@@ -123,6 +137,7 @@ class LifeOSDB extends Dexie {
   trash!: EntityTable<StoredTrash, "id">;
   dayNotes!: EntityTable<StoredDayNote, "date">;
   netWorthSnapshots!: EntityTable<StoredNetWorthSnapshot, "date">;
+  vault!: EntityTable<StoredVaultItem, "id">;
 
   constructor() {
     super("life-os");
@@ -161,6 +176,16 @@ class LifeOSDB extends Dexie {
       trash: "id, trashedAt, kind",
       dayNotes: "date, updatedAt",
       netWorthSnapshots: "date, updatedAt",
+    });
+    // v6: encrypted vault (local-only, never synced).
+    this.version(6).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
+      trash: "id, trashedAt, kind",
+      dayNotes: "date, updatedAt",
+      netWorthSnapshots: "date, updatedAt",
+      vault: "id, type, updatedAt",
     });
   }
 }
