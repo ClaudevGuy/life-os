@@ -230,10 +230,17 @@ function VaultCard({
   const secret = pf ? entry.data[pf] : null;
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="group text-left life-card p-4 hover:border-[var(--terra)]/40 transition relative overflow-hidden"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group text-left life-card p-4 hover:border-[var(--terra)]/40 transition relative overflow-hidden cursor-pointer focus:outline-none focus-visible:border-[var(--terra)]"
     >
       <div className="flex items-start gap-3">
         <span
@@ -260,7 +267,7 @@ function VaultCard({
           <SecretReveal value={secret} />
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
