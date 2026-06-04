@@ -8,6 +8,10 @@ import {
   Flame,
   ListTodo,
   Sparkles,
+  Sun,
+  Moon,
+  Sunrise,
+  Sunset,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/store/db";
@@ -39,30 +43,9 @@ const EMPTY: Stats = {
 };
 
 export function TopBar() {
-  const [now, setNow] = useState<Date | null>(null);
   const [askOpen, setAskOpen] = useState(false);
 
-  useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(t);
-  }, []);
-
   const stats = useLiveQuery(async () => computeStats(await db.items.toArray())) ?? EMPTY;
-
-  const timeLabel = now
-    ? now.toLocaleTimeString(undefined, {
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : "";
-  const dateLabel = now
-    ? now.toLocaleDateString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      })
-    : "";
 
   return (
     <div className="sticky top-0 z-10 pl-3 sm:pl-[22px] pr-[14px] py-[14px] border-b border-[var(--line)] bg-[var(--paper)]/85 backdrop-blur flex items-center gap-2 sm:gap-[10px]">
@@ -124,10 +107,14 @@ export function TopBar() {
         <button
           type="button"
           onClick={() => setAskOpen(true)}
-          className="focus-hide inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] text-[13px] font-medium leading-none text-[var(--ink)] hover:text-[var(--terra)] hover:border-[var(--terra)] transition"
+          className="focus-hide inline-flex items-center gap-1.5 h-[30px] px-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] text-[13px] font-medium leading-none text-[var(--ink)] hover:text-[var(--terra)] hover:border-[var(--terra)] hover:-translate-y-px hover:shadow-[0_2px_10px_var(--accent-glow)] active:translate-y-0 transition"
           title="Ask my notes"
         >
-          <Sparkles size={13} className="text-[var(--terra)]" strokeWidth={1.6} />
+          <Sparkles
+            size={13}
+            className="text-[var(--terra)] tb-twinkle"
+            strokeWidth={1.6}
+          />
           <span
             className="text-[13px] font-medium leading-none"
             style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
@@ -137,16 +124,7 @@ export function TopBar() {
         </button>
         <PomodoroPill />
         <ThemeToggle />
-        {now && (
-          <div className="hidden sm:flex flex-col items-end justify-center h-[30px] px-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] leading-none">
-            <span className="text-[11px] tabular-nums text-[var(--ink)] font-mono tracking-[0.04em]">
-              {timeLabel}
-            </span>
-            <span className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-[var(--muted)]">
-              {dateLabel}
-            </span>
-          </div>
-        )}
+        <LiveClock />
       </div>
 
       <AskPopover open={askOpen} onClose={() => setAskOpen(false)} />
@@ -180,11 +158,75 @@ function Pill({
     <Link
       href={href}
       title={title}
-      className={`inline-flex items-center gap-1.5 rounded-[10px] border px-2.5 h-[30px] text-[11.5px] font-medium tabular-nums transition whitespace-nowrap ${toneClass}`}
+      className={`inline-flex items-center gap-1.5 rounded-[10px] border px-2.5 h-[30px] text-[11.5px] font-medium tabular-nums transition hover:-translate-y-px active:translate-y-0 whitespace-nowrap ${toneClass}`}
     >
       <Icon size={12} />
       {label}
     </Link>
+  );
+}
+
+/**
+ * A self-contained live clock: ticks every second (so the colon can blink and
+ * the time stays honest) without re-rendering the rest of the bar. The glyph
+ * tracks the real time of day — sunrise, sun, sunset, moon.
+ */
+function LiveClock() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!now) {
+    return (
+      <div className="hidden sm:block w-[96px] h-[30px] rounded-[10px] border border-[var(--line)] bg-[var(--paper)]" />
+    );
+  }
+
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  const mm = String(m).padStart(2, "0");
+  const ampm = h < 12 ? "AM" : "PM";
+  const dateLabel = now.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+
+  const Glyph =
+    h < 6 ? Moon : h < 8 ? Sunrise : h < 18 ? Sun : h < 21 ? Sunset : Moon;
+  const glyphColor =
+    h < 6 || h >= 21
+      ? "#8FA6C8"
+      : h < 8
+        ? "#E59A6B"
+        : h < 18
+          ? "#E0A94A"
+          : "#D9764F";
+
+  return (
+    <div className="hidden sm:flex items-center gap-2 h-[30px] pl-2.5 pr-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] hover:border-[var(--terra)]/40 transition-colors">
+      <Glyph
+        size={13}
+        strokeWidth={1.7}
+        style={{ color: glyphColor }}
+        className="shrink-0"
+      />
+      <div className="flex flex-col items-end justify-center leading-none">
+        <span className="text-[11.5px] tabular-nums text-[var(--ink)] font-mono tracking-[0.03em]">
+          {hh}
+          <span className="tb-colon">:</span>
+          {mm}
+          <span className="ml-1 text-[9px] text-[var(--muted)]">{ampm}</span>
+        </span>
+        <span className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-[var(--muted)]">
+          {dateLabel}
+        </span>
+      </div>
+    </div>
   );
 }
 

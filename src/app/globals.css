@@ -353,6 +353,29 @@ html[data-theme="system"] .life-shine {
   animation: eq-bounce 0.9s ease-in-out infinite;
 }
 
+/* top bar — subtle signs of life */
+@keyframes tb-twinkle {
+  0%, 100% { opacity: 0.7; transform: scale(1) rotate(0deg); }
+  50%      { opacity: 1; transform: scale(1.18) rotate(10deg); }
+}
+.tb-twinkle { animation: tb-twinkle 2.8s ease-in-out infinite; transform-origin: center; }
+
+@keyframes tb-blink {
+  0%, 42%   { opacity: 1; }
+  58%, 100% { opacity: 0.25; }
+}
+.tb-colon { animation: tb-blink 1s step-end infinite; }
+
+@keyframes tb-breathe {
+  0%, 100% { opacity: 0.5; transform: scale(0.85); }
+  50%      { opacity: 1; transform: scale(1); }
+}
+.tb-live { animation: tb-breathe 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-twinkle, .tb-colon, .tb-live { animation: none !important; }
+}
+
 input, textarea, select, button { font: inherit; }
 
 /* cmdk command palette — section headings + caret hint */
