@@ -4,6 +4,8 @@
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black) ![React](https://img.shields.io/badge/React-19-149eca) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6) ![IndexedDB](https://img.shields.io/badge/storage-IndexedDB-f0a868)
 
+**🌐 Landing page:** <!-- LANDING_URL -->_not deployed yet_<!-- /LANDING_URL --> — a futuristic marketing site, deployed from [`marketing/`](marketing/). The app itself is **never deployed**; it stays local-first on your machine.
+
 ---
 
 ## What this is
