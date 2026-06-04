@@ -157,6 +157,13 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
+/* sticky nav — opaque enough that scrolling content never bleeds through */
+.lp-nav {
+  background: rgba(8, 8, 16, 0.85);
+  border-bottom: 1px solid var(--lp-line);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
 .lp-card {
   position: relative;
   background:

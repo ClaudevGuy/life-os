@@ -526,13 +526,30 @@ function Logo() {
   return (
     <span className="inline-flex items-center gap-2.5">
       <span
-        className="grid place-items-center w-8 h-8 rounded-[9px] text-white"
+        className="grid place-items-center shrink-0 overflow-hidden"
         style={{
-          background: "linear-gradient(135deg, var(--lp-terra), var(--lp-violet))",
-          boxShadow: "0 6px 20px -6px rgba(226,103,74,0.6)",
+          width: 30,
+          height: 30,
+          borderRadius: 8.4,
+          boxShadow:
+            "0 1px 2px rgba(20,12,0,0.28), 0 6px 16px -8px rgba(212,90,63,0.55)",
         }}
       >
-        <Sparkles size={16} />
+        <svg width={30} height={30} viewBox="0 0 32 32" aria-hidden>
+          <rect width="32" height="32" fill="#D45A3F" />
+          <g
+            fill="none"
+            stroke="#FBF7EE"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M16 12.5 V25" />
+            <path d="M15.4 19 Q13.75 13.45 8 12.8 Q9.65 18.35 15.4 19 Z" />
+            <path d="M16.6 19 Q18.25 13.45 24 12.8 Q22.35 18.35 16.6 19 Z" />
+          </g>
+          <circle cx="16" cy="9.5" r="2.4" fill="#FBF7EE" />
+        </svg>
       </span>
       <span className="text-[17px] font-semibold tracking-[-0.02em]">
         Life<span style={{ color: "var(--lp-terra)" }}>·</span>OS
@@ -544,7 +561,7 @@ function Logo() {
 function Nav() {
   return (
     <nav className="sticky top-0 z-50">
-      <div className="lp-glass border-x-0 border-t-0">
+      <div className="lp-nav">
         <div className="max-w-6xl mx-auto px-5 sm:px-6 h-16 flex items-center justify-between">
           <Logo />
           <div className="hidden md:flex items-center gap-7 text-[14px]" style={{ color: "var(--lp-muted)" }}>
