@@ -1,0 +1,294 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Life OS — marketing landing. Self-contained, futuristic, dark. Everything is
+   scoped under .lp-root so it never touches the app's Studio theme.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.lp-root {
+  --lp-bg: #070710;
+  --lp-bg2: #0b0b18;
+  --lp-ink: #edecf5;
+  --lp-muted: #a6a4ba;
+  --lp-faint: #6f6d86;
+  --lp-line: rgba(255, 255, 255, 0.1);
+  --lp-line-2: rgba(255, 255, 255, 0.16);
+  --lp-terra: #e2674a;
+  --lp-gold: #e8c07a;
+  --lp-violet: #8b7cf0;
+  --lp-sky: #56b6e8;
+  --lp-card: rgba(255, 255, 255, 0.035);
+
+  position: relative;
+  min-height: 100vh;
+  background: var(--lp-bg);
+  color: var(--lp-ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+
+.lp-root *,
+.lp-root *::before,
+.lp-root *::after {
+  box-sizing: border-box;
+}
+
+/* ── ambient background ─────────────────────────────────────────────────── */
+
+.lp-blob {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(70px);
+  opacity: 0.55;
+  pointer-events: none;
+  will-change: transform;
+}
+.lp-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+  pointer-events: none;
+}
+.lp-noise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── motion ─────────────────────────────────────────────────────────────── */
+
+@keyframes lp-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -30px) scale(1.08); }
+  66% { transform: translate(-30px, 24px) scale(0.96); }
+}
+@keyframes lp-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes lp-float-slow {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-22px) rotate(0.5deg); }
+}
+@keyframes lp-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes lp-shimmer {
+  to { background-position: 200% center; }
+}
+@keyframes lp-spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes lp-pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+@keyframes lp-gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes lp-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes lp-rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lp-anim-drift { animation: lp-drift 18s ease-in-out infinite; }
+.lp-anim-float { animation: lp-float 6s ease-in-out infinite; }
+.lp-anim-float-slow { animation: lp-float-slow 9s ease-in-out infinite; }
+.lp-anim-spin { animation: lp-spin-slow 32s linear infinite; }
+.lp-hero-in > * { animation: lp-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.lp-hero-in > *:nth-child(1) { animation-delay: 0.05s; }
+.lp-hero-in > *:nth-child(2) { animation-delay: 0.15s; }
+.lp-hero-in > *:nth-child(3) { animation-delay: 0.25s; }
+.lp-hero-in > *:nth-child(4) { animation-delay: 0.35s; }
+.lp-hero-in > *:nth-child(5) { animation-delay: 0.45s; }
+
+/* scroll reveal */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: opacity, transform;
+}
+.lp-reveal.lp-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── type / text ────────────────────────────────────────────────────────── */
+
+.lp-grad {
+  background: linear-gradient(110deg, #fff 0%, var(--lp-gold) 42%, var(--lp-terra) 70%, var(--lp-violet) 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: lp-gradient-x 8s ease infinite;
+}
+.lp-grad-cool {
+  background: linear-gradient(110deg, var(--lp-sky), var(--lp-violet));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── surfaces ───────────────────────────────────────────────────────────── */
+
+.lp-glass {
+  background: var(--lp-card);
+  border: 1px solid var(--lp-line);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.lp-card {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  border: 1px solid var(--lp-line);
+  border-radius: 18px;
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.35s, box-shadow 0.35s;
+}
+.lp-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--lp-line-2);
+  box-shadow: 0 18px 50px -20px rgba(226, 103, 74, 0.4);
+}
+.lp-card-glow::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(120deg, transparent 30%, var(--lp-terra), var(--lp-violet), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.lp-card-glow:hover::before { opacity: 1; }
+
+/* buttons */
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: 12px;
+  padding: 13px 22px;
+  transition: transform 0.2s, box-shadow 0.3s, background 0.3s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lp-btn-primary {
+  color: #fff;
+  background: linear-gradient(100deg, var(--lp-terra), #d4823f);
+  background-size: 200% auto;
+  box-shadow: 0 10px 34px -10px rgba(226, 103, 74, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.lp-btn-primary:hover {
+  transform: translateY(-2px);
+  animation: lp-shimmer 1.4s linear infinite;
+  background-image: linear-gradient(100deg, var(--lp-terra), var(--lp-gold), var(--lp-terra));
+}
+.lp-btn-ghost {
+  color: var(--lp-ink);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--lp-line-2);
+}
+.lp-btn-ghost:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* chips / pills */
+.lp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--lp-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--lp-line);
+  white-space: nowrap;
+}
+
+/* hero spotlight follows the pointer */
+.lp-spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    340px circle at var(--lp-mx, 50%) var(--lp-my, 30%),
+    rgba(226, 103, 74, 0.16),
+    transparent 70%
+  );
+  transition: background 0.1s;
+}
+
+/* marquee */
+.lp-marquee {
+  display: flex;
+  width: max-content;
+  animation: lp-marquee 38s linear infinite;
+}
+.lp-marquee-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+/* perspective grid floor */
+.lp-floor {
+  position: absolute;
+  left: 50%;
+  bottom: -10%;
+  width: 200%;
+  height: 60%;
+  transform: translateX(-50%) perspective(420px) rotateX(62deg);
+  background-image:
+    linear-gradient(to right, rgba(139, 124, 240, 0.18) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 103, 74, 0.16) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 50% 70% at 50% 100%, #000, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse 50% 70% at 50% 100%, #000, transparent 72%);
+  pointer-events: none;
+}
+
+.lp-caret {
+  display: inline-block;
+  width: 9px;
+  height: 1.05em;
+  vertical-align: -2px;
+  margin-left: 2px;
+  background: var(--lp-terra);
+  animation: lp-blink 1s step-end infinite;
+}
+
+.lp-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lp-line-2), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-root * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .lp-reveal { opacity: 1; transform: none; }
+}
