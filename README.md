@@ -2,9 +2,9 @@
 
 > Capture, organize, and recall everything you care about — notes, tasks, projects, people, daily journals — in one place. **Local-first**: every byte lives in your browser, never on someone else's server.
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black) ![React](https://img.shields.io/badge/React-19-149eca) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6) ![IndexedDB](https://img.shields.io/badge/storage-IndexedDB-f0a868)
+[![Live Demo](https://img.shields.io/badge/live%20demo-Vercel-000?logo=vercel)](https://life-os-tan-tau.vercel.app/) ![Next.js](https://img.shields.io/badge/Next.js-16-black) ![React](https://img.shields.io/badge/React-19-149eca) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6) ![IndexedDB](https://img.shields.io/badge/storage-IndexedDB-f0a868)
 
-**🌐 Landing page:** <!-- LANDING_URL -->_not deployed yet_<!-- /LANDING_URL --> — a futuristic marketing site, deployed from [`marketing/`](marketing/). The app itself is **never deployed**; it stays local-first on your machine.
+**🌐 Landing page:** <!-- LANDING_URL -->[**life-os-tan-tau.vercel.app**](https://life-os-tan-tau.vercel.app/)<!-- /LANDING_URL --> — a futuristic marketing site, deployed from [`marketing/`](marketing/). The app itself is **never deployed**; it stays local-first on your machine.
 
 ---
 
