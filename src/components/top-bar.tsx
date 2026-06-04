@@ -20,6 +20,7 @@ import { SearchTrigger } from "@/components/search-trigger";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PomodoroPill } from "@/components/pomodoro-pill";
 import { AskPopover } from "@/components/ask-popover";
+import { greetingFor, timeOfDay } from "@/lib/time-of-day";
 import { ymd } from "@/lib/ymd";
 
 type Stats = {
@@ -48,7 +49,13 @@ export function TopBar() {
   const stats = useLiveQuery(async () => computeStats(await db.items.toArray())) ?? EMPTY;
 
   return (
-    <div className="sticky top-0 z-10 pl-3 sm:pl-[22px] pr-[14px] py-[14px] border-b border-[var(--line)] bg-[var(--paper)]/85 backdrop-blur flex items-center gap-2 sm:gap-[10px]">
+    <div
+      className="sticky top-0 z-10 pl-3 sm:pl-[22px] pr-[14px] py-[14px] border-b border-[var(--line)] backdrop-blur flex items-center gap-2 sm:gap-[10px]"
+      style={{
+        background:
+          "linear-gradient(100deg, color-mix(in oklch, var(--terra) 7%, transparent) 0%, transparent 26%, transparent 74%, color-mix(in oklch, var(--gold) 6%, transparent) 100%), color-mix(in oklch, var(--paper) 86%, transparent)",
+      }}
+    >
       <SidebarToggle />
 
       {/* Search — flexes */}
@@ -87,14 +94,10 @@ export function TopBar() {
           />
         )}
         {stats.habitsTotal > 0 && (
-          <Pill
-            href="/habits"
-            tone={stats.bestStreak > 2 ? "fire" : "default"}
-            icon={Flame}
-            label={`${stats.habitsDone}/${stats.habitsTotal}${
-              stats.bestStreak > 0 ? ` · ${stats.bestStreak}🔥` : ""
-            }`}
-            title="Today's habits"
+          <HabitsPill
+            done={stats.habitsDone}
+            total={stats.habitsTotal}
+            streak={stats.bestStreak}
           />
         )}
       </div>
@@ -166,10 +169,93 @@ function Pill({
   );
 }
 
+/** Habits pill with a little completion ring + a flame for the streak. */
+function HabitsPill({
+  done,
+  total,
+  streak,
+}: {
+  done: number;
+  total: number;
+  streak: number;
+}) {
+  const allDone = total > 0 && done >= total;
+  const ringColor = allDone ? "var(--gold)" : "var(--terra)";
+  const tone =
+    allDone || streak > 2
+      ? "bg-[var(--gold-tint)] text-[var(--gold)] border-[var(--gold)]/30"
+      : "bg-[var(--paper)] text-[var(--ink-2)] border-[var(--line)] hover:border-[var(--terra)] hover:text-[var(--terra)]";
+  return (
+    <Link
+      href="/habits"
+      title="Today's habits"
+      className={`inline-flex items-center gap-1.5 rounded-[10px] border pl-1.5 pr-2.5 h-[30px] text-[11.5px] font-medium tabular-nums transition hover:-translate-y-px active:translate-y-0 whitespace-nowrap ${tone}`}
+    >
+      <MiniRing done={done} total={total} color={ringColor} />
+      <span>
+        {done}/{total}
+      </span>
+      {streak > 0 && (
+        <span className="inline-flex items-center gap-0.5">
+          <span className="opacity-30">·</span>
+          <Flame
+            size={11}
+            className="text-[var(--gold)]"
+            fill="var(--gold)"
+            strokeWidth={1.4}
+          />
+          {streak}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function MiniRing({
+  done,
+  total,
+  color,
+}: {
+  done: number;
+  total: number;
+  color: string;
+}) {
+  const size = 16;
+  const stroke = 2.5;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = total > 0 ? Math.min(1, done / total) : 0;
+  return (
+    <svg width={size} height={size} className="-rotate-90 shrink-0" aria-hidden>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={`color-mix(in oklch, ${color} 22%, transparent)`}
+        strokeWidth={stroke}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={c * (1 - pct)}
+        style={{ transition: "stroke-dashoffset 0.5s ease" }}
+      />
+    </svg>
+  );
+}
+
 /**
  * A self-contained live clock: ticks every second (so the colon can blink and
  * the time stays honest) without re-rendering the rest of the bar. The glyph
- * tracks the real time of day — sunrise, sun, sunset, moon.
+ * tracks the real time of day — sunrise, sun, sunset, moon — and hovering
+ * reveals a greeting.
  */
 function LiveClock() {
   const [now, setNow] = useState<Date | null>(null);
@@ -195,6 +281,12 @@ function LiveClock() {
     month: "short",
     day: "numeric",
   });
+  const fullDate = now.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  const greeting = greetingFor(timeOfDay(now));
 
   const Glyph =
     h < 6 ? Moon : h < 8 ? Sunrise : h < 18 ? Sun : h < 21 ? Sunset : Moon;
@@ -208,23 +300,45 @@ function LiveClock() {
           : "#D9764F";
 
   return (
-    <div className="hidden sm:flex items-center gap-2 h-[30px] pl-2.5 pr-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] hover:border-[var(--terra)]/40 transition-colors">
-      <Glyph
-        size={13}
-        strokeWidth={1.7}
-        style={{ color: glyphColor }}
-        className="shrink-0"
-      />
-      <div className="flex flex-col items-end justify-center leading-none">
-        <span className="text-[11.5px] tabular-nums text-[var(--ink)] font-mono tracking-[0.03em]">
-          {hh}
-          <span className="tb-colon">:</span>
-          {mm}
-          <span className="ml-1 text-[9px] text-[var(--muted)]">{ampm}</span>
-        </span>
-        <span className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-[var(--muted)]">
-          {dateLabel}
-        </span>
+    <div className="relative group hidden sm:block">
+      <div className="flex items-center gap-2 h-[30px] pl-2.5 pr-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] group-hover:border-[var(--terra)]/40 transition-colors cursor-default">
+        <Glyph
+          size={13}
+          strokeWidth={1.7}
+          style={{ color: glyphColor }}
+          className="shrink-0"
+        />
+        <div className="flex flex-col items-end justify-center leading-none">
+          <span className="text-[11.5px] tabular-nums text-[var(--ink)] font-mono tracking-[0.03em]">
+            {hh}
+            <span className="tb-colon">:</span>
+            {mm}
+            <span className="ml-1 text-[9px] text-[var(--muted)]">{ampm}</span>
+          </span>
+          <span className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-[var(--muted)]">
+            {dateLabel}
+          </span>
+        </div>
+      </div>
+
+      {/* Hover greeting */}
+      <div
+        className="pointer-events-none absolute right-0 top-full mt-2 px-3.5 py-2.5 rounded-[12px] border border-[var(--line-2)] bg-[var(--paper)] opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 whitespace-nowrap z-50"
+        style={{ boxShadow: "var(--shadow-2)" }}
+      >
+        <div
+          className="text-[14px] font-semibold tracking-[-0.01em]"
+          style={{
+            background:
+              "linear-gradient(120deg, var(--terra) 0%, var(--gold) 100%)",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          {greeting}
+        </div>
+        <div className="mt-0.5 text-[11px] text-[var(--muted)]">{fullDate}</div>
       </div>
     </div>
   );
