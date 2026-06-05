@@ -21,6 +21,18 @@ import {
   clearGuard,
 } from "@/lib/vault/crypto";
 import type { VaultEntry, VaultType } from "@/lib/vault/types";
+import {
+  type AiCreds,
+  getCreds,
+  setCreds,
+  isAiKeyVaultLocked,
+  hydrateAiKeyFromVault,
+  dropAiKeyRuntime,
+  writeSecuredCreds,
+  revertToPlaintext,
+  reencryptSecured,
+  clearSecured,
+} from "@/lib/ai-key";
 
 type VaultCtx = {
   ready: boolean;
@@ -35,6 +47,16 @@ type VaultCtx = {
   changePasscode: (oldP: string, newP: string) => Promise<boolean>;
   resetVault: () => Promise<void>;
   setAppLock: (on: boolean) => void;
+  /** Whether the AI API key is encrypted under the vault passcode. */
+  aiKeyLocked: boolean;
+  /** Encrypt the saved AI key under the vault (requires the vault unlocked). */
+  secureAiKey: () => Promise<boolean>;
+  /** Move the AI key back to plaintext storage (requires the vault unlocked). */
+  unsecureAiKey: () => Promise<boolean>;
+  /** Save new AI creds while in locked mode (re-encrypts under the vault). */
+  saveSecuredAiCreds: (creds: AiCreds) => Promise<boolean>;
+  /** Forget the AI key everywhere (plaintext + sealed). */
+  forgetAiKey: () => void;
   addItem: (
     type: VaultType,
     title: string,
@@ -63,10 +85,12 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [sessionUnlocked, setSessionUnlocked] = useState(false);
   const [key, setKey] = useState<CryptoKey | null>(null);
   const [items, setItems] = useState<VaultEntry[] | null>(null);
+  const [aiKeyLocked, setAiKeyLocked] = useState(false);
 
   useEffect(() => {
     setHasPasscode(hasGuard());
     setAppLockEnabled(readAppLock());
+    setAiKeyLocked(isAiKeyVaultLocked());
     setReady(true);
   }, []);
 
@@ -111,6 +135,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const unlock = useCallback(async (pass: string) => {
     const k = await verifyPasscode(pass);
     if (!k) return false;
+    await hydrateAiKeyFromVault(k); // decrypt the sealed AI key into memory
     setKey(k);
     setSessionUnlocked(true);
     return true;
@@ -118,6 +143,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
 
   const setup = useCallback(async (pass: string) => {
     const k = await createGuard(pass);
+    await hydrateAiKeyFromVault(k);
     setKey(k);
     setHasPasscode(true);
     setSessionUnlocked(true);
@@ -128,6 +154,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     setKey(null);
     setSessionUnlocked(false);
     setItems(null);
+    dropAiKeyRuntime(); // forget the in-memory AI key
   }, []);
 
   const setAppLock = useCallback((on: boolean) => {
@@ -149,6 +176,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
         /* leave entries we can't re-encrypt */
       }
     }
+    await reencryptSecured(oldKey, newKey); // keep the sealed AI key in sync
     setKey(newKey);
     setSessionUnlocked(true);
     return true;
@@ -158,11 +186,13 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     await db.vault.clear();
     clearGuard();
     writeAppLock(false);
+    clearSecured(); // the sealed AI key is unrecoverable without the passcode
     setKey(null);
     setItems(null);
     setHasPasscode(false);
     setSessionUnlocked(false);
     setAppLockEnabled(false);
+    setAiKeyLocked(false);
   }, []);
 
   const addItem = useCallback(
@@ -195,6 +225,39 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     await db.vault.delete(id);
   }, []);
 
+  // ── AI key under the vault ──────────────────────────────────────────────
+  const secureAiKey = useCallback(async () => {
+    if (!key) return false;
+    const creds = getCreds();
+    if (!creds) return false;
+    const ok = await writeSecuredCreds(key, creds);
+    if (ok) setAiKeyLocked(true);
+    return ok;
+  }, [key]);
+
+  const unsecureAiKey = useCallback(async () => {
+    if (!key) return false;
+    const ok = await revertToPlaintext(key);
+    if (ok) setAiKeyLocked(false);
+    return ok;
+  }, [key]);
+
+  const saveSecuredAiCreds = useCallback(
+    async (creds: AiCreds) => {
+      if (!key) return false;
+      const ok = await writeSecuredCreds(key, creds);
+      if (ok) setAiKeyLocked(true);
+      return ok;
+    },
+    [key],
+  );
+
+  const forgetAiKey = useCallback(() => {
+    setCreds(null);
+    clearSecured();
+    setAiKeyLocked(false);
+  }, []);
+
   const appLocked = ready && appLockEnabled && hasPasscode && !sessionUnlocked;
 
   const value = useMemo<VaultCtx>(
@@ -211,6 +274,11 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       changePasscode,
       resetVault,
       setAppLock,
+      aiKeyLocked,
+      secureAiKey,
+      unsecureAiKey,
+      saveSecuredAiCreds,
+      forgetAiKey,
       addItem,
       editItem,
       removeItem,
@@ -228,6 +296,11 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       changePasscode,
       resetVault,
       setAppLock,
+      aiKeyLocked,
+      secureAiKey,
+      unsecureAiKey,
+      saveSecuredAiCreds,
+      forgetAiKey,
       addItem,
       editItem,
       removeItem,

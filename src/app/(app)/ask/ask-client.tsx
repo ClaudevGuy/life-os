@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import { Send, Sparkles, RefreshCw, Wand2 } from "lucide-react";
 import {
   useAskChat,
   TurnView,
   AskSuggestions,
 } from "@/components/ask-chat";
+import { aiKeyState } from "@/lib/ai-key";
 
 export function AskClient() {
   const { turns, streaming, ask } = useAskChat();
@@ -19,6 +21,10 @@ export function AskClient() {
 
   function submit(question: string) {
     if (!question.trim() || streaming) return;
+    if (aiKeyState() === "sealed") {
+      toast.error("Unlock your vault to use AI (Settings → AI).");
+      return;
+    }
     setQ("");
     void ask(question);
   }

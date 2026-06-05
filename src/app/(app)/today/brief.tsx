@@ -4,13 +4,17 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Sparkles, RefreshCw, Newspaper } from "lucide-react";
 import { db } from "@/lib/store/db";
-import { aiHeaders } from "@/lib/ai-key";
+import { aiHeaders, aiKeyState } from "@/lib/ai-key";
 
 export function Brief({ recentCount }: { recentCount: number }) {
   const [brief, setBrief] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function generate() {
+    if (aiKeyState() === "sealed") {
+      toast.error("Unlock your vault to use AI (Settings → AI).");
+      return;
+    }
     setLoading(true);
     try {
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
