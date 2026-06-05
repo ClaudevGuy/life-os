@@ -51,6 +51,7 @@ import {
   nextChargeLabel,
 } from "@/lib/subscriptions";
 import { CryptoCard, StocksCard } from "@/components/market-widgets";
+import { UsdCard } from "./usd-card";
 import { ymd } from "@/lib/ymd";
 import { Donut, Sparkline } from "./charts";
 import { NewAccountButton, AccountModal } from "./account-modal";
@@ -425,6 +426,9 @@ export default function FinancePage() {
           />
         </>
       )}
+
+      {/* US Dollar (DXY) */}
+      <UsdCard />
 
       {/* Markets reference */}
       <div>
