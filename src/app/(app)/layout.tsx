@@ -8,6 +8,7 @@ import { TopBar } from "@/components/top-bar";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { PersistBootstrap } from "@/components/persist-bootstrap";
 import { SyncBootstrap } from "@/components/sync-bootstrap";
+import { PwaBootstrap } from "@/components/pwa-bootstrap";
 import { LogoMark } from "@/components/logo-mark";
 import { MusicProvider } from "@/components/music-player";
 import { VaultProvider } from "@/components/vault/vault-provider";
@@ -83,6 +84,7 @@ export default function AppLayout({
       <KeyboardShortcuts />
       <PersistBootstrap />
       <SyncBootstrap />
+      <PwaBootstrap />
       <AppLockGate />
     </div>
     </VaultProvider>

@@ -1,13 +1,14 @@
 {
   "name": "Life OS",
   "short_name": "Life OS",
-  "description": "Capture, organize, and recall everything you care about — local-first.",
+  "description": "The operating system for your whole life — local-first.",
   "start_url": "/today",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#F6F1E8",
   "theme_color": "#D45A3F",
+  "categories": ["productivity", "lifestyle"],
   "icons": [
     {
       "src": "/icon.svg",
@@ -21,5 +22,20 @@
       "sizes": "any",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    { "name": "Today", "url": "/today" },
+    { "name": "Ask my notes", "url": "/ask" },
+    { "name": "Daily brief", "url": "/brief" }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

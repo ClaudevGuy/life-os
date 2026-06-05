@@ -1,0 +1,108 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Bell, BellOff } from "lucide-react";
+import { toast } from "sonner";
+import {
+  notifySupported,
+  notifyPermission,
+  requestNotifyPermission,
+  notifyEnabled,
+  setNotifyEnabled,
+  testNotification,
+} from "@/lib/notify";
+
+export function NotificationsSection() {
+  const [mounted, setMounted] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [perm, setPerm] = useState<NotificationPermission>("default");
+
+  useEffect(() => {
+    setMounted(true);
+    setEnabled(notifyEnabled());
+    setPerm(notifyPermission());
+  }, []);
+
+  async function toggle() {
+    if (!notifySupported()) {
+      toast.error("This browser doesn't support notifications");
+      return;
+    }
+    if (enabled) {
+      setNotifyEnabled(false);
+      setEnabled(false);
+      return;
+    }
+    let p = notifyPermission();
+    if (p !== "granted") p = await requestNotifyPermission();
+    setPerm(p);
+    if (p === "granted") {
+      setNotifyEnabled(true);
+      setEnabled(true);
+      toast.success("Notifications on");
+    } else {
+      toast.error("Permission denied — allow notifications in your browser.");
+    }
+  }
+
+  if (!mounted) return null;
+  const supported = notifySupported();
+
+  return (
+    <div className="life-card divide-y divide-[var(--border-soft)] overflow-hidden">
+      <div className="px-4 py-3 flex items-center gap-3">
+        <span className="shrink-0 text-[var(--accent)]">
+          {enabled ? <Bell size={15} /> : <BellOff size={15} />}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium">Reminders &amp; nudges</div>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">
+            Get notified when a reminder comes due, a subscription renews,
+            it&apos;s someone&apos;s birthday, or habits are still pending —
+            while Life OS is open.
+          </p>
+          {!supported && (
+            <p className="text-xs text-[var(--bad)] mt-1">
+              Not supported in this browser.
+            </p>
+          )}
+          {supported && perm === "denied" && (
+            <p className="text-xs text-[var(--bad)] mt-1">
+              Blocked — allow notifications from your browser&apos;s address bar.
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          onClick={toggle}
+          disabled={!supported}
+          className="relative w-[44px] h-[26px] rounded-full transition-colors shrink-0 disabled:opacity-40"
+          style={{ background: enabled ? "var(--accent)" : "var(--border-strong)" }}
+        >
+          <span
+            className="absolute top-[3px] w-5 h-5 rounded-full bg-white transition-[left] duration-200"
+            style={{ left: enabled ? 21 : 3, boxShadow: "0 1px 3px rgba(0,0,0,0.25)" }}
+          />
+        </button>
+      </div>
+
+      {enabled && (
+        <button
+          type="button"
+          onClick={() => testNotification()}
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-card-hover)] transition text-left"
+        >
+          <Bell size={14} className="text-[var(--text-faint)]" />
+          <div className="flex-1">
+            <div className="text-sm font-medium">Send a test notification</div>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              Make sure it comes through.
+            </p>
+          </div>
+        </button>
+      )}
+    </div>
+  );
+}

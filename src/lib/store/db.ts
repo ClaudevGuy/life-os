@@ -120,6 +120,9 @@ export type StoredNetWorthSnapshot = {
  * A daily health check-in, keyed by YYYY-MM-DD (one row per day). Weight is
  * always stored in kg; the UI converts for display.
  */
+/** Small key/value store for app-level settings (e.g. the backup folder handle). */
+export type StoredKV = { key: string; value: unknown };
+
 export type StoredHealthLog = {
   date: string; // YYYY-MM-DD (primary key)
   mood?: number; // 1–5
@@ -155,6 +158,7 @@ class LifeOSDB extends Dexie {
   netWorthSnapshots!: EntityTable<StoredNetWorthSnapshot, "date">;
   vault!: EntityTable<StoredVaultItem, "id">;
   healthLogs!: EntityTable<StoredHealthLog, "date">;
+  appKV!: EntityTable<StoredKV, "key">;
 
   constructor() {
     super("life-os");
@@ -214,6 +218,18 @@ class LifeOSDB extends Dexie {
       netWorthSnapshots: "date, updatedAt",
       vault: "id, type, updatedAt",
       healthLogs: "date, updatedAt",
+    });
+    // v8: tiny key/value store for app settings (backup folder handle, etc.).
+    this.version(8).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
+      trash: "id, trashedAt, kind",
+      dayNotes: "date, updatedAt",
+      netWorthSnapshots: "date, updatedAt",
+      vault: "id, type, updatedAt",
+      healthLogs: "date, updatedAt",
+      appKV: "key",
     });
   }
 }

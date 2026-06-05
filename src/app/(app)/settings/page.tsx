@@ -4,6 +4,8 @@ import { DataSection } from "./data-section";
 import { TrashSection } from "./trash-section";
 import { AiKeySection } from "./ai-key-section";
 import { SyncSection } from "./sync-section";
+import { NotificationsSection } from "./notifications-section";
+import { BackupsSection } from "./backups-section";
 
 export const metadata = { title: "Settings · Life OS" };
 
@@ -27,6 +29,13 @@ export default function SettingsPage() {
 
       <section className="mt-10">
         <h2 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3">
+          Notifications
+        </h2>
+        <NotificationsSection />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3">
           AI
         </h2>
         <AiKeySection />
@@ -37,6 +46,13 @@ export default function SettingsPage() {
           Sync
         </h2>
         <SyncSection />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)] mb-3">
+          Backups
+        </h2>
+        <BackupsSection />
       </section>
 
       <section className="mt-10">
