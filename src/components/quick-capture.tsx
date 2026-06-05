@@ -17,6 +17,10 @@ import {
   Folder,
   MoreHorizontal,
   CornerDownLeft,
+  X,
+  Flag,
+  CalendarClock,
+  Hash,
 } from "lucide-react";
 import { parseNaturalDate, dateLabel } from "@/lib/natural-date";
 import { captureItem } from "@/lib/store/items";
@@ -38,16 +42,17 @@ const KIND_META: Record<
     label: string;
     icon: React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>;
     tint: string;
+    hint: string;
   }
 > = {
-  note: { label: "Note", icon: NotebookPen, tint: "var(--kind-note)" },
-  task: { label: "Task", icon: ListTodo, tint: "var(--kind-task)" },
-  person: { label: "Person", icon: Users, tint: "var(--kind-person)" },
-  highlight: { label: "Highlight", icon: Quote, tint: "var(--kind-highlight)" },
-  journal: { label: "Journal", icon: Sun, tint: "var(--kind-journal)" },
-  habit: { label: "Habit", icon: Flame, tint: "var(--kind-habit)" },
-  voice: { label: "Voice", icon: Mic, tint: "var(--kind-voice)" },
-  project: { label: "Project", icon: Folder, tint: "var(--kind-project)" },
+  note: { label: "Note", icon: NotebookPen, tint: "var(--kind-note)", hint: "Capture a thought — AI enriches it after" },
+  task: { label: "Task", icon: ListTodo, tint: "var(--kind-task)", hint: "Add a to-do — natural-language dates work" },
+  person: { label: "Person", icon: Users, tint: "var(--kind-person)", hint: "Add someone to your circle" },
+  highlight: { label: "Highlight", icon: Quote, tint: "var(--kind-highlight)", hint: "Save a quote worth keeping" },
+  journal: { label: "Journal", icon: Sun, tint: "var(--kind-journal)", hint: "Reflect on how the day went" },
+  habit: { label: "Habit", icon: Flame, tint: "var(--kind-habit)", hint: "Build a daily streak" },
+  voice: { label: "Voice", icon: Mic, tint: "var(--kind-voice)", hint: "Drop a quick voice memo" },
+  project: { label: "Project", icon: Folder, tint: "var(--kind-project)", hint: "Start something with an outcome" },
 };
 
 const PRIMARY: Kind[] = ["note", "task", "highlight", "project"];
@@ -64,37 +69,11 @@ export function QuickCapture() {
   const [body, setBody] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
+  const [pickedDue, setPickedDue] = useState<{ label: string; date: Date } | null>(null);
+  const [topic, setTopic] = useState("");
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null;
-      const inEditable =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable;
-      if (!inEditable && e.key === "c" && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault();
-        setOpen(true);
-      }
-      if (e.key === "Escape") setOpen(false);
-      if (open && (e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        e.preventDefault();
-        save();
-      }
-      // Alt+1..4 picks a primary kind without leaving the input
-      if (open && e.altKey && /^[1-4]$/.test(e.key)) {
-        e.preventDefault();
-        const idx = parseInt(e.key, 10) - 1;
-        if (PRIMARY[idx]) setKind(PRIMARY[idx]);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, title, body, kind, priority]);
 
   // Lazy-load project options from the local store
   useEffect(() => {
@@ -114,6 +93,8 @@ export function QuickCapture() {
     setBody("");
     setShowAll(false);
     setPriority("medium");
+    setPickedDue(null);
+    setTopic("");
     setProjectId(null);
     setOpen(false);
   }
@@ -123,6 +104,37 @@ export function QuickCapture() {
     [title, kind],
   );
   const cleanTitle = parsed ? parsed.title : title.trim();
+  const effectiveDue =
+    kind === "task" ? parsed?.date ?? pickedDue?.date ?? null : null;
+
+  const words = useMemo(() => {
+    const s = `${title} ${body}`.trim();
+    return s ? s.split(/\s+/).length : 0;
+  }, [title, body]);
+
+  const quickDue = useMemo(() => {
+    const base = new Date();
+    const mk = (addDays: number) => {
+      const d = new Date(base);
+      d.setHours(17, 0, 0, 0);
+      d.setDate(d.getDate() + addDays);
+      return d;
+    };
+    const weekend = (() => {
+      const d = new Date(base);
+      d.setHours(17, 0, 0, 0);
+      const off = ((6 - d.getDay()) + 7) % 7 || 7;
+      d.setDate(d.getDate() + off);
+      return d;
+    })();
+    return [
+      { label: "Today", date: mk(0) },
+      { label: "Tomorrow", date: mk(1) },
+      { label: "Weekend", date: weekend },
+      { label: "Next week", date: mk(7) },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   async function save() {
     if (!title.trim() && !body.trim()) {
@@ -134,7 +146,7 @@ export function QuickCapture() {
       if (kind === "task") {
         metadata.priority = priority;
         metadata.completedAt = null;
-        if (parsed) metadata.dueDate = parsed.date.toISOString();
+        if (effectiveDue) metadata.dueDate = effectiveDue.toISOString();
       }
       if (kind === "habit") {
         metadata.cadence = "daily";
@@ -150,6 +162,7 @@ export function QuickCapture() {
           kind,
           title: finalTitle || null,
           body: body.trim() || null,
+          topic: topic.trim().replace(/^#/, "") || null,
           metadata,
         });
       } catch {
@@ -162,8 +175,38 @@ export function QuickCapture() {
     });
   }
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const inEditable =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+      if (!inEditable && e.key === "c" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setOpen(true);
+      }
+      if (e.key === "Escape") reset();
+      if (open && (e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        save();
+      }
+      // Alt+1..4 picks a primary kind without leaving the input
+      if (open && e.altKey && /^[1-4]$/.test(e.key)) {
+        e.preventDefault();
+        const idx = parseInt(e.key, 10) - 1;
+        if (PRIMARY[idx]) setKind(PRIMARY[idx]);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, title, body, kind, priority, pickedDue, topic, projectId]);
+
   const activeMeta = KIND_META[kind];
   const ActiveIcon = activeMeta.icon;
+  const tint = activeMeta.tint;
+  const showProject = KIND_CAN_BE_LINKED.includes(kind) && projects.length > 0;
 
   return (
     <>
@@ -180,162 +223,198 @@ export function QuickCapture() {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 sm:p-6 bg-black/55 backdrop-blur-lg overflow-y-auto"
           onClick={reset}
         >
           <div
-            className="w-full max-w-lg rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-card)] shadow-2xl overflow-hidden life-rise"
+            className="w-full max-w-[548px] my-auto rounded-[22px] border border-[var(--line-2)] bg-[var(--paper)] overflow-hidden life-rise"
+            style={{ boxShadow: "var(--shadow-3)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Aurora header — base evening gradient + kind-tinted radial wash */}
-            <div className="relative h-32 overflow-hidden">
-              <div className="absolute inset-0 tod-evening" />
+            {/* Top accent line in the kind tint */}
+            <div
+              aria-hidden
+              className="h-1 w-full transition-[background] duration-500"
+              style={{
+                background: `linear-gradient(90deg, ${tint}, color-mix(in oklch, ${tint} 30%, transparent))`,
+              }}
+            />
+
+            {/* Header — compact, light, kind-tinted */}
+            <div className="relative px-5 pt-4 pb-3.5">
               <div
-                className="absolute inset-0 transition-[background] duration-500"
+                aria-hidden
+                className="absolute inset-0 pointer-events-none transition-[background] duration-500"
                 style={{
-                  background: `radial-gradient(ellipse 75% 65% at 50% 45%, color-mix(in oklch, ${activeMeta.tint} 70%, transparent) 0%, transparent 70%)`,
+                  background: `radial-gradient(130% 130% at 0% 0%, color-mix(in oklch, ${tint} 14%, transparent), transparent 55%)`,
                 }}
               />
-              <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[var(--bg-card)] via-[var(--bg-card)]/40 to-transparent" />
-              <div className="absolute inset-0 grid place-items-center">
-                <div
-                  className="grid place-items-center w-16 h-16 rounded-full bg-white/10 backdrop-blur-md transition-[box-shadow,border-color] duration-500"
-                  style={{
-                    border: `2px solid ${activeMeta.tint}b3`,
-                    boxShadow: `0 10px 30px -8px ${activeMeta.tint}cc, inset 0 1px 0 rgba(255,255,255,0.15)`,
-                  }}
-                >
-                  <ActiveIcon size={24} className="text-white" />
+              <div className="relative flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="grid place-items-center w-11 h-11 rounded-[14px] shrink-0 transition-[background,border-color] duration-500"
+                    style={{
+                      background: `color-mix(in oklch, ${tint} 15%, var(--paper))`,
+                      border: `1px solid color-mix(in oklch, ${tint} 32%, transparent)`,
+                    }}
+                  >
+                    <ActiveIcon size={20} style={{ color: tint }} />
+                  </div>
+                  <div>
+                    <div className="text-[15.5px] font-semibold text-[var(--ink)] leading-tight">
+                      New {activeMeta.label.toLowerCase()}
+                    </div>
+                    <div className="text-[12.5px] text-[var(--muted)] leading-snug mt-0.5">
+                      {activeMeta.hint}
+                    </div>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={reset}
+                  aria-label="Close"
+                  className="grid place-items-center w-8 h-8 rounded-full text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
+                >
+                  <X size={16} />
+                </button>
               </div>
             </div>
 
-            {/* Centered kind label */}
-            <div className="pt-3 pb-4 text-center">
-              <div
-                className="text-[11px] uppercase tracking-[0.22em] font-semibold transition-colors"
-                style={{ color: activeMeta.tint }}
-              >
-                New {activeMeta.label.toLowerCase()}
-              </div>
-            </div>
-
-            {/* Kind tabs — segmented pill */}
-            <div className="px-6 pb-3 flex justify-center">
-              <div className="inline-flex items-center gap-0.5 rounded-full bg-[var(--bg-rail)] border border-[var(--border-soft)] p-1 shadow-inner">
-                {PRIMARY.map((k, i) => (
-                  <KindTab
+            {/* Kind selector — tinted chips */}
+            <div className="px-5 pb-3 flex items-center gap-1.5 flex-wrap">
+              {(showAll ? [...PRIMARY, ...SECONDARY] : PRIMARY).map((k) => {
+                const si = PRIMARY.indexOf(k);
+                return (
+                  <KindChip
                     key={k}
                     kind={k}
                     active={kind === k}
                     onClick={() => setKind(k)}
-                    shortcut={i + 1}
+                    shortcut={si >= 0 ? si + 1 : undefined}
                   />
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setShowAll((v) => !v)}
-                  className={`grid place-items-center w-7 h-7 rounded-full transition ${
-                    showAll
-                      ? "bg-white/5 text-[var(--text)]"
-                      : "text-[var(--text-faint)] hover:text-[var(--text-muted)] hover:bg-white/5"
-                  }`}
-                  title={showAll ? "Fewer kinds" : "More kinds"}
-                  aria-label="More kinds"
-                >
-                  <MoreHorizontal size={13} />
-                </button>
-              </div>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setShowAll((v) => !v)}
+                className="inline-flex items-center gap-1 h-8 px-2.5 rounded-full text-[12.5px] font-medium text-[var(--muted)] hover:text-[var(--ink)] border border-[var(--line)] bg-[var(--paper)] hover:bg-[var(--paper-2)] transition"
+                title={showAll ? "Fewer kinds" : "More kinds"}
+              >
+                <MoreHorizontal size={14} />
+                {showAll ? "Less" : "More"}
+              </button>
             </div>
-            {showAll && (
-              <div className="px-6 pb-3 flex justify-center">
-                <div className="inline-flex items-center gap-0.5 rounded-full bg-[var(--bg-rail)]/60 border border-[var(--border-soft)] p-1 flex-wrap">
-                  {SECONDARY.map((k) => (
-                    <KindTab
-                      key={k}
-                      kind={k}
-                      active={kind === k}
-                      onClick={() => setKind(k)}
-                      small
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Title + Body combined input surface */}
-            <div className="px-6 pt-2 pb-4">
-              <div className="rounded-xl bg-[var(--bg-rail)] border border-[var(--border-soft)] focus-within:border-[var(--accent)] focus-within:shadow-[0_0_0_3px_var(--accent-glow)] transition-all overflow-hidden">
+            {/* Title + body surface */}
+            <div className="px-5 pb-3">
+              <div className="rounded-[14px] bg-[var(--paper)] border border-[var(--line-2)] focus-within:border-[var(--terra)] focus-within:shadow-[0_0_0_3px_var(--accent-glow)] transition-all overflow-hidden">
                 <input
                   autoFocus
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={placeholderForKind(kind)}
-                  className="qc-title w-full bg-transparent text-[18px] tracking-tight leading-snug placeholder:text-[var(--text-faint)] outline-none font-medium px-4 pt-3 pb-2 text-[var(--text)]"
+                  className="qc-title w-full bg-transparent text-[17px] tracking-tight leading-snug placeholder:text-[var(--muted-2)] outline-none font-medium px-4 pt-3 pb-2 text-[var(--ink)]"
                 />
-                <div className="h-px bg-[var(--border-soft)]/60 mx-4" />
+                <div className="h-px bg-[var(--line)] mx-4" />
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={4}
                   placeholder={bodyPlaceholderForKind(kind)}
-                  className="qc-body w-full bg-transparent text-[13.5px] leading-relaxed placeholder:text-[var(--text-faint)] outline-none resize-none text-[var(--text)] px-4 pt-2.5 pb-3"
+                  className="qc-body w-full bg-transparent text-[13.5px] leading-relaxed placeholder:text-[var(--muted-2)] outline-none resize-none text-[var(--ink-2)] px-4 pt-2.5 pb-3"
                 />
-              </div>
-              <div className="mt-2 px-1 flex items-center gap-3 text-[11px] text-[var(--text-faint)] min-h-[16px]">
-                {parsed && (
-                  <span className="inline-flex items-center gap-1 text-[var(--accent)]">
-                    📅 due {dateLabel(parsed.date)}
-                  </span>
-                )}
-                {!parsed && kind === "task" && (
-                  <span className="italic">
-                    Try “review proposal friday”, “call mom tomorrow”, “ship in 3 days”
-                  </span>
-                )}
               </div>
             </div>
 
-            {(kind === "task" ||
-              (KIND_CAN_BE_LINKED.includes(kind) && projects.length > 0)) && (
-              <div className="px-7 pb-4 flex items-center justify-center gap-4 flex-wrap">
-                {kind === "task" && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-                      Priority
-                    </span>
+            {/* Properties — aligned, contextual rows */}
+            <div className="px-5 pb-4 space-y-1">
+              {kind === "task" && (
+                <>
+                  <MetaRow icon={Flag} label="Priority">
                     <PrioritySelect value={priority} onChange={setPriority} />
-                  </div>
-                )}
-                {KIND_CAN_BE_LINKED.includes(kind) && projects.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-                      Project
-                    </span>
-                    <select
-                      value={projectId ?? ""}
-                      onChange={(e) => setProjectId(e.target.value || null)}
-                      className="rounded-full bg-[var(--bg-rail)] border border-[var(--border-soft)] text-xs px-3 py-1 text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                    >
-                      <option value="">— none —</option>
-                      {projects.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.title ?? "untitled"}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            )}
+                  </MetaRow>
+                  <MetaRow icon={CalendarClock} label="Due">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {quickDue.map((q) => {
+                        const on = !parsed && pickedDue?.label === q.label;
+                        return (
+                          <button
+                            key={q.label}
+                            type="button"
+                            onClick={() =>
+                              setPickedDue(on ? null : { label: q.label, date: q.date })
+                            }
+                            className="h-7 px-2.5 rounded-full text-[12px] border transition"
+                            style={
+                              on
+                                ? {
+                                    background: "color-mix(in oklch, var(--terra) 15%, var(--paper))",
+                                    borderColor: "color-mix(in oklch, var(--terra) 45%, transparent)",
+                                    color: "var(--terra)",
+                                  }
+                                : {
+                                    background: "var(--paper)",
+                                    borderColor: "var(--line)",
+                                    color: "var(--muted)",
+                                  }
+                            }
+                          >
+                            {q.label}
+                          </button>
+                        );
+                      })}
+                      {effectiveDue && (
+                        <span className="inline-flex items-center gap-1 text-[12px] text-[var(--terra)] ml-0.5">
+                          {dateLabel(effectiveDue)}
+                          {parsed && (
+                            <span className="text-[var(--muted-2)]">· from title</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </MetaRow>
+                </>
+              )}
+
+              <MetaRow icon={Hash} label="Topic">
+                <input
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="Optional — shows in your tag cloud"
+                  className="w-full bg-transparent text-[13px] h-7 outline-none text-[var(--ink)] placeholder:text-[var(--muted-2)]"
+                />
+              </MetaRow>
+
+              {showProject && (
+                <MetaRow icon={Folder} label="Project">
+                  <select
+                    value={projectId ?? ""}
+                    onChange={(e) => setProjectId(e.target.value || null)}
+                    className="h-8 rounded-full bg-[var(--paper)] border border-[var(--line)] text-[12.5px] px-3 text-[var(--ink-2)] focus:outline-none focus:border-[var(--terra)] max-w-full"
+                  >
+                    <option value="">— none —</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title ?? "untitled"}
+                      </option>
+                    ))}
+                  </select>
+                </MetaRow>
+              )}
+            </div>
 
             {/* Footer */}
-            <div className="px-6 py-3.5 flex items-center justify-between border-t border-[var(--border-soft)]">
-              <div className="inline-flex items-center gap-1.5 text-[10px] text-[var(--text-faint)]">
-                <Sparkles size={11} className="text-[var(--accent)]" />
-                AI enriches in the background
+            <div className="px-5 py-3 flex items-center justify-between gap-3 border-t border-[var(--line)] bg-[var(--paper-2)]/40">
+              <div className="inline-flex items-center gap-1.5 text-[11px] text-[var(--muted)] min-w-0">
+                <Sparkles size={12} className="text-[var(--terra)] shrink-0" />
+                <span className="truncate">AI enriches in the background</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 shrink-0">
+                {words > 0 && (
+                  <span className="text-[11px] tabular-nums text-[var(--muted-2)] hidden sm:inline">
+                    {words} {words === 1 ? "word" : "words"}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={reset}
@@ -348,9 +427,10 @@ export function QuickCapture() {
                   onClick={save}
                   disabled={pending}
                   className="life-btn life-btn-primary"
+                  title="Save · ⌘/Ctrl + Enter"
                 >
                   Save
-                  <kbd className="text-[10px] opacity-70 inline-flex items-center">
+                  <kbd className="ml-0.5 text-[10px] opacity-70 inline-flex items-center">
                     <CornerDownLeft size={11} />
                   </kbd>
                 </button>
@@ -363,17 +443,35 @@ export function QuickCapture() {
   );
 }
 
-function KindTab({
+function MetaRow({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 min-h-[36px]">
+      <div className="flex items-center gap-1.5 w-[80px] shrink-0 text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[var(--muted)]">
+        <Icon size={12} className="text-[var(--muted-2)]" />
+        {label}
+      </div>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function KindChip({
   kind,
   active,
   onClick,
-  small,
   shortcut,
 }: {
   kind: Kind;
   active: boolean;
   onClick: () => void;
-  small?: boolean;
   shortcut?: number;
 }) {
   const Icon = KIND_META[kind].icon;
@@ -387,26 +485,25 @@ function KindTab({
           ? `${KIND_META[kind].label} · alt+${shortcut}`
           : KIND_META[kind].label
       }
-      className={`relative inline-flex items-center gap-1.5 rounded-full transition-all ${
-        small ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-[12.5px] font-medium"
-      } ${
+      className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[12.5px] font-medium transition-all ${
         active
-          ? "text-zinc-950"
-          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-white/[0.04]"
+          ? "text-[var(--ink)]"
+          : "text-[var(--muted)] hover:text-[var(--ink)]"
       }`}
       style={
         active
           ? {
-              background: tint,
-              boxShadow: `0 4px 14px -4px ${tint}80`,
+              background: `color-mix(in oklch, ${tint} 18%, var(--paper))`,
+              border: `1px solid color-mix(in oklch, ${tint} 42%, transparent)`,
+              boxShadow: "var(--shadow-1)",
             }
-          : undefined
+          : {
+              background: "var(--paper)",
+              border: "1px solid var(--line)",
+            }
       }
     >
-      <Icon
-        size={small ? 11 : 13}
-        style={{ color: active ? undefined : tint }}
-      />
+      <Icon size={14} style={{ color: tint }} />
       {KIND_META[kind].label}
     </button>
   );
