@@ -13,6 +13,7 @@ import {
   Sparkles,
   Lock,
   LockKeyhole,
+  Unlock,
 } from "lucide-react";
 import {
   getCreds,
@@ -226,6 +227,19 @@ export function AiKeySection() {
     } else {
       toast.error("Wrong passcode");
     }
+  }
+
+  /** Re-seal: lock the vault so the key is encrypted-at-rest again. */
+  function lockNow() {
+    vault.lock();
+    toast.success("Vault locked");
+  }
+
+  /** Stop encrypting under the vault — store the key in plaintext again. */
+  async function removeVaultLock() {
+    const ok = await vault.unsecureAiKey();
+    if (ok) toast.success("Vault lock removed — key stored in plaintext");
+    else toast.error("Couldn't remove the lock");
   }
 
   const masked = saved
@@ -545,7 +559,39 @@ export function AiKeySection() {
                 </button>
               )}
             </div>
+          ) : vault.aiKeyLocked ? (
+            /* Locked mode, vault unlocked this session — offer to re-seal. */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-[var(--ink)] inline-flex items-center gap-1.5">
+                    <Unlock size={14} className="text-[var(--sage)]" />
+                    Vault unlocked this session
+                  </div>
+                  <p className="text-[12px] text-[var(--muted)] mt-0.5 leading-relaxed">
+                    Your AI key is decrypted in memory. Lock to seal it until you
+                    next unlock.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={lockNow}
+                  className="life-btn life-btn-sm life-btn-secondary shrink-0"
+                >
+                  <Lock size={13} strokeWidth={1.7} />
+                  Lock now
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={removeVaultLock}
+                className="text-[11.5px] text-[var(--muted)] hover:text-[var(--ink)] transition"
+              >
+                Remove vault lock — store the key in plaintext instead
+              </button>
+            </div>
           ) : (
+            /* Plaintext, vault unlocked — offer to lock. */
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-[13px] font-medium text-[var(--ink)] inline-flex items-center gap-1.5">
@@ -553,16 +599,11 @@ export function AiKeySection() {
                   Lock under vault password
                 </div>
                 <p className="text-[12px] text-[var(--muted)] mt-0.5 leading-relaxed">
-                  {vault.aiKeyLocked
-                    ? "Encrypted with your vault key — you unlock the vault each session to use AI."
-                    : "Encrypt the key so it's unreadable until you unlock your vault."}
+                  Encrypt the key so it&apos;s unreadable until you unlock your
+                  vault.
                 </p>
               </div>
-              <Switch
-                checked={vault.aiKeyLocked}
-                disabled={!vault.aiKeyLocked && !saved}
-                onChange={toggleLock}
-              />
+              <Switch checked={false} disabled={!saved} onChange={toggleLock} />
             </div>
           )}
         </div>
