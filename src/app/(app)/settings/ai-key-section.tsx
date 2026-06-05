@@ -350,12 +350,24 @@ export function AiKeySection() {
           </label>
           {saved && !editing && !replacing ? (
             vault.aiKeyLocked ? (
-              /* Locked: masked, read-only, NOT revealable. Replace = write-only. */
+              /* Vault unlocked this session: viewable (eye) but only replaceable. */
               <div className="flex items-center gap-2 mb-3">
                 <code className="font-mono text-[12px] text-[var(--muted)] bg-[var(--paper-2)] border border-[var(--line)] rounded-[10px] px-3 py-2 flex-1 inline-flex items-center gap-2 min-w-0">
                   <Lock size={12} className="text-[var(--terra)] shrink-0" />
-                  <span className="truncate">{masked}</span>
+                  <span className="truncate">{reveal ? saved.key : masked}</span>
                 </code>
+                <button
+                  type="button"
+                  onClick={() => setReveal((v) => !v)}
+                  className="grid place-items-center w-9 h-9 rounded-[8px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition shrink-0"
+                  aria-label={reveal ? "Hide" : "Reveal"}
+                >
+                  {reveal ? (
+                    <EyeOff size={14} strokeWidth={1.6} />
+                  ) : (
+                    <Eye size={14} strokeWidth={1.6} />
+                  )}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -363,7 +375,7 @@ export function AiKeySection() {
                     setReplacing(true);
                   }}
                   className="h-9 px-3 rounded-[8px] border border-[var(--line)] bg-[var(--paper)] text-[12px] font-medium text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition shrink-0"
-                  title="A locked key can't be revealed — replace it instead"
+                  title="Replace the key"
                 >
                   Replace
                 </button>
