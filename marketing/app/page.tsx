@@ -520,6 +520,7 @@ export default function Landing() {
       <Nav />
       <Hero />
       <Marquee />
+      <VideoSection />
       <Pillars />
       <Bento />
       <DeepDives />
@@ -573,6 +574,7 @@ function Nav() {
         <div className="max-w-6xl mx-auto px-5 sm:px-6 h-16 flex items-center justify-between">
           <Logo />
           <div className="hidden md:flex items-center gap-7 text-[14px]" style={{ color: "var(--lp-muted)" }}>
+            <a href="#video" className="hover:text-white transition-colors">Demo</a>
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#ai" className="hover:text-white transition-colors">AI</a>
             <a href="#private" className="hover:text-white transition-colors">Private</a>
@@ -780,6 +782,50 @@ function Marquee() {
         </div>
       </div>
     </div>
+  );
+}
+
+function VideoSection() {
+  return (
+    <section id="video" className="max-w-6xl mx-auto px-5 sm:px-6 py-20 sm:py-24">
+      <Reveal>
+        <SectionHead
+          kicker="See it in motion"
+          title={<>A minute inside <span className="lp-grad">Life OS.</span></>}
+          sub="Every tool, one private app — the whole thing in motion."
+        />
+      </Reveal>
+      <Reveal delay={90}>
+        <div className="mt-12 relative">
+          {/* ambient glow */}
+          <div
+            aria-hidden
+            className="absolute -inset-x-10 -top-10 -bottom-10 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(60% 60% at 50% 40%, rgba(139,124,240,0.22), transparent 70%)",
+              filter: "blur(20px)",
+            }}
+          />
+          <div
+            className="relative lp-card p-2 sm:p-2.5 overflow-hidden"
+            style={{ boxShadow: "0 50px 140px -50px rgba(139,124,240,0.6)" }}
+          >
+            <video
+              src="/life-os.mp4"
+              poster="/life-os-poster.jpg"
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="metadata"
+              className="w-full rounded-[14px] block aspect-video bg-black"
+            />
+          </div>
+        </div>
+      </Reveal>
+    </section>
   );
 }
 

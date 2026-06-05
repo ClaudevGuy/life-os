@@ -1,0 +1,24 @@
+{
+  "name": "life-os-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remotion marketing/intro video for Life OS",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render LifeOSIntro out/life-os.mp4 --image-format=jpeg --overwrite",
+    "still": "remotion still LifeOSIntro out/poster.jpg --frame=70 --image-format=jpeg --overwrite",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.0",
+    "lucide-react": "^0.460.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.0.0"
+  }
+}
