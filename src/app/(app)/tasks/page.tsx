@@ -42,34 +42,44 @@ export default function TasksPage() {
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto pg-enter">
-      <header className="mb-6">
-        <h1 className="life-h1 inline-flex items-center gap-2">
-          <ListTodo size={20} className="text-[var(--terra)]" strokeWidth={1.6} />
-          Tasks
-        </h1>
-        <p className="text-[14.5px] text-[var(--muted)] mt-1 max-w-xl">
-          What needs doing — with stakes, dates, and a clear definition of done.
-        </p>
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto pg-enter">
+      <header className="flex items-start justify-between gap-4 flex-wrap mb-6">
+        <div className="flex items-center gap-3.5">
+          <div
+            className="grid place-items-center w-12 h-12 rounded-[15px] shrink-0"
+            style={{
+              background: "color-mix(in oklch, var(--terra) 15%, var(--paper))",
+              border: "1px solid color-mix(in oklch, var(--terra) 32%, transparent)",
+            }}
+          >
+            <ListTodo size={22} strokeWidth={1.7} className="text-[var(--terra)]" />
+          </div>
+          <div>
+            <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[var(--ink)] leading-none">
+              Tasks
+            </h1>
+            <p className="text-[13.5px] text-[var(--muted)] mt-2 leading-none">
+              What needs doing — with stakes, dates, context, and subtasks.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <StatChip label="Open" value={open.length} tone="ink" />
+          <StatChip label="Overdue" value={overdue.length} tone="terra" />
+          <StatChip label="Due today" value={dueToday.length} tone="gold" />
+          <StatChip label="Done · 7d" value={doneThisWeek.length} tone="sage" />
+        </div>
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 life-stagger">
-        <Stat label="Open" value={open.length} tone="ink" />
-        <Stat label="Overdue" value={overdue.length} tone="terra" />
-        <Stat label="Due today" value={dueToday.length} tone="gold" />
-        <Stat label="Done this week" value={doneThisWeek.length} tone="sage" />
-      </div>
-
-      <div className="mt-4">
-        <NewTask />
-      </div>
+      <NewTask />
 
       <TasksView rows={rows} tab={tab} onTabChange={setTab} />
     </div>
   );
 }
 
-function Stat({
+function StatChip({
   label,
   value,
   tone,
@@ -82,21 +92,21 @@ function Stat({
     tone === "terra"
       ? "var(--terra)"
       : tone === "gold"
-      ? "var(--gold)"
-      : tone === "sage"
-      ? "var(--sage)"
-      : "var(--ink)";
+        ? "var(--gold)"
+        : tone === "sage"
+          ? "var(--sage)"
+          : "var(--ink)";
   return (
-    <div className="life-card p-5">
-      <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
-        {label}
-      </div>
-      <div
-        className="mt-2 text-[34px] font-semibold tabular-nums tracking-[-0.02em] leading-none"
+    <div className="inline-flex items-center gap-2 rounded-full bg-[var(--paper-2)] border border-[var(--line)] pl-3 pr-3.5 py-1.5">
+      <span
+        className="text-[16px] font-semibold tabular-nums leading-none"
         style={{ color }}
       >
         {value}
-      </div>
+      </span>
+      <span className="text-[10.5px] uppercase tracking-[0.1em] font-semibold text-[var(--muted)] leading-none">
+        {label}
+      </span>
     </div>
   );
 }
