@@ -136,7 +136,42 @@ function saveFired(f: { day: string; keys: string[] }): void {
   }
 }
 
-async function show(n: { title: string; body: string; tag?: string; url?: string }) {
+/** A service-worker registration with an ACTIVE worker, or null. */
+async function activeRegistration(
+  timeoutMs = 3000,
+): Promise<ServiceWorkerRegistration | null> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return null;
+  }
+  try {
+    let reg = await navigator.serviceWorker.getRegistration();
+    if (reg?.active) return reg;
+    // Register on demand if the bootstrap hasn't run yet.
+    if (!reg) reg = await navigator.serviceWorker.register("/sw.js");
+    // Wait for an active worker, but don't hang forever if it never activates.
+    const ready = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((res) => setTimeout(() => res(null), timeoutMs)),
+    ]);
+    if (ready?.active) return ready;
+    return reg?.active ? reg : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Show one notification. Prefers the service worker so a click can focus the
+ * app, and falls back to the page-level constructor when there's no active
+ * worker (e.g. desktop, first load). Throws if it genuinely can't display, so
+ * callers like the test button can report the reason instead of failing silent.
+ */
+async function show(n: {
+  title: string;
+  body: string;
+  tag?: string;
+  url?: string;
+}): Promise<void> {
   const opts: NotificationOptions = {
     body: n.body,
     tag: n.tag,
@@ -144,19 +179,13 @@ async function show(n: { title: string; body: string; tag?: string; url?: string
     icon: "/icon.svg",
     badge: "/icon.svg",
   };
-  try {
-    const reg =
-      "serviceWorker" in navigator
-        ? await navigator.serviceWorker.getRegistration()
-        : null;
-    if (reg && "showNotification" in reg) {
-      await reg.showNotification(n.title, opts);
-    } else {
-      new Notification(n.title, opts);
-    }
-  } catch {
-    /* ignore */
+  const reg = await activeRegistration();
+  if (reg?.active) {
+    await reg.showNotification(n.title, opts);
+    return;
   }
+  // No active worker — fall back to the constructor (desktop browsers).
+  new Notification(n.title, opts);
 }
 
 /** Fire any newly-due notifications (deduped within the day). */
@@ -168,17 +197,41 @@ export async function fireDue(items: StoredItem[]): Promise<void> {
   const due = dueNotifications(items);
   const fresh = due.filter((n) => !fired.keys.includes(n.key));
   for (const n of fresh) {
-    await show(n);
+    try {
+      await show(n);
+    } catch {
+      /* one failure shouldn't block the rest of the batch */
+    }
     fired.keys.push(n.key);
   }
   saveFired(fired);
 }
 
+/**
+ * Fire a test notification. Ensures permission first and throws a friendly,
+ * specific message on failure so the UI can tell the user what to fix.
+ */
 export async function testNotification(): Promise<void> {
-  await show({
-    title: "Life OS",
-    body: "Notifications are on — you'll be nudged about reminders, renewals and birthdays.",
-    tag: "test",
-    url: "/today",
-  });
+  if (!notifySupported()) {
+    throw new Error("This browser doesn't support notifications.");
+  }
+  let p = notifyPermission();
+  if (p === "default") p = await requestNotifyPermission();
+  if (p !== "granted") {
+    throw new Error(
+      "Notifications are blocked. Allow them for this site in your browser, then try again.",
+    );
+  }
+  try {
+    await show({
+      title: "Life OS",
+      body: "Notifications are on — you'll be nudged about reminders, renewals and birthdays.",
+      tag: "test",
+      url: "/today",
+    });
+  } catch {
+    throw new Error(
+      "Couldn't display the notification — your OS may be muting it (e.g. Windows Focus Assist / Do Not Disturb).",
+    );
+  }
 }

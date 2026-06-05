@@ -16,6 +16,7 @@ export function NotificationsSection() {
   const [mounted, setMounted] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [perm, setPerm] = useState<NotificationPermission>("default");
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -42,6 +43,23 @@ export function NotificationsSection() {
       toast.success("Notifications on");
     } else {
       toast.error("Permission denied — allow notifications in your browser.");
+    }
+  }
+
+  async function sendTest() {
+    setSending(true);
+    try {
+      await testNotification();
+      setPerm(notifyPermission());
+      toast.success("Test notification sent", {
+        description:
+          "Don't see it? Your OS may be muting it — check Focus Assist / Do Not Disturb.",
+      });
+    } catch (e) {
+      setPerm(notifyPermission());
+      toast.error(e instanceof Error ? e.message : "Couldn't send the notification");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -91,12 +109,15 @@ export function NotificationsSection() {
       {enabled && (
         <button
           type="button"
-          onClick={() => testNotification()}
-          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-card-hover)] transition text-left"
+          onClick={sendTest}
+          disabled={sending}
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-card-hover)] transition text-left disabled:opacity-60"
         >
           <Bell size={14} className="text-[var(--text-faint)]" />
           <div className="flex-1">
-            <div className="text-sm font-medium">Send a test notification</div>
+            <div className="text-sm font-medium">
+              {sending ? "Sending…" : "Send a test notification"}
+            </div>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
               Make sure it comes through.
             </p>
