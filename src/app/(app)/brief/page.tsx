@@ -21,12 +21,7 @@ import { useSnapshots } from "@/lib/store/snapshots";
 import { useHealthLogs } from "@/lib/store/health";
 import { aiHeaders } from "@/lib/ai-key";
 import { greetingFor, timeOfDay } from "@/lib/time-of-day";
-import {
-  computeBrief,
-  briefSummaryText,
-  briefIsEmpty,
-  type BriefData,
-} from "@/lib/brief";
+import { computeBrief, briefSummaryText, briefIsEmpty } from "@/lib/brief";
 
 export default function BriefPage() {
   const itemsRaw = useAllItems();

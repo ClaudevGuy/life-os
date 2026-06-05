@@ -12,7 +12,7 @@
 
 Life OS is a personal "second brain" built around one idea: **your data should belong to you, fully.** No signup, no database to provision, no SaaS subscription. You open the app and start capturing. Everything — notes, tasks, habits, health check-ins, goals, finances, people, files, and an encrypted secrets vault — lives inside your browser's **IndexedDB**.
 
-The only things that ever leave your machine are explicit, read-only lookups: an AI call when you press *Ask*, and anonymous market/FX/favicon requests on the Finance and Subscriptions pages. None of it persists server-side, and your actual data never goes anywhere.
+The only things that ever leave your machine are explicit, read-only lookups: an AI call when you use *Ask*, voice, or the *Daily Brief*, and anonymous market/FX/favicon requests on the Finance and Subscriptions pages. None of it persists server-side, and your actual data never goes anywhere — notifications and backups are entirely local.
 
 ### The pages
 
@@ -23,6 +23,7 @@ The only things that ever leave your machine are explicit, read-only lookups: an
 | | `/bookmarks` | Reading list / saved links |
 | | `/files` | PDFs, docs, images — stored locally |
 | **Daily** | `/today` | Customizable drag-and-drop dashboard: time-of-day hero, week pulse, agenda, habits, music, markets, and more |
+| | `/brief` | A proactive **Daily Brief** — an AI narrative + "today at a glance" built from all your data |
 | | `/calendar` | Month / week / agenda over every dated item, plus a per-day notes scratchpad |
 | | `/tasks` | Quick-add with priorities, board/list views, due dates & reminders |
 | | `/habits` | Streaks, a GitHub-style heatmap, cadence-aware (daily/weekdays/weekly) |
@@ -94,7 +95,7 @@ type StoredItem = {
 
 Kind-specific fields live under `metadata` — e.g. **task** (`priority`, `dueDate`, `completedAt`, `reminder`, `projectId`), **habit** (`cadence`, `checkins[]`), **goal** (`timeframe`, `metric`, `milestones[]`, `identity`), **subscription** (`amount`, `currency`, `cycle`, `nextChargeAt`, `website`, `paused`), **account** (`accountType`, `category`, `balance`, `currency`), **holding** (`assetClass`, `symbol`, `coinId`, `quantity`, `costBasis`). Reminders are tasks with `metadata.reminder = true` + a `dueDate`. This flat shape lets new kinds/fields land without a schema migration.
 
-### Other tables (Dexie v7)
+### Other tables (Dexie v8)
 
 | Table | Purpose | Synced? |
 | --- | --- | --- |
@@ -104,6 +105,7 @@ Kind-specific fields live under `metadata` — e.g. **task** (`priority`, `dueDa
 | `dayNotes` | per-calendar-day scratchpad | — |
 | `netWorthSnapshots` | daily net-worth points for the Finance trend | — |
 | `healthLogs` | daily health check-ins | — |
+| `appKV` | small app settings (e.g. the connected backup folder handle) | — |
 | `vault` | **AES-GCM encrypted** secrets (PBKDF2-derived key) | **never** |
 
 ### Reading / writing
@@ -124,6 +126,7 @@ await deleteItem(id);                           // soft-delete → trash
 The AI is **agentic** and brings your own key — it talks to providers directly (no gateway).
 
 - **`POST /api/ai/ask`** — the browser sends a question + relevant items; the model streams an answer *and* can call tools the browser then executes locally: `addReminder`, `addTask`, `addPerson`, `addNote`, `addBookmark`, `addAccount`, `addHolding`. So "remind me to call Henry tomorrow at 2" or "add 0.5 BTC to my holdings" just works. The same pipeline backs **voice capture**.
+- **`POST /api/ai/daily-brief`** — backs the [Daily Brief](#the-pages) (`/brief`). The browser builds a flat fact summary from your local data and the model streams back a short, warm morning narrative. Facts-only, no tools, nothing stored. Degrades gracefully: no key → the structured "today at a glance" still renders.
 - **`POST /api/ai/brief`** — a generated summary of recent activity.
 
 | Provider | Direct via | Default model |
@@ -141,11 +144,23 @@ The AI is **agentic** and brings your own key — it talks to providers directly
 
 ## Backup & portability
 
-- **Export / Import** — `/settings → Data` dumps or restores every item as one JSON file.
+- **Full snapshot** — `/settings → Backups`: download a complete backup (every table **including the encrypted vault**) as one JSON, or restore one back in — dates revived, items merged.
+- **Connect a folder** — grant a local folder via the [File System Access API](https://developer.mozilla.org/docs/Web/API/File_System_Access_API) and Life OS writes a fresh backup there **automatically** (~every 12h while the app is open), with a "last backed up" indicator. Disconnect anytime.
+- **Export / Import** — `/settings → Data` for a quick items + day-notes JSON.
 - **Trash** — deletes are recoverable; auto-purged after 30 days.
 - **Optional Gist sync** — opt in to mirror your items to a private GitHub Gist so a second device can pull them down. The encrypted vault is **excluded** by design.
 
-> ⚠️ Everything lives in IndexedDB, which a browser *can* evict under storage pressure. Export periodically (or enable sync) if it matters.
+> ⚠️ Everything lives in IndexedDB, which a browser *can* evict under storage pressure. Connect a backup folder (or export periodically) if it matters.
+
+---
+
+## Notifications & install (PWA)
+
+Life OS installs as a [PWA](https://developer.mozilla.org/docs/Web/Progressive_web_apps) — add it to your home screen or dock for a standalone, offline-capable app. A service worker caches the shell so it opens without a network.
+
+- **Local notifications** — `/settings → Notifications`: get nudged when a reminder comes due, a subscription renews, it's someone's birthday, or you still have habits to check off. An in-app scheduler fires them while the app is open — **no push server, nothing leaves your machine** — and clicking one focuses the app on the right page.
+- **Shortcuts** — long-press the installed icon for jumps to Today, Ask, and the Daily Brief.
+- **Share target** — on mobile, share a link or text from any app straight into Life OS; it lands as a bookmark (if it's a URL) or a note.
 
 ---
 
@@ -156,7 +171,7 @@ The AI is **agentic** and brings your own key — it talks to providers directly
 - **AI SDK** + `@ai-sdk/anthropic` + `@ai-sdk/openai` (direct, no gateway) · **zod** for tool schemas
 - **@dnd-kit** for the drag-and-drop Today dashboard
 - **Tailwind v4** · **cmdk** (⌘K) · **sonner** (toasts) · **lucide-react** (icons)
-- **Web Crypto** (vault) · **Web Speech API** (voice) · YouTube IFrame + Data API (music)
+- **Web Crypto** (vault) · **Web Speech API** (voice) · **Service Worker + Notifications + File System Access** (PWA, nudges, folder backups) · YouTube IFrame + Data API (music)
 
 No database, no auth provider, no ORM, no backend of your own.
 
@@ -168,18 +183,19 @@ No database, no auth provider, no ORM, no backend of your own.
 src/
   app/
     (app)/            all app routes share the sidebar layout
-      today/ inbox/ notes/ tasks/ habits/ health/ goals/ finance/
+      today/ brief/ inbox/ notes/ tasks/ habits/ health/ goals/ finance/
       subscriptions/ projects/ people/ calendar/ graph/ music/ vault/
-      ask/ highlights/ reviews/ tags/ templates/ settings/
+      ask/ share/ highlights/ reviews/ tags/ templates/ settings/
       items/[id]/     shared detail view (dispatches by kind)
     api/
-      ai/{ask,brief}/         agentic AI proxies
+      ai/{ask,brief,daily-brief}/  agentic AI + Daily Brief proxies
       markets/{crypto,stocks,fx,quote,usd}/  live price proxies
       youtube/...             OAuth + Data API for Music
-  components/         top-bar, sidebar, command palette, quick/voice capture, vault…
+  components/         top-bar, sidebar, command palette, quick/voice capture, pwa-bootstrap, vault…
   lib/
     store/            db.ts (Dexie) · items.ts · blobs.ts · snapshots.ts · health.ts
-    ai-provider.ts ask.ts finance.ts goals.ts links.ts subscriptions.ts vault/…
+    ai-provider.ts ask.ts brief.ts notify.ts backup.ts finance.ts goals.ts links.ts vault/…
+  public/            manifest.webmanifest · sw.js (service worker)
 marketing/            standalone landing site (deployable to Vercel)
 ```
 
