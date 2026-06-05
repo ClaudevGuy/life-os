@@ -11,6 +11,9 @@ interface SpeechEvent {
   resultIndex: number;
   results: { length: number; [i: number]: SpeechResult };
 }
+interface SpeechErrorEvent {
+  error?: string;
+}
 interface Recognition {
   lang: string;
   continuous: boolean;
@@ -18,8 +21,9 @@ interface Recognition {
   start(): void;
   stop(): void;
   abort(): void;
+  onstart: (() => void) | null;
   onresult: ((e: SpeechEvent) => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e: SpeechErrorEvent) => void) | null;
   onend: (() => void) | null;
 }
 type RecognitionCtor = new () => Recognition;
@@ -35,23 +39,49 @@ function getCtor(): RecognitionCtor | null {
 
 /**
  * Live speech-to-text via the browser's built-in recognizer. No API key.
- * `transcript` = the committed text; `interim` = the in-progress words.
+ * Requires a secure context (https or localhost) and a user gesture to start.
  */
 export function useSpeechRecognition() {
-  const [supported] = useState(() => getCtor() !== null);
+  const [supported] = useState(
+    () =>
+      getCtor() !== null &&
+      (typeof window === "undefined" || window.isSecureContext),
+  );
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [interim, setInterim] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const recRef = useRef<Recognition | null>(null);
+
+  const stop = useCallback(() => {
+    try {
+      recRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+    setListening(false);
+  }, []);
 
   const start = useCallback(() => {
     const Ctor = getCtor();
-    if (!Ctor) return;
+    if (!Ctor) {
+      setError("unsupported");
+      return;
+    }
+    // Tear down any previous instance so start() can't throw InvalidState.
+    try {
+      recRef.current?.abort();
+    } catch {
+      /* ignore */
+    }
+    setError(null);
+    setInterim("");
     const rec = new Ctor();
     rec.lang =
       (typeof navigator !== "undefined" && navigator.language) || "en-US";
     rec.continuous = true;
     rec.interimResults = true;
+    rec.onstart = () => setListening(true);
     rec.onresult = (e) => {
       let fin = "";
       let intr = "";
@@ -60,10 +90,15 @@ export function useSpeechRecognition() {
         if (r.isFinal) fin += r[0].transcript;
         else intr += r[0].transcript;
       }
-      if (fin) setTranscript((t) => (t ? `${t} ${fin}`.replace(/\s+/g, " ") : fin).trim());
+      if (fin) {
+        setTranscript((t) => `${t ? `${t} ` : ""}${fin}`.replace(/\s+/g, " ").trim());
+      }
       setInterim(intr);
     };
-    rec.onerror = () => {};
+    rec.onerror = (e) => {
+      setError(e?.error || "error");
+      setListening(false);
+    };
     rec.onend = () => {
       setListening(false);
       setInterim("");
@@ -71,20 +106,15 @@ export function useSpeechRecognition() {
     recRef.current = rec;
     try {
       rec.start();
-      setListening(true);
     } catch {
-      /* already started */
+      // start() throws if it's already running — ignore.
     }
-  }, []);
-
-  const stop = useCallback(() => {
-    recRef.current?.stop();
-    setListening(false);
   }, []);
 
   const reset = useCallback(() => {
     setTranscript("");
     setInterim("");
+    setError(null);
   }, []);
 
   return {
@@ -92,6 +122,7 @@ export function useSpeechRecognition() {
     listening,
     transcript,
     interim,
+    error,
     setTranscript,
     start,
     stop,

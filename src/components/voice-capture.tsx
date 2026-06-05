@@ -37,6 +37,19 @@ export function VoiceButton() {
   );
 }
 
+const ERR_MSG: Record<string, string> = {
+  "not-allowed":
+    "Microphone access is blocked. Allow it from your browser's address bar, then tap again.",
+  "service-not-allowed": "Microphone access is blocked in this browser.",
+  "no-speech": "Didn't catch anything — tap and try again.",
+  "audio-capture": "No microphone found.",
+  network: "The speech service is unavailable right now.",
+  unsupported: "Voice isn't available here (needs Chrome/Edge over https or localhost).",
+};
+function errMsg(e: string): string {
+  return ERR_MSG[e] ?? "Couldn't start the microphone — tap to try again.";
+}
+
 function firstLine(t: string): string {
   return t.split("\n")[0].slice(0, 120);
 }
@@ -50,12 +63,9 @@ function VoiceModal({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [applied, setApplied] = useState<AppliedAction[] | null>(null);
 
-  // Auto-start listening when supported.
+  // Stop recognition when the modal closes (don't auto-start — the mic
+  // permission prompt needs a real tap, and auto-start double-fires in dev).
   useEffect(() => {
-    if (sr.supported) {
-      sr.reset();
-      sr.start();
-    }
     return () => sr.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -232,6 +242,11 @@ function VoiceModal({ onClose }: { onClose: () => void }) {
                   <p className="mt-3 text-[12px] text-[var(--muted)]">
                     {sr.listening ? "Listening… tap to stop" : "Tap to speak"}
                   </p>
+                  {sr.error && (
+                    <p className="mt-1.5 text-[12px] text-[var(--bad)] text-center max-w-[19rem] leading-snug">
+                      {errMsg(sr.error)}
+                    </p>
+                  )}
                 </div>
               )}
 
