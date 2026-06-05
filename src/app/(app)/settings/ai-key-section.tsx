@@ -62,6 +62,7 @@ export function AiKeySection() {
   const [keyDraft, setKeyDraft] = useState("");
   const [modelDraft, setModelDraft] = useState("");
   const [reveal, setReveal] = useState(false);
+  const [replacing, setReplacing] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [unlockDraft, setUnlockDraft] = useState("");
   const [unlocking, setUnlocking] = useState(false);
@@ -74,6 +75,8 @@ export function AiKeySection() {
   useEffect(() => {
     const c = getCreds();
     setSaved(c);
+    setReveal(false); // never leave a key revealed across a lock-state change
+    setReplacing(false);
     if (c) {
       setProvider(c.provider);
       setModelDraft(c.model ?? "");
@@ -110,6 +113,8 @@ export function AiKeySection() {
     await persist(next);
     setSaved(next);
     setKeyDraft("");
+    setReplacing(false);
+    setReveal(false);
     setStatus("idle");
     toast.success(
       vault.aiKeyLocked
@@ -329,24 +334,46 @@ export function AiKeySection() {
           <label className="block text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] mb-2">
             API key
           </label>
-          {saved && !editing ? (
-            <div className="flex items-center gap-2 mb-3">
-              <code className="font-mono text-[12px] text-[var(--muted)] bg-[var(--paper-2)] border border-[var(--line)] rounded-[10px] px-3 py-2 flex-1">
-                {reveal ? saved.key : masked}
-              </code>
-              <button
-                type="button"
-                onClick={() => setReveal((v) => !v)}
-                className="grid place-items-center w-9 h-9 rounded-[8px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
-                aria-label={reveal ? "Hide" : "Reveal"}
-              >
-                {reveal ? (
-                  <EyeOff size={14} strokeWidth={1.6} />
-                ) : (
-                  <Eye size={14} strokeWidth={1.6} />
-                )}
-              </button>
-            </div>
+          {saved && !editing && !replacing ? (
+            vault.aiKeyLocked ? (
+              /* Locked: masked, read-only, NOT revealable. Replace = write-only. */
+              <div className="flex items-center gap-2 mb-3">
+                <code className="font-mono text-[12px] text-[var(--muted)] bg-[var(--paper-2)] border border-[var(--line)] rounded-[10px] px-3 py-2 flex-1 inline-flex items-center gap-2 min-w-0">
+                  <Lock size={12} className="text-[var(--terra)] shrink-0" />
+                  <span className="truncate">{masked}</span>
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKeyDraft("");
+                    setReplacing(true);
+                  }}
+                  className="h-9 px-3 rounded-[8px] border border-[var(--line)] bg-[var(--paper)] text-[12px] font-medium text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition shrink-0"
+                  title="A locked key can't be revealed — replace it instead"
+                >
+                  Replace
+                </button>
+              </div>
+            ) : (
+              /* Plaintext: masked with reveal */
+              <div className="flex items-center gap-2 mb-3">
+                <code className="font-mono text-[12px] text-[var(--muted)] bg-[var(--paper-2)] border border-[var(--line)] rounded-[10px] px-3 py-2 flex-1">
+                  {reveal ? saved.key : masked}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => setReveal((v) => !v)}
+                  className="grid place-items-center w-9 h-9 rounded-[8px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
+                  aria-label={reveal ? "Hide" : "Reveal"}
+                >
+                  {reveal ? (
+                    <EyeOff size={14} strokeWidth={1.6} />
+                  ) : (
+                    <Eye size={14} strokeWidth={1.6} />
+                  )}
+                </button>
+              </div>
+            )
           ) : (
             <div className="flex items-center gap-2 mb-3">
               <input
@@ -354,11 +381,24 @@ export function AiKeySection() {
                 value={keyDraft}
                 onChange={(e) => setKeyDraft(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && save()}
-                placeholder={meta.placeholder}
+                placeholder={replacing ? "Paste a new key…" : meta.placeholder}
+                autoFocus={replacing}
                 className="flex-1 rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-[13px] font-mono text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
                 autoComplete="off"
                 spellCheck={false}
               />
+              {replacing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplacing(false);
+                    setKeyDraft("");
+                  }}
+                  className="h-9 px-3 rounded-[8px] text-[12px] font-medium text-[var(--muted)] hover:text-[var(--ink)] transition shrink-0"
+                >
+                  Cancel
+                </button>
+              )}
             </div>
           )}
 
@@ -411,17 +451,20 @@ export function AiKeySection() {
                   Clear
                 </button>
                 <div className="ml-auto">
-                  {editing ? (
+                  {editing || replacing ? (
                     <button
                       type="button"
                       onClick={save}
                       disabled={!keyDraft.trim() || status === "saving"}
                       className="life-btn life-btn-sm life-btn-primary"
                     >
-                      Save as {meta.label}
+                      {editing ? `Save as ${meta.label}` : "Save key"}
                     </button>
                   ) : (
-                    <span className="text-[11.5px] text-[var(--muted)]">
+                    <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[var(--muted)]">
+                      {vault.aiKeyLocked && (
+                        <Lock size={11} className="text-[var(--terra)]" />
+                      )}
                       Stored as {PROVIDERS[saved.provider].label}
                     </span>
                   )}
