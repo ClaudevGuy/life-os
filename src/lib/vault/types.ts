@@ -1,6 +1,6 @@
 /** Shared vault types + per-type field schemas. */
 
-export type VaultType = "login" | "card" | "note" | "codes" | "secret";
+export type VaultType = "login" | "card" | "note" | "codes" | "secret" | "api";
 
 export type VaultEntry = {
   id: string;
@@ -23,6 +23,7 @@ export const VAULT_TYPES: { type: VaultType; label: string }[] = [
   { type: "login", label: "Login" },
   { type: "card", label: "Card" },
   { type: "codes", label: "Recovery codes" },
+  { type: "api", label: "API key" },
   { type: "secret", label: "Secret" },
   { type: "note", label: "Secure note" },
 ];
@@ -31,6 +32,7 @@ export const VAULT_TYPE_LABEL: Record<VaultType, string> = {
   login: "Login",
   card: "Card",
   codes: "Recovery codes",
+  api: "API key",
   secret: "Secret",
   note: "Secure note",
 };
@@ -57,6 +59,22 @@ export const TYPE_FIELDS: Record<VaultType, VaultField[]> = {
     { key: "value", label: "Secret", secret: true, textarea: true },
     { key: "notes", label: "Notes", textarea: true },
   ],
+  api: [
+    { key: "service", label: "Service", placeholder: "OpenAI, Stripe, AWS…" },
+    { key: "key", label: "API key", secret: true, placeholder: "sk-…" },
+    {
+      key: "secret",
+      label: "Client secret",
+      secret: true,
+      placeholder: "Optional — signing / secret key",
+    },
+    {
+      key: "endpoint",
+      label: "Endpoint",
+      placeholder: "https://api.example.com (optional)",
+    },
+    { key: "notes", label: "Notes", textarea: true },
+  ],
   note: [{ key: "body", label: "Note", textarea: true }],
 };
 
@@ -71,6 +89,8 @@ export function primaryField(type: VaultType): string | null {
       return "codes";
     case "secret":
       return "value";
+    case "api":
+      return "key";
     case "note":
       return null;
   }
@@ -88,6 +108,8 @@ export function subtitleFor(entry: VaultEntry): string | null {
       return `${(d.codes ?? "").split("\n").filter(Boolean).length} codes`;
     case "secret":
       return null;
+    case "api":
+      return d.service || hostOf(d.endpoint) || null;
     case "note":
       return (d.body ?? "").split("\n")[0]?.slice(0, 60) || null;
   }

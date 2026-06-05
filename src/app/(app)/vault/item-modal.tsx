@@ -14,6 +14,7 @@ import {
   Hash,
   Fingerprint,
   StickyNote,
+  Braces,
   type LucideIcon,
 } from "lucide-react";
 import { Portal } from "@/components/portal";
@@ -29,6 +30,7 @@ export const TYPE_ICON: Record<VaultType, LucideIcon> = {
   login: KeyRound,
   card: CreditCard,
   codes: Hash,
+  api: Braces,
   secret: Fingerprint,
   note: StickyNote,
 };
