@@ -291,7 +291,13 @@ html[data-theme="system"] .life-shine {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
-.pg-enter { animation: pg-in 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+/* `backwards`, not `both`: hold the initial frame before the run, but DON'T
+   retain a composited transform layer afterwards. A finished forwards/both
+   transform animation keeps the element as the containing block for any
+   position:fixed descendants (modals), clipping their full-screen backdrop to
+   the page box. The final state is transform:none, so this is visually
+   identical — it just releases the containing block. */
+.pg-enter { animation: pg-in 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 
 @keyframes life-rise {
   from { opacity: 0; transform: translateY(6px); }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Plus, FolderKanban } from "lucide-react";
 import { captureItem } from "@/lib/store/items";
@@ -57,8 +58,8 @@ export function NewProject() {
     });
   }
 
-  if (!open) {
-    return (
+  return (
+    <>
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -67,14 +68,14 @@ export function NewProject() {
         <Plus size={13} strokeWidth={2} />
         New project
       </button>
-    );
-  }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh] bg-black/40 backdrop-blur-sm"
-      onClick={reset}
-    >
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh] bg-black/40 backdrop-blur-sm"
+            onClick={reset}
+          >
       <div
         className="w-full max-w-sm rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] p-6 life-rise"
         style={{ boxShadow: "var(--shadow-3)" }}
@@ -161,8 +162,11 @@ export function NewProject() {
           >
             Create
           </button>
-        </div>
-      </div>
-    </div>
+            </div>
+          </div>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
