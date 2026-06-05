@@ -781,7 +781,7 @@ const OutroScene: React.FC = () => {
         </FadeUp>
         <FadeUp delay={34}>
           <div style={{ fontFamily: FONT, fontSize: 25, color: C.faint, marginTop: 4 }}>
-            life-os-tan-tau.vercel.app · Free &amp; open source
+            Free &amp; open source
           </div>
         </FadeUp>
       </div>
