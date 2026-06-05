@@ -139,10 +139,16 @@ function MusicBackdrop() {
     { top: "88%", left: "42%", size: 64, rot: 9, o: 0.035 },
   ];
   const N = 72;
-  const barW = 1200 / N - 5;
+  // Round everything: Math.sin's last ULP can differ between the server and
+  // the browser, which would otherwise trip a hydration mismatch on the SVG
+  // attributes. 2-decimal precision is far finer than the eye can see here.
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const barW = round2(1200 / N - 5);
   const bars = Array.from({ length: N }, (_, i) => ({
-    x: (i / N) * 1200,
-    h: 12 + 30 * Math.abs(Math.sin(i * 0.55)) + 18 * Math.abs(Math.sin(i * 0.21 + 1)),
+    x: round2((i / N) * 1200),
+    h: round2(
+      12 + 30 * Math.abs(Math.sin(i * 0.55)) + 18 * Math.abs(Math.sin(i * 0.21 + 1)),
+    ),
   }));
 
   return (
