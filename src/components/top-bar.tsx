@@ -20,6 +20,7 @@ import { SearchTrigger } from "@/components/search-trigger";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PomodoroPill } from "@/components/pomodoro-pill";
 import { AskPopover } from "@/components/ask-popover";
+import { VoiceButton } from "@/components/voice-capture";
 import { greetingFor, timeOfDay } from "@/lib/time-of-day";
 import { ymd } from "@/lib/ymd";
 
@@ -107,6 +108,7 @@ export function TopBar() {
           ml-auto on small screens (when live pills are hidden) so it still
           hugs the edge. md:ml-0 hands the auto margin off to live pills. */}
       <div className="ml-auto md:ml-0 flex items-center gap-2 shrink-0">
+        <VoiceButton />
         <button
           type="button"
           onClick={() => setAskOpen(true)}
