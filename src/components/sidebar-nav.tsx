@@ -23,6 +23,7 @@ import {
   Target,
   Shield,
   HeartPulse,
+  Waypoints,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -99,6 +100,7 @@ const SECTIONS: RailSection[] = [
     heading: "Explore",
     items: [
       { href: "/ask", label: "Ask my notes", icon: MessageSquare },
+      { href: "/graph", label: "Connections", icon: Waypoints },
       { href: "/music", label: "Music", icon: Music },
       { href: "/vault", label: "Vault", icon: Shield },
     ],
