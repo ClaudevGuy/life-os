@@ -34,7 +34,6 @@ import {
   Bookmark,
   ChevronRight,
   Bell,
-  Sunrise,
   Mic,
   Waypoints,
   FolderDown,
@@ -279,7 +278,6 @@ const EVERYTHING: { cat: string; icon: typeof Wallet; items: string[] }[] = [
     icon: Sparkles,
     items: [
       "Ask your notes — agentic AI",
-      "AI Daily Brief — your morning, narrated",
       "Voice capture — speak to add anything",
       "Adds reminders, tasks, people, accounts & holdings for you",
       "[[Wiki-links]] & a Connections graph",
@@ -512,50 +510,6 @@ function BentoMusic() {
   );
 }
 
-function BentoBrief() {
-  return (
-    <div className="lp-glass rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-2.5">
-        <Sunrise size={13} style={{ color: "var(--lp-violet)" }} />
-        <span className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-faint)" }}>This morning</span>
-      </div>
-      <p className="text-[12.5px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>
-        &ldquo;Three tasks due and your half-marathon goal is on pace. Net worth ticked up{" "}
-        <b style={{ color: "var(--lp-ink)" }}>2.4%</b> this week — nice. One renewal lands Friday.&rdquo;
-      </p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {[
-          { i: ListTodo, t: "3 due", c: "var(--lp-terra)" },
-          { i: Flame, t: "2 habits", c: "var(--lp-gold)" },
-          { i: CreditCard, t: "1 renewal", c: "var(--lp-sky)" },
-        ].map((x) => (
-          <span key={x.t} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]" style={{ background: "rgba(255,255,255,0.05)" }}>
-            <x.i size={11} style={{ color: x.c }} />
-            {x.t}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BentoNotify() {
-  return (
-    <div className="space-y-2">
-      {[
-        { i: Bell, t: "Call Henry · 2:00 PM", c: "var(--lp-gold)" },
-        { i: CreditCard, t: "Netflix renews today", c: "var(--lp-sky)" },
-        { i: Flame, t: "2 habits left to check", c: "var(--lp-terra)" },
-      ].map((x) => (
-        <div key={x.t} className="lp-glass rounded-lg px-3 py-2 flex items-center gap-2.5">
-          <x.i size={14} style={{ color: x.c }} />
-          <span className="text-[12px]">{x.t}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ───────────────────────────────────────────────────────────────────────────
 // Page
 // ───────────────────────────────────────────────────────────────────────────
@@ -676,8 +630,8 @@ function Hero() {
           </h1>
           <p className="mt-6 text-[17px] sm:text-[19px] leading-relaxed max-w-2xl" style={{ color: "var(--lp-muted)" }}>
             Plan your day, build habits, track your health, manage your money, lock away your
-            secrets, wake up to a daily brief, and ask an AI that actually does the work — all in
-            one beautiful app that runs on <span style={{ color: "var(--lp-ink)" }}>your device</span>, not someone&apos;s cloud.
+            secrets, and ask an AI that actually does the work — all in one beautiful app that
+            runs on <span style={{ color: "var(--lp-ink)" }}>your device</span>, not someone&apos;s cloud.
           </p>
           <div className="mt-9 flex items-center gap-3 flex-wrap">
             <Link href={GITHUB} target="_blank" rel="noreferrer" className="lp-btn lp-btn-primary">
@@ -784,12 +738,6 @@ function HeroPreview() {
           <span className="text-[12.5px]">14-day streak</span>
         </div>
       </div>
-      <div className="hidden lg:block absolute left-2 bottom-12 lp-anim-float" style={{ animationDelay: "-2.2s" }}>
-        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2">
-          <Sunrise size={15} style={{ color: "var(--lp-violet)" }} />
-          <span className="text-[12.5px]">Daily brief ready</span>
-        </div>
-      </div>
     </div>
   );
 }
@@ -810,7 +758,7 @@ function Spark() {
 }
 
 const MARQUEE_TAGS = [
-  "Today dashboard", "Daily brief", "Calendar", "Tasks", "Reminders", "Habits", "Focus timer",
+  "Today dashboard", "Calendar", "Tasks", "Reminders", "Habits", "Focus timer",
   "Health", "Goals", "Reviews", "Highlights", "Net worth", "Holdings", "Markets",
   "Subscriptions", "Notes", "Bookmarks", "Files", "Inbox", "People", "Projects",
   "Tags", "Templates", "Ask AI", "Voice capture", "Connections graph", "Command palette",
@@ -910,20 +858,14 @@ function Bento() {
         <Reveal delay={140}>
           <BentoCard icon={Target} color="var(--lp-violet)" title="Goals that track themselves" body="Tie a goal to who you're becoming; progress rolls up on its own." visual={<BentoGoal />} />
         </Reveal>
-        <Reveal delay={70} className="sm:col-span-2">
-          <BentoCard wide icon={Sunrise} color="var(--lp-violet)" title="A daily brief that gets you" body="Each morning an AI reads your whole system and writes a short, human brief — what's due, what's slipping, and what's worth celebrating." visual={<BentoBrief />} />
-        </Reveal>
-        <Reveal delay={140}>
+        <Reveal delay={70}>
           <BentoCard icon={HeartPulse} color="var(--lp-sky)" title="Body & mind" body="Mood, energy, sleep, weight — charted into patterns you can act on." visual={<BentoMood />} />
         </Reveal>
-        <Reveal delay={70}>
+        <Reveal delay={140}>
           <BentoCard icon={Sparkles} color="var(--lp-violet)" title="AI that acts" body="Ask in plain words — it does the work and confirms, instead of just chatting." visual={<BentoAsk />} />
         </Reveal>
-        <Reveal delay={140}>
-          <BentoCard icon={Music} color="var(--lp-terra)" title="Music, built in" body="Your YouTube Music, with a player that follows you across the app." visual={<BentoMusic />} />
-        </Reveal>
         <Reveal delay={210}>
-          <BentoCard icon={Bell} color="var(--lp-gold)" title="Your daily driver" body="Install it as an app and get gently nudged — reminders, renewals, birthdays — all from your device, no push server." visual={<BentoNotify />} />
+          <BentoCard icon={Music} color="var(--lp-terra)" title="Music, built in" body="Your YouTube Music, with a player that follows you across the app." visual={<BentoMusic />} />
         </Reveal>
       </div>
     </section>
@@ -1105,7 +1047,7 @@ function Everything() {
       {/* tiny feature ribbon */}
       <Reveal>
         <div className="mt-10 flex flex-wrap justify-center gap-2.5">
-          {[Sunrise, Bell, Mic, Waypoints, FolderDown, Command, Timer, Music, RefreshCw, WifiOff, Download, Highlighter, FolderKanban, Bookmark, Users, ListTodo, Flame].map((I, i) => (
+          {[Bell, Mic, Waypoints, FolderDown, Command, Timer, Music, RefreshCw, WifiOff, Download, Highlighter, FolderKanban, Bookmark, Users, ListTodo, Flame].map((I, i) => (
             <span key={i} className="grid place-items-center w-10 h-10 rounded-xl lp-glass" style={{ color: "var(--lp-muted)" }}>
               <I size={17} />
             </span>

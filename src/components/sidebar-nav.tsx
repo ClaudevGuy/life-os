@@ -24,7 +24,6 @@ import {
   Shield,
   HeartPulse,
   Waypoints,
-  Sparkles,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -65,7 +64,6 @@ const SECTIONS: RailSection[] = [
     heading: "Daily",
     items: [
       { href: "/today", label: "Today", icon: Sun },
-      { href: "/brief", label: "Daily brief", icon: Sparkles },
       { href: "/calendar", label: "Calendar", icon: CalendarDays },
       {
         href: "/tasks",

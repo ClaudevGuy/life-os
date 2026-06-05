@@ -25,8 +25,7 @@
   ],
   "shortcuts": [
     { "name": "Today", "url": "/today" },
-    { "name": "Ask my notes", "url": "/ask" },
-    { "name": "Daily brief", "url": "/brief" }
+    { "name": "Ask my notes", "url": "/ask" }
   ],
   "share_target": {
     "action": "/share",
