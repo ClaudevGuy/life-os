@@ -17,15 +17,26 @@ const INTERVAL: Record<string, string> = {
   "1y": "1wk",
 };
 
+// Currencies the UI may chart the dollar against (allowlist → Yahoo `USD{X}=X`).
+const PAIRS = ["EUR", "ILS", "GBP", "JPY", "CHF", "CAD", "AUD"];
+
 export const revalidate = 300;
 
 export async function GET(req: Request) {
-  const rangeParam = new URL(req.url).searchParams.get("range") || "3mo";
+  const params = new URL(req.url).searchParams;
+  const rangeParam = params.get("range") || "3mo";
   const range = INTERVAL[rangeParam] ? rangeParam : "3mo";
   const interval = INTERVAL[range];
+
+  const pairParam = (params.get("pair") || "dxy").toUpperCase();
+  const pair = pairParam === "DXY" ? "dxy" : PAIRS.includes(pairParam) ? pairParam : "dxy";
+  const symbol = pair === "dxy" ? "DX-Y.NYB" : `USD${pair}=X`;
+
   try {
     const res = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB?range=${range}&interval=${interval}`,
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+        symbol,
+      )}?range=${range}&interval=${interval}`,
       {
         headers: { "user-agent": UA, accept: "application/json" },
         next: { revalidate: 300 },
@@ -55,7 +66,7 @@ export async function GET(req: Request) {
     const first = points[0] ?? price;
     const change = prev ? ((price - prev) / prev) * 100 : 0;
     const rangeChange = first ? ((price - first) / first) * 100 : 0;
-    return Response.json({ price, change, rangeChange, range, points });
+    return Response.json({ price, change, rangeChange, range, pair, points });
   } catch {
     return Response.json({ error: "fetch_failed" }, { status: 502 });
   }
