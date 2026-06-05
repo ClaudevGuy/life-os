@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useTransition } from "react";
+import { useState, useRef, useEffect, useMemo, useTransition } from "react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/markdown";
 import { Pencil, X, Check } from "lucide-react";
-import { updateItem } from "@/lib/store/items";
+import { updateItem, useAllItems } from "@/lib/store/items";
 
 export function InlineTitle({
   id,
@@ -97,6 +97,61 @@ export function InlineBody({
     if (editing) textareaRef.current?.focus();
   }, [editing]);
 
+  // ── [[wiki-link]] autocomplete ──
+  const allItems = useAllItems() ?? [];
+  const [ac, setAc] = useState<{ query: string; start: number } | null>(null);
+  const [acIndex, setAcIndex] = useState(0);
+
+  const suggestions = useMemo(() => {
+    if (!ac) return [];
+    const q = ac.query.trim().toLowerCase();
+    const out = allItems.filter((it) => {
+      if (it.id === id) return false;
+      const t = (it.title ?? "").trim().toLowerCase();
+      if (!t) return false;
+      return q ? t.includes(q) : true;
+    });
+    out.sort((a, b) => {
+      const at = (a.title ?? "").toLowerCase();
+      const bt = (b.title ?? "").toLowerCase();
+      const as = q && at.startsWith(q) ? 0 : 1;
+      const bs = q && bt.startsWith(q) ? 0 : 1;
+      if (as !== bs) return as - bs;
+      return at.length - bt.length;
+    });
+    return out.slice(0, 6);
+  }, [ac, allItems, id]);
+
+  function refreshAc(text: string, caret: number) {
+    const before = text.slice(0, caret);
+    const open = before.lastIndexOf("[[");
+    if (open === -1) {
+      setAc(null);
+      return;
+    }
+    const between = before.slice(open + 2);
+    if (between.includes("]") || between.includes("\n") || between.length > 60) {
+      setAc(null);
+      return;
+    }
+    setAc({ query: between, start: open });
+    setAcIndex(0);
+  }
+
+  function insertLink(title: string) {
+    const ta = textareaRef.current;
+    if (!ta || !ac) return;
+    const caret = ta.selectionStart;
+    const next = `${draft.slice(0, ac.start)}[[${title}]]${draft.slice(caret)}`;
+    setDraft(next);
+    setAc(null);
+    const pos = ac.start + title.length + 4;
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(pos, pos);
+    });
+  }
+
   function save() {
     if (draft === (value ?? "")) {
       setEditing(false);
@@ -140,24 +195,92 @@ export function InlineBody({
             </button>
           </div>
         </div>
-        <textarea
-          ref={textareaRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault();
-              save();
-            }
-            if (e.key === "Escape") {
-              setDraft(value ?? "");
-              setEditing(false);
-            }
-          }}
-          rows={12}
-          className="w-full rounded-lg bg-[var(--bg-rail)] border border-[var(--border-strong)] p-4 text-sm font-mono text-[var(--text)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] resize-none leading-relaxed"
-          placeholder="Markdown body. Use [[wiki links]] to connect items, ** for bold, > for quotes."
-        />
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              refreshAc(e.target.value, e.target.selectionStart);
+            }}
+            onClick={(e) => refreshAc(draft, e.currentTarget.selectionStart)}
+            onKeyUp={(e) => {
+              if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+                refreshAc(draft, e.currentTarget.selectionStart);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (ac && suggestions.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setAcIndex((i) => (i + 1) % suggestions.length);
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setAcIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  insertLink(suggestions[acIndex].title ?? "");
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setAc(null);
+                  return;
+                }
+              }
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                save();
+              }
+              if (e.key === "Escape") {
+                setDraft(value ?? "");
+                setEditing(false);
+              }
+            }}
+            rows={12}
+            className="w-full rounded-lg bg-[var(--bg-rail)] border border-[var(--border-strong)] p-4 text-sm font-mono text-[var(--text)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] resize-none leading-relaxed"
+            placeholder="Markdown body. Type [[ to link an item, ** for bold, > for quotes."
+          />
+          {ac && suggestions.length > 0 && (
+            <div
+              className="absolute left-2 right-2 top-full mt-1 z-30 rounded-[10px] border border-[var(--border-strong)] bg-[var(--bg-card)] py-1 max-h-60 overflow-auto"
+              style={{ boxShadow: "var(--shadow-2)" }}
+            >
+              <div className="px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+                Link to…
+              </div>
+              {suggestions.map((it, i) => (
+                <button
+                  key={it.id}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    insertLink(it.title ?? "");
+                  }}
+                  onMouseEnter={() => setAcIndex(i)}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-[13px] transition ${
+                    i === acIndex ? "bg-[var(--bg-card-hover)]" : ""
+                  }`}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ background: `var(--kind-${it.kind}, var(--accent))` }}
+                  />
+                  <span className="text-[var(--text)] truncate flex-1">
+                    {it.title}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-faint)] capitalize shrink-0">
+                    {it.kind}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="mt-1.5 text-[10px] text-[var(--text-faint)]">
           ⌘↵ to save · esc to cancel
         </div>
