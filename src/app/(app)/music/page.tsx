@@ -98,25 +98,105 @@ function MusicInner() {
 
   if (!status) {
     return (
-      <div className="p-8 max-w-6xl mx-auto pg-enter">
-        <Header />
-        <div className="mt-10 flex items-center justify-center text-[var(--muted)]">
-          <Loader2 size={18} className="animate-spin" />
+      <div className="relative min-h-full">
+        <MusicBackdrop />
+        <div className="relative p-8 max-w-6xl mx-auto pg-enter">
+          <Header />
+          <div className="mt-10 flex items-center justify-center text-[var(--muted)]">
+            <Loader2 size={18} className="animate-spin" />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto pg-enter">
-      <Header name={status.connected ? status.name : null} />
-      {!status.configured ? (
-        <SetupGuide />
-      ) : !status.connected ? (
-        <ConnectScreen />
-      ) : (
-        <Connected onDisconnected={loadStatus} />
-      )}
+    <div className="relative min-h-full">
+      <MusicBackdrop />
+      <div className="relative p-8 max-w-6xl mx-auto pg-enter">
+        <Header name={status.connected ? status.name : null} />
+        {!status.configured ? (
+          <SetupGuide />
+        ) : !status.connected ? (
+          <ConnectScreen />
+        ) : (
+          <Connected onDisconnected={loadStatus} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Minimal musical backdrop ───────────────────────────────────────────────
+
+function MusicBackdrop() {
+  const NOTES = [
+    { top: "14%", left: "9%", size: 86, rot: -14, o: 0.05 },
+    { top: "33%", left: "85%", size: 58, rot: 12, o: 0.045 },
+    { top: "63%", left: "23%", size: 112, rot: -8, o: 0.04 },
+    { top: "75%", left: "71%", size: 74, rot: 16, o: 0.05 },
+    { top: "50%", left: "53%", size: 46, rot: -6, o: 0.035 },
+    { top: "88%", left: "42%", size: 64, rot: 9, o: 0.035 },
+  ];
+  const N = 72;
+  const barW = 1200 / N - 5;
+  const bars = Array.from({ length: N }, (_, i) => ({
+    x: (i / N) * 1200,
+    h: 12 + 30 * Math.abs(Math.sin(i * 0.55)) + 18 * Math.abs(Math.sin(i * 0.21 + 1)),
+  }));
+
+  return (
+    <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* warm wash from the top */}
+      <div
+        className="absolute inset-x-0 top-0 h-[420px]"
+        style={{
+          background:
+            "radial-gradient(110% 70% at 50% -12%, color-mix(in oklch, var(--terra) 9%, transparent), transparent 72%)",
+        }}
+      />
+      {/* a faint soundwave across the page */}
+      <svg
+        className="absolute left-0 right-0 w-full opacity-[0.06]"
+        style={{ top: "37%" }}
+        height={120}
+        viewBox="0 0 1200 80"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="mwave" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="var(--terra)" />
+            <stop offset="50%" stopColor="var(--gold)" />
+            <stop offset="100%" stopColor="var(--sky)" />
+          </linearGradient>
+        </defs>
+        {bars.map((b, i) => (
+          <rect
+            key={i}
+            x={b.x}
+            y={40 - b.h / 2}
+            width={barW}
+            height={b.h}
+            rx={barW / 2}
+            fill="url(#mwave)"
+          />
+        ))}
+      </svg>
+      {/* a few oversized, whisper-faint notes */}
+      {NOTES.map((n, i) => (
+        <Music
+          key={i}
+          size={n.size}
+          strokeWidth={1.1}
+          className="absolute text-[var(--terra)]"
+          style={{
+            top: n.top,
+            left: n.left,
+            opacity: n.o,
+            transform: `rotate(${n.rot}deg)`,
+          }}
+        />
+      ))}
     </div>
   );
 }
