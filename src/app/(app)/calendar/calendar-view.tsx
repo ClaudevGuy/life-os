@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { captureItem } from "@/lib/store/items";
+import { captureItem, setTaskDone } from "@/lib/store/items";
 import {
   useDayNote,
   useDayNoteDates,
@@ -323,6 +323,46 @@ function EventChip({ it }: { it: CalItem }) {
   );
 }
 
+// ---------- check off (tasks & reminders) ----------
+
+/** Only tasks/reminders can be "done". */
+function isCheckable(it: CalItem): boolean {
+  return it.kind === "task";
+}
+
+function TaskCheckbox({
+  done,
+  color,
+  onToggle,
+  className,
+}: {
+  done: boolean;
+  color: string;
+  onToggle: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      aria-pressed={done}
+      title={done ? "Mark as not done" : "Mark as done"}
+      aria-label={done ? "Mark as not done" : "Mark as done"}
+      className={`grid place-items-center w-[19px] h-[19px] rounded-[6px] border shrink-0 transition hover:scale-105 active:scale-95 ${className ?? ""}`}
+      style={{
+        borderColor: done ? "var(--sage)" : color,
+        background: done ? "var(--sage)" : "transparent",
+      }}
+    >
+      {done && <Check size={12} strokeWidth={3} style={{ color: "var(--paper)" }} />}
+    </button>
+  );
+}
+
 // ---------- month view ----------
 
 function MonthGrid({
@@ -585,11 +625,18 @@ function Agenda({
       {populated.map(({ d, iso, items }) => {
         const isToday = iso === today;
         return (
-          <button
+          <div
             key={iso}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => onSelectDay(iso)}
-            className="w-full text-left life-card life-card-hover p-4 transition"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelectDay(iso);
+              }
+            }}
+            className="w-full text-left life-card life-card-hover p-4 transition cursor-pointer"
           >
             <div className="flex items-baseline gap-3">
               <div
@@ -618,6 +665,7 @@ function Agenda({
                 const color = archived
                   ? "var(--muted-2)"
                   : EVENT_META[it.type].color;
+                const checkable = isCheckable(it);
                 return (
                   <li
                     key={`${it.id}-${it.type}-${it.isoDate}`}
@@ -635,10 +683,20 @@ function Agenda({
                         {archived ? "" : "all-day"}
                       </span>
                     )}
-                    <span
-                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ background: color }}
-                    />
+                    {checkable ? (
+                      <TaskCheckbox
+                        done={archived}
+                        color={EVENT_META[it.type].color}
+                        onToggle={() => {
+                          void setTaskDone(it.id, !archived);
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ background: color }}
+                      />
+                    )}
                     <span
                       className={`text-sm truncate ${
                         archived
@@ -663,7 +721,7 @@ function Agenda({
                 );
               })}
             </ul>
-          </button>
+          </div>
         );
       })}
     </div>
@@ -783,48 +841,61 @@ function DayDrawer({
                 const color = archived
                   ? "var(--muted-2)"
                   : EVENT_META[it.type].color;
+                const checkable = isCheckable(it);
                 return (
                   <li key={`${it.id}-${it.type}-${it.isoDate}`}>
-                    <Link
-                      href={it.href}
-                      className="block rounded-md p-2 -mx-1 hover:bg-[var(--paper-2)] transition"
-                    >
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-start gap-2.5 rounded-md p-2 -mx-1 hover:bg-[var(--paper-2)] transition">
+                      {checkable ? (
+                        <TaskCheckbox
+                          done={archived}
+                          color={EVENT_META[it.type].color}
+                          onToggle={() =>
+                            startTransition(() => {
+                              void setTaskDone(it.id, !archived);
+                            })
+                          }
+                          className="mt-[2px]"
+                        />
+                      ) : (
                         <span
-                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          className="w-1.5 h-1.5 rounded-full shrink-0 mt-[7px]"
                           style={{ background: color }}
                         />
-                        {it.time && !archived && (
-                          <span
-                            className="text-[11px] font-mono tabular-nums shrink-0"
-                            style={{ color }}
-                          >
-                            {fmtTime(it.time)}
-                          </span>
-                        )}
-                        <span
-                          className={`text-sm truncate ${
-                            archived
-                              ? "line-through text-[var(--muted)]"
-                              : "text-[var(--ink)]"
-                          }`}
-                        >
-                          {it.title ?? "untitled"}
-                        </span>
-                        <span
-                          className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide shrink-0"
-                          style={{ color: archived ? "var(--muted-2)" : color }}
-                        >
-                          {it.type === "reminder" && <Bell size={9} />}
-                          {archived ? "done" : EVENT_META[it.type].label}
-                        </span>
-                      </div>
-                      {(it.summary || it.meta) && (
-                        <p className="mt-0.5 ml-3.5 text-xs text-[var(--muted)] line-clamp-1">
-                          {it.meta ?? it.summary}
-                        </p>
                       )}
-                    </Link>
+                      <Link href={it.href} className="flex-1 min-w-0 block">
+                        <div className="flex items-center gap-2">
+                          {it.time && !archived && (
+                            <span
+                              className="text-[11px] font-mono tabular-nums shrink-0"
+                              style={{ color }}
+                            >
+                              {fmtTime(it.time)}
+                            </span>
+                          )}
+                          <span
+                            className={`text-sm truncate ${
+                              archived
+                                ? "line-through text-[var(--muted)]"
+                                : "text-[var(--ink)]"
+                            }`}
+                          >
+                            {it.title ?? "untitled"}
+                          </span>
+                          <span
+                            className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide shrink-0"
+                            style={{ color: archived ? "var(--muted-2)" : color }}
+                          >
+                            {it.type === "reminder" && <Bell size={9} />}
+                            {archived ? "done" : EVENT_META[it.type].label}
+                          </span>
+                        </div>
+                        {(it.summary || it.meta) && (
+                          <p className="mt-0.5 text-xs text-[var(--muted)] line-clamp-1">
+                            {it.meta ?? it.summary}
+                          </p>
+                        )}
+                      </Link>
+                    </div>
                   </li>
                 );
               })}

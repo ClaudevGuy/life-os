@@ -167,6 +167,23 @@ export async function togglePin(id: string): Promise<void> {
   schedulePushIfConfigured();
 }
 
+/**
+ * Mark a task/reminder done (or not). Mirrors the tasks list: sets
+ * `metadata.completedAt` and flips `status` so it reads as archived/struck
+ * everywhere (calendar, Today, etc.).
+ */
+export async function setTaskDone(id: string, done: boolean): Promise<void> {
+  const item = await db.items.get(id);
+  if (!item) return;
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  await db.items.update(id, {
+    metadata: { ...meta, completedAt: done ? new Date().toISOString() : null },
+    status: done ? "archived" : "active",
+    updatedAt: new Date(),
+  });
+  schedulePushIfConfigured();
+}
+
 // ---------- Reads (one-shot) ----------
 
 export async function getItem(id: string): Promise<StoredItem | null> {

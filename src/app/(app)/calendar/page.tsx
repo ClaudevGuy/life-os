@@ -134,7 +134,7 @@ export default function CalendarPage() {
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             Everything with a date — reminders, due tasks, renewals, birthdays
-            and deadlines. Click a day to add a reminder.
+            and deadlines. Click a day to add a reminder or check items off.
           </p>
         </div>
       </div>
