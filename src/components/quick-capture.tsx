@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition, useMemo } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { PrioritySelect } from "@/components/priority-select";
 import {
   Plus,
   NotebookPen,
@@ -303,22 +304,7 @@ export function QuickCapture() {
                     <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
                       Priority
                     </span>
-                    <div className="inline-flex items-center gap-0.5 rounded-full bg-[var(--bg-rail)] border border-[var(--border-soft)] p-0.5">
-                      {(["low", "medium", "high"] as const).map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => setPriority(p)}
-                          className={`text-[10px] uppercase tracking-wide px-2.5 py-1 rounded-full transition ${
-                            priority === p
-                              ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                              : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      ))}
-                    </div>
+                    <PrioritySelect value={priority} onChange={setPriority} />
                   </div>
                 )}
                 {KIND_CAN_BE_LINKED.includes(kind) && projects.length > 0 && (

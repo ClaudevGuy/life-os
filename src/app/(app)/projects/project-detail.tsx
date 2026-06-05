@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useLiveQuery } from "dexie-react-hooks";
+import { PrioritySelect } from "@/components/priority-select";
 import {
   ArrowLeft,
   Pin,
@@ -1019,31 +1020,7 @@ function AddTaskInline({
         placeholder="Task title"
         className="flex-1 bg-transparent text-[14px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none"
       />
-      <div className="inline-flex items-center gap-1 p-0.5 rounded-full bg-[var(--paper)] border border-[var(--line)]">
-        {(["low", "medium", "high"] as const).map((p) => {
-          const active = priority === p;
-          return (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPriority(p)}
-              className={`text-[10.5px] uppercase tracking-[0.12em] font-semibold px-2 py-0.5 rounded-full transition ${
-                active ? "text-[var(--ink)]" : "text-[var(--muted)] hover:text-[var(--ink)]"
-              }`}
-              style={
-                active
-                  ? {
-                      background: `color-mix(in oklch, ${PRIORITY_COLOR[p]} 16%, transparent)`,
-                      color: PRIORITY_COLOR[p],
-                    }
-                  : undefined
-              }
-            >
-              {PRIORITY_LABEL[p]}
-            </button>
-          );
-        })}
-      </div>
+      <PrioritySelect value={priority} onChange={setPriority} />
       <button
         type="button"
         onClick={save}

@@ -5,14 +5,9 @@ import { toast } from "sonner";
 import { Plus, Calendar } from "lucide-react";
 import { parseNaturalDate, dateLabel } from "@/lib/natural-date";
 import { captureItem } from "@/lib/store/items";
+import { PrioritySelect } from "@/components/priority-select";
 
 type Priority = "low" | "medium" | "high";
-
-const PRIORITY_COLORS: Record<Priority, string> = {
-  low: "var(--sage)",
-  medium: "var(--gold)",
-  high: "var(--terra)",
-};
 
 export function NewTask() {
   const [pending, startTransition] = useTransition();
@@ -68,34 +63,8 @@ export function NewTask() {
           </div>
         )}
       </div>
-      <div className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[var(--paper-2)] border border-[var(--line)] p-1">
-        {(["low", "medium", "high"] as const).map((p) => {
-          const active = priority === p;
-          const dot = PRIORITY_COLORS[p];
-          return (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPriority(p)}
-              className={`inline-flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.12em] font-semibold px-2.5 py-1 rounded-full transition ${
-                active
-                  ? "bg-[var(--paper)] text-[var(--ink)]"
-                  : "text-[var(--muted)] hover:text-[var(--ink)]"
-              }`}
-              style={
-                active
-                  ? { boxShadow: "var(--shadow-1)" }
-                  : undefined
-              }
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ background: dot }}
-              />
-              {p}
-            </button>
-          );
-        })}
+      <div className="hidden sm:block">
+        <PrioritySelect value={priority} onChange={setPriority} />
       </div>
       <button
         type="button"

@@ -6,6 +6,7 @@ import type { StoredItem } from "@/lib/store/items";
 import { updateItem, deleteItem } from "@/lib/store/items";
 import { parseNaturalDate, dateLabel } from "@/lib/natural-date";
 import { Portal } from "@/components/portal";
+import { PrioritySelect } from "@/components/priority-select";
 
 type Priority = "low" | "medium" | "high";
 type Recurrence = "" | "daily" | "weekdays" | "weekly" | "monthly";
@@ -127,21 +128,8 @@ export function TaskEditDialog({
             <label className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
               Priority
             </label>
-            <div className="mt-1.5 inline-flex items-center gap-0.5 rounded-md bg-[var(--bg-rail)] border border-[var(--border-soft)] p-0.5">
-              {(["low", "medium", "high"] as Priority[]).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPriority(p)}
-                  className={`px-3 py-1 rounded text-[11px] uppercase tracking-wide transition ${
-                    priority === p
-                      ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                      : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
+            <div className="mt-1.5">
+              <PrioritySelect value={priority} onChange={setPriority} />
             </div>
           </div>
 
