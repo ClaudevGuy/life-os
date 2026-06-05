@@ -59,6 +59,7 @@ export function SubscriptionModal({
   );
   const [category, setCategory] = useState(initialMeta?.category ?? "");
   const [cancelUrl, setCancelUrl] = useState(initialMeta?.cancelUrl ?? "");
+  const [website, setWebsite] = useState(initialMeta?.website ?? "");
   const [notes, setNotes] = useState(existing?.body ?? "");
   const [pending, startTransition] = useTransition();
 
@@ -94,6 +95,8 @@ export function SubscriptionModal({
         : undefined,
       category: category.trim() || undefined,
       cancelUrl: cancelUrl.trim() || undefined,
+      website: website.trim() || undefined,
+      paused: initialMeta?.paused || undefined,
     };
     startTransition(async () => {
       try {
@@ -270,6 +273,25 @@ export function SubscriptionModal({
                 />
               </Field>
             </div>
+
+            <Field
+              label={
+                <>
+                  Website{" "}
+                  <span className="opacity-60 normal-case tracking-normal font-normal">
+                    (shows the logo)
+                  </span>
+                </>
+              }
+            >
+              <input
+                type="url"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://service.com"
+                className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-[13.5px] font-mono text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
+              />
+            </Field>
 
             <Field
               label={

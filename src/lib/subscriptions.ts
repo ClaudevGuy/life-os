@@ -23,7 +23,25 @@ export type SubscriptionMeta = {
   nextChargeAt?: string;
   category?: string;
   cancelUrl?: string;
+  website?: string;
+  paused?: boolean;
 };
+
+/** Extract a clean hostname for favicon lookups. */
+export function domainOf(url?: string): string | null {
+  if (!url || !url.trim()) return null;
+  try {
+    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
+    return u.hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+/** A favicon URL for a domain (DuckDuckGo — privacy-friendly, decent quality). */
+export function faviconUrl(domain: string): string {
+  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+}
 
 export const CYCLES: Cycle[] = ["weekly", "monthly", "quarterly", "yearly"];
 
@@ -83,6 +101,8 @@ export function readSubscription(item: StoredItem): SubscriptionMeta | null {
     nextChargeAt: m.nextChargeAt,
     category: m.category,
     cancelUrl: m.cancelUrl,
+    website: m.website,
+    paused: m.paused === true,
   };
 }
 
@@ -92,7 +112,7 @@ export function monthlyTotals(items: StoredItem[]): Record<string, number> {
   for (const item of items) {
     if (item.status === "archived") continue;
     const sub = readSubscription(item);
-    if (!sub) continue;
+    if (!sub || sub.paused) continue;
     const monthly = monthlyEquivalent(sub.amount, sub.cycle);
     totals[sub.currency] = (totals[sub.currency] ?? 0) + monthly;
   }

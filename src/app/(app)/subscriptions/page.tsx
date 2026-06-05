@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useItemsOfKind } from "@/lib/store/items";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { useItemsOfKind, updateItem, deleteItem } from "@/lib/store/items";
 import type { StoredItem } from "@/lib/store/items";
 import {
   CreditCard,
@@ -10,7 +11,14 @@ import {
   AlertCircle,
   TrendingUp,
   CalendarClock,
+  MoreHorizontal,
+  Pause,
+  Play,
+  Ban,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import { Portal } from "@/components/portal";
 import { NewSubscriptionButton, SubscriptionModal } from "./new-subscription";
 import {
   formatMoney,
@@ -19,6 +27,8 @@ import {
   nextChargeLabel,
   readSubscription,
   currencySymbol,
+  domainOf,
+  faviconUrl,
   type Cycle,
 } from "@/lib/subscriptions";
 
@@ -92,28 +102,34 @@ export default function SubscriptionsPage() {
       .filter((x): x is SubRow => x !== null);
   }, [rows]);
 
-  const totals = useMemo(() => monthlyTotals(data.map((d) => d.item)), [data]);
+  const activeData = useMemo(() => data.filter((d) => !d.sub.paused), [data]);
+  const pausedData = useMemo(() => data.filter((d) => d.sub.paused), [data]);
+
+  const totals = useMemo(
+    () => monthlyTotals(activeData.map((d) => d.item)),
+    [activeData],
+  );
   const primaryCurrency =
     Object.entries(totals).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
   const primaryMonthly = totals[primaryCurrency] ?? 0;
 
   const sortedByRenewal = useMemo(() => {
-    return [...data].sort((a, b) => {
+    return [...activeData].sort((a, b) => {
       const ta = a.sub.nextChargeAt ? new Date(a.sub.nextChargeAt).getTime() : Infinity;
       const tb = b.sub.nextChargeAt ? new Date(b.sub.nextChargeAt).getTime() : Infinity;
       if (ta !== tb) return ta - tb;
       return b.monthly - a.monthly;
     });
-  }, [data]);
+  }, [activeData]);
 
   const sortedByCost = useMemo(
-    () => [...data].sort((a, b) => b.monthly - a.monthly),
-    [data],
+    () => [...activeData].sort((a, b) => b.monthly - a.monthly),
+    [activeData],
   );
 
   const groups = useMemo(() => {
     const m = new Map<string, { color: string; items: SubRow[]; total: number }>();
-    for (const d of data) {
+    for (const d of activeData) {
       const label = d.sub.category?.trim() || "Uncategorized";
       const g = m.get(label) ?? { color: d.color, items: [], total: 0 };
       g.items.push(d);
@@ -128,20 +144,20 @@ export default function SubscriptionsPage() {
         items: g.items.sort((a, b) => b.monthly - a.monthly),
       }))
       .sort((a, b) => b.total - a.total);
-  }, [data]);
+  }, [activeData]);
 
   const biggest = useMemo(
     () =>
-      [...data]
+      [...activeData]
         .filter((d) => d.sub.currency === primaryCurrency)
         .sort((a, b) => b.monthly - a.monthly)[0] ?? null,
-    [data, primaryCurrency],
+    [activeData, primaryCurrency],
   );
 
   const categoryShares = useMemo(() => {
     const totalsByCat = new Map<string, { monthly: number; color: string }>();
     let denom = 0;
-    for (const d of data) {
+    for (const d of activeData) {
       if (d.sub.currency !== primaryCurrency) continue;
       denom += d.monthly;
       const label = d.sub.category?.trim() || "Uncategorized";
@@ -158,31 +174,32 @@ export default function SubscriptionsPage() {
         pct: (v.monthly / denom) * 100,
       }))
       .sort((a, b) => b.monthly - a.monthly);
-  }, [data, primaryCurrency]);
+  }, [activeData, primaryCurrency]);
 
   const renewingSoon = useMemo(() => {
     const cutoff = Date.now() + 7 * 86_400_000;
-    return data.filter(
+    return activeData.filter(
       (d) => d.sub.nextChargeAt && new Date(d.sub.nextChargeAt).getTime() <= cutoff,
     ).length;
-  }, [data]);
+  }, [activeData]);
 
   const upcoming = useMemo(() => {
     const cutoff = Date.now() + 60 * 86_400_000;
-    return data
+    return activeData
       .map((d) =>
-        d.sub.nextChargeAt
-          ? { d, t: new Date(d.sub.nextChargeAt).getTime() }
-          : null,
+        d.sub.nextChargeAt ? { d, t: new Date(d.sub.nextChargeAt).getTime() } : null,
       )
       .filter((x): x is { d: SubRow; t: number } => x !== null)
       .filter((x) => x.t <= cutoff)
       .sort((a, b) => a.t - b.t)
       .slice(0, 8);
-  }, [data]);
+  }, [activeData]);
 
   const bigValue = view === "yr" ? primaryMonthly * 12 : primaryMonthly;
   const sym = currencySymbol(primaryCurrency);
+  const flatList = (sortBy === "cost" ? sortedByCost : sortedByRenewal).concat(
+    pausedData,
+  );
 
   return (
     <div className="p-6 sm:p-8 max-w-6xl mx-auto pg-enter">
@@ -268,14 +285,16 @@ export default function SubscriptionsPage() {
                   </div>
                 )}
 
-                {/* stat chips */}
                 <div className="mt-5 flex items-center gap-2 flex-wrap">
-                  <StatChip label="active" value={String(data.length)} />
+                  <StatChip label="active" value={String(activeData.length)} />
                   <StatChip
                     label="renewing 7d"
                     value={String(renewingSoon)}
                     tone={renewingSoon > 0 ? "var(--gold)" : undefined}
                   />
+                  {pausedData.length > 0 && (
+                    <StatChip label="paused" value={String(pausedData.length)} />
+                  )}
                   {biggest && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--paper-2)] border border-[var(--line)] pl-1.5 pr-3 py-1">
                       <TrendingUp size={11} className="text-[var(--terra)]" />
@@ -301,7 +320,7 @@ export default function SubscriptionsPage() {
                     slices={categoryShares.map((c) => ({ value: c.monthly, color: c.color }))}
                     total={categoryShares.reduce((s, c) => s + c.monthly, 0)}
                     centerMain={`${sym}${Math.round(primaryMonthly).toLocaleString()}`}
-                    centerSub={`${data.length} subs`}
+                    centerSub={`${activeData.length} subs`}
                   />
                   <ul className="flex-1 min-w-0 space-y-1.5">
                     {categoryShares.slice(0, 6).map((c) => (
@@ -346,19 +365,16 @@ export default function SubscriptionsPage() {
                       key={d.item.id}
                       type="button"
                       onClick={() => setEditing(d.item)}
-                      className="shrink-0 w-[150px] text-left life-card p-3 hover:border-[var(--terra)]/40 transition"
+                      className="shrink-0 w-[160px] text-left life-card p-3 hover:border-[var(--terra)]/40 transition"
                     >
                       <div className="flex items-center gap-2">
-                        <span
-                          className="grid place-items-center w-8 h-8 rounded-[9px] text-[13px] font-semibold shrink-0"
-                          style={{
-                            background: d.tint,
-                            color: d.color,
-                            border: `1px solid color-mix(in oklch, ${d.color} 30%, transparent)`,
-                          }}
-                        >
-                          {initial(d.item.title)}
-                        </span>
+                        <ServiceLogo
+                          sub={d.sub}
+                          title={d.item.title}
+                          color={d.color}
+                          tint={d.tint}
+                          size={32}
+                        />
                         <div className="min-w-0">
                           <div className="text-[13px] font-medium text-[var(--ink)] truncate">
                             {d.item.title}
@@ -422,22 +438,12 @@ export default function SubscriptionsPage() {
             <div className="space-y-4">
               {groups.map((g) => (
                 <div key={g.label} className="life-card overflow-hidden">
-                  <div className="px-5 py-2.5 flex items-center justify-between bg-[var(--paper-2)] border-b border-[var(--line)]">
-                    <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] font-semibold text-[var(--muted)]">
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ background: g.color }}
-                      />
-                      {g.label}
-                      <span className="text-[var(--muted-2)] normal-case tracking-normal">
-                        · {g.items.length}
-                      </span>
-                    </span>
-                    <span className="text-[12px] font-mono tabular-nums font-semibold text-[var(--ink)]">
-                      {formatMoney(Math.round(g.total), primaryCurrency)}
-                      <span className="text-[var(--muted)] font-normal">/mo</span>
-                    </span>
-                  </div>
+                  <GroupHeader
+                    color={g.color}
+                    label={g.label}
+                    count={g.items.length}
+                    total={`${formatMoney(Math.round(g.total), primaryCurrency)}`}
+                  />
                   <ul>
                     {g.items.map((row) => (
                       <SubscriptionRow
@@ -449,16 +455,31 @@ export default function SubscriptionsPage() {
                   </ul>
                 </div>
               ))}
+              {pausedData.length > 0 && (
+                <div className="life-card overflow-hidden">
+                  <GroupHeader color="var(--muted-2)" label="Paused" count={pausedData.length} />
+                  <ul>
+                    {pausedData.map((row) => (
+                      <SubscriptionRow
+                        key={row.item.id}
+                        row={row}
+                        onEdit={() => setEditing(row.item)}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           ) : (
             <div className="life-card overflow-hidden">
-              <div className="px-5 py-3 grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_170px_150px] gap-4 items-center text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] border-b border-[var(--line)]">
+              <div className="px-5 py-3 grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[1fr_150px_130px_36px] gap-3 sm:gap-4 items-center text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] border-b border-[var(--line)]">
                 <span>Service</span>
                 <span className="text-right">Cost</span>
                 <span className="text-right">Next charge</span>
+                <span />
               </div>
               <ul>
-                {(sortBy === "cost" ? sortedByCost : sortedByRenewal).map((row) => (
+                {flatList.map((row) => (
                   <SubscriptionRow
                     key={row.item.id}
                     row={row}
@@ -484,6 +505,7 @@ export default function SubscriptionsPage() {
 
 function SubscriptionRow({ row, onEdit }: { row: SubRow; onEdit: () => void }) {
   const { item, sub, monthly, color, tint } = row;
+  const paused = sub.paused === true;
   const charge = sub.nextChargeAt ? new Date(sub.nextChargeAt) : null;
   const chargeLabel = nextChargeLabel(sub.nextChargeAt);
   const isOverdue = charge !== null && charge.getTime() < Date.now() - 86_400_000;
@@ -495,11 +517,10 @@ function SubscriptionRow({ row, onEdit }: { row: SubRow; onEdit: () => void }) {
   const cycleLabel = sub.cycle === "monthly" ? "/mo" : `/${sub.cycle[0]}`;
   const showMonthlyEquivalent = sub.cycle !== "monthly";
 
-  // How far into the current billing cycle we are (for the progress bar).
   const cycleLen = CYCLE_DAYS[sub.cycle];
   const daysUntil = charge ? (charge.getTime() - Date.now()) / 86_400_000 : null;
   const progress =
-    daysUntil != null && cycleLen
+    !paused && daysUntil != null && cycleLen
       ? Math.max(0, Math.min(1, 1 - daysUntil / cycleLen))
       : null;
   const progColor = isOverdue
@@ -511,26 +532,24 @@ function SubscriptionRow({ row, onEdit }: { row: SubRow; onEdit: () => void }) {
   return (
     <li
       onClick={onEdit}
-      className="group px-5 py-4 grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_170px_150px] gap-4 items-center border-b border-[var(--line)] last:border-b-0 hover:bg-[var(--paper-2)] transition cursor-pointer"
+      className={`group px-5 py-4 grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[1fr_150px_130px_36px] gap-3 sm:gap-4 items-center border-b border-[var(--line)] last:border-b-0 hover:bg-[var(--paper-2)] transition cursor-pointer ${
+        paused ? "opacity-60" : ""
+      }`}
     >
       {/* Service */}
       <div className="min-w-0 flex items-center gap-3">
-        <span
-          className="grid place-items-center w-11 h-11 rounded-[11px] text-[15px] font-semibold tracking-[-0.01em] shrink-0"
-          style={{
-            background: tint,
-            color,
-            border: `1px solid color-mix(in oklch, ${color} 30%, transparent)`,
-          }}
-        >
-          {initial(item.title)}
-        </span>
+        <ServiceLogo sub={sub} title={item.title} color={color} tint={tint} size={44} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[15px] font-medium text-[var(--ink)] truncate">
               {item.title || "Untitled"}
             </span>
-            {sub.category && (
+            {paused && (
+              <span className="text-[10px] uppercase tracking-[0.12em] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-2)] text-[var(--muted)]">
+                Paused
+              </span>
+            )}
+            {!paused && sub.category && (
               <span
                 className="text-[10px] uppercase tracking-[0.12em] font-semibold px-2 py-0.5 rounded-full"
                 style={{ color, background: tint }}
@@ -538,21 +557,7 @@ function SubscriptionRow({ row, onEdit }: { row: SubRow; onEdit: () => void }) {
                 {sub.category}
               </span>
             )}
-            {sub.cancelUrl && (
-              <a
-                href={sub.cancelUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1 text-[10.5px] uppercase tracking-[0.12em] font-semibold text-[var(--muted)] hover:text-[var(--terra)] transition"
-                title="Open manage / cancel link"
-              >
-                Manage
-                <ExternalLink size={10} strokeWidth={1.6} />
-              </a>
-            )}
           </div>
-          {/* Cycle progress */}
           {progress != null && (
             <div
               className="mt-2 h-1 rounded-full bg-[var(--bg-2)] overflow-hidden max-w-[230px]"
@@ -591,7 +596,11 @@ function SubscriptionRow({ row, onEdit }: { row: SubRow; onEdit: () => void }) {
 
       {/* Next charge */}
       <div className="text-right shrink-0">
-        {chargeLabel ? (
+        {paused ? (
+          <span className="text-[11.5px] text-[var(--muted-2)] uppercase tracking-[0.1em] font-semibold">
+            paused
+          </span>
+        ) : chargeLabel ? (
           <>
             <span
               className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.1em] font-semibold"
@@ -618,13 +627,256 @@ function SubscriptionRow({ row, onEdit }: { row: SubRow; onEdit: () => void }) {
           </span>
         )}
       </div>
+
+      {/* Actions */}
+      <div className="flex justify-end">
+        <RowMenu item={item} paused={paused} cancelUrl={sub.cancelUrl} onEdit={onEdit} />
+      </div>
     </li>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Row actions menu
+// ──────────────────────────────────────────────────────────────────────
+
+function RowMenu({
+  item,
+  paused,
+  cancelUrl,
+  onEdit,
+}: {
+  item: StoredItem;
+  paused: boolean;
+  cancelUrl?: string;
+  onEdit: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
+
+  function toggle(e: React.MouseEvent) {
+    e.stopPropagation();
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    setOpen((o) => !o);
+  }
+
+  async function togglePause(e: React.MouseEvent) {
+    e.stopPropagation();
+    setOpen(false);
+    await updateItem(item.id, {
+      metadata: { ...(item.metadata ?? {}), paused: !paused },
+    });
+    toast.success(paused ? "Resumed" : "Paused");
+  }
+  async function cancelSub(e: React.MouseEvent) {
+    e.stopPropagation();
+    setOpen(false);
+    if (!confirm(`Cancel "${item.title}"? It moves to archived and stops counting.`))
+      return;
+    await updateItem(item.id, { status: "archived" });
+    toast.success("Cancelled");
+  }
+  async function del(e: React.MouseEvent) {
+    e.stopPropagation();
+    setOpen(false);
+    if (!confirm(`Delete "${item.title}"? This can't be undone.`)) return;
+    await deleteItem(item.id);
+    toast.success("Deleted");
+  }
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        aria-label="Actions"
+        className={`grid place-items-center w-7 h-7 rounded-md text-[var(--muted-2)] hover:text-[var(--ink)] hover:bg-[var(--bg-2)] transition ${
+          open ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+        }`}
+      >
+        <MoreHorizontal size={16} />
+      </button>
+      {open && pos && (
+        <Portal>
+          <div
+            className="fixed inset-0 z-[60]"
+            onClick={() => setOpen(false)}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div
+              className="absolute w-44 rounded-[11px] border border-[var(--line-2)] bg-[var(--paper)] py-1.5 life-rise"
+              style={{ top: pos.top, right: pos.right, boxShadow: "var(--shadow-3)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MenuItem
+                icon={Pencil}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen(false);
+                  onEdit();
+                }}
+              >
+                Edit
+              </MenuItem>
+              {cancelUrl && (
+                <a
+                  href={cancelUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-1.5 text-[12.5px] text-[var(--ink-2)] hover:bg-[var(--paper-2)] transition"
+                >
+                  <ExternalLink size={13} />
+                  Manage
+                </a>
+              )}
+              <MenuItem icon={paused ? Play : Pause} onClick={togglePause}>
+                {paused ? "Resume" : "Pause"}
+              </MenuItem>
+              <MenuItem icon={Ban} onClick={cancelSub}>
+                Cancel
+              </MenuItem>
+              <div className="my-1 h-px bg-[var(--line)]" />
+              <MenuItem icon={Trash2} danger onClick={del}>
+                Delete
+              </MenuItem>
+            </div>
+          </div>
+        </Portal>
+      )}
+    </>
+  );
+}
+
+function MenuItem({
+  icon: Icon,
+  children,
+  onClick,
+  danger,
+}: {
+  icon: React.ComponentType<{ size?: number }>;
+  children: React.ReactNode;
+  onClick: (e: React.MouseEvent) => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full flex items-center gap-2.5 px-3.5 py-1.5 text-[12.5px] transition ${
+        danger
+          ? "text-[var(--muted)] hover:text-[var(--bad)] hover:bg-[var(--terra-tint)]"
+          : "text-[var(--ink-2)] hover:bg-[var(--paper-2)]"
+      }`}
+    >
+      <Icon size={13} />
+      {children}
+    </button>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────
 // Atoms
 // ──────────────────────────────────────────────────────────────────────
+
+function ServiceLogo({
+  sub,
+  title,
+  color,
+  tint,
+  size = 44,
+}: {
+  sub: NonNullable<ReturnType<typeof readSubscription>>;
+  title: string | null;
+  color: string;
+  tint: string;
+  size?: number;
+}) {
+  const domain = domainOf(sub.website || sub.cancelUrl);
+  const [failed, setFailed] = useState(false);
+  const radius = Math.round(size * 0.25);
+
+  if (domain && !failed) {
+    return (
+      <span
+        className="grid place-items-center shrink-0 overflow-hidden bg-white border border-[var(--line)]"
+        style={{ width: size, height: size, borderRadius: radius }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={faviconUrl(domain)}
+          alt=""
+          width={Math.round(size * 0.62)}
+          height={Math.round(size * 0.62)}
+          loading="lazy"
+          onError={() => setFailed(true)}
+          style={{ objectFit: "contain" }}
+        />
+      </span>
+    );
+  }
+  return (
+    <span
+      className="grid place-items-center shrink-0 font-semibold tracking-[-0.01em]"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        background: tint,
+        color,
+        border: `1px solid color-mix(in oklch, ${color} 30%, transparent)`,
+        fontSize: Math.round(size * 0.34),
+      }}
+    >
+      {initial(title)}
+    </span>
+  );
+}
+
+function GroupHeader({
+  color,
+  label,
+  count,
+  total,
+}: {
+  color: string;
+  label: string;
+  count: number;
+  total?: string;
+}) {
+  return (
+    <div className="px-5 py-2.5 flex items-center justify-between bg-[var(--paper-2)] border-b border-[var(--line)]">
+      <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] font-semibold text-[var(--muted)]">
+        <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+        {label}
+        <span className="text-[var(--muted-2)] normal-case tracking-normal">· {count}</span>
+      </span>
+      {total && (
+        <span className="text-[12px] font-mono tabular-nums font-semibold text-[var(--ink)]">
+          {total}
+          <span className="text-[var(--muted)] font-normal">/mo</span>
+        </span>
+      )}
+    </div>
+  );
+}
 
 function Donut({
   slices,
@@ -698,7 +950,7 @@ function StatChip({
   tone?: string;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--paper-2)] border border-[var(--line)] pl-3 pr-3 py-1">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--paper-2)] border border-[var(--line)] px-3 py-1">
       <span
         className="text-[14px] font-semibold tabular-nums"
         style={{ color: tone ?? "var(--ink)" }}
