@@ -1027,18 +1027,25 @@ function CredentialsMissing({ name }: { name: string | null }) {
               as <span className="font-medium text-[var(--ink-2)]">{name}</span>
             </>
           ) : null}{" "}
-          — that login is cached in this browser — but this server can&apos;t find
-          your <Code>YOUTUBE_CLIENT_ID</Code> / <Code>YOUTUBE_CLIENT_SECRET</Code>,
-          so it can&apos;t talk to YouTube. You don&apos;t need to redo the Google
-          setup, just restore the keys.
+          — that login is cached in this browser — but this server doesn&apos;t
+          have valid <Code>YOUTUBE_CLIENT_ID</Code> /{" "}
+          <Code>YOUTUBE_CLIENT_SECRET</Code> values, so it can&apos;t talk to
+          YouTube. You don&apos;t need to redo the Google setup, just fix the keys.
         </p>
         <ol className="mt-4 space-y-3">
           <Step n={1}>
-            Make sure a <Code>.env.local</Code> file exists in the project root
-            with both values:
+            Open <Code>.env.local</Code> in the project root and set your{" "}
+            <span className="font-medium text-[var(--ink)]">real</span> Client ID
+            and secret — not the <Code>your-id</Code> / <Code>your-secret</Code>{" "}
+            example text:
             <Code block>
-              {`YOUTUBE_CLIENT_ID=your-id\nYOUTUBE_CLIENT_SECRET=your-secret`}
+              {`YOUTUBE_CLIENT_ID=1234…apps.googleusercontent.com\nYOUTUBE_CLIENT_SECRET=GOCSPX-…`}
             </Code>
+            Get them from your{" "}
+            <ExtLink href="https://console.cloud.google.com/auth/clients">
+              Google OAuth client
+            </ExtLink>
+            .
           </Step>
           <Step n={2}>
             <span className="font-medium text-[var(--ink)]">
@@ -1124,10 +1131,11 @@ function SetupGuide() {
           <Code block>http://localhost:3000/api/youtube/callback</Code>
         </Step>
         <Step n={7}>
-          Copy the Client ID + secret into a <Code>.env.local</Code> file in the
-          project root:
+          Copy your <span className="font-medium text-[var(--ink)]">real</span>{" "}
+          Client ID + secret (from the Clients tab) into a <Code>.env.local</Code>{" "}
+          file in the project root — replace the bracketed placeholders:
           <Code block>
-            {`YOUTUBE_CLIENT_ID=your-id\nYOUTUBE_CLIENT_SECRET=your-secret`}
+            {`YOUTUBE_CLIENT_ID=<your client id>.apps.googleusercontent.com\nYOUTUBE_CLIENT_SECRET=GOCSPX-<your secret>`}
           </Code>
         </Step>
         <Step n={8}>

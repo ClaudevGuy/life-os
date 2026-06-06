@@ -43,9 +43,20 @@ export function getClientSecret(): string {
   return secret;
 }
 
+/** The literal example values from the setup guide — not real credentials. */
+const PLACEHOLDERS = new Set(["your-id", "your-secret", "", "changeme"]);
+
 export function isConfigured(): boolean {
+  const id = process.env.YOUTUBE_CLIENT_ID?.trim();
+  const secret = process.env.YOUTUBE_CLIENT_SECRET?.trim();
+  // Reject the unfilled example placeholders so the UI guides the user to
+  // paste their REAL Client ID / secret instead of silently failing the
+  // token exchange with `invalid_client`.
   return Boolean(
-    process.env.YOUTUBE_CLIENT_ID && process.env.YOUTUBE_CLIENT_SECRET,
+    id &&
+      secret &&
+      !PLACEHOLDERS.has(id) &&
+      !PLACEHOLDERS.has(secret),
   );
 }
 
