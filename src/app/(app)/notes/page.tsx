@@ -25,13 +25,21 @@ import {
   Bold,
   Italic,
   Code,
+  Link2,
+  ArrowUpRight,
+  CornerDownLeft,
+  Shuffle,
+  ListTodo,
+  Quote,
 } from "lucide-react";
 import {
   useItemsOfKind,
+  useAllItems,
   captureItem,
   updateItem,
   type StoredItem,
 } from "@/lib/store/items";
+import { linksFor } from "@/lib/links";
 import { saveBlob, deleteBlob } from "@/lib/store/blobs";
 import { BlobImg } from "@/components/blob-img";
 import { ItemActions } from "@/components/item-actions";
@@ -497,6 +505,14 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   // Selection to restore after a programmatic wrap (set via the toolbar).
   const pendingSel = useRef<[number, number] | null>(null);
+  const router = useRouter();
+
+  // Backlinks: who this note links to, and who links back to it.
+  const allItems = useAllItems() ?? [];
+  const { outgoing, incoming } = useMemo(
+    () => linksFor(n.id, allItems),
+    [n.id, allItems],
+  );
 
   // When switching notes, drop edit mode and reseed the local fields.
   useEffect(() => {
@@ -676,14 +692,20 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="life-btn life-btn-sm life-btn-secondary"
-            >
-              <Pencil size={12} strokeWidth={1.6} />
-              Edit
-            </button>
+            <>
+              <ConvertMenu
+                note={n}
+                onConverted={(id) => router.push(`/items/${id}`)}
+              />
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="life-btn life-btn-sm life-btn-secondary"
+              >
+                <Pencil size={12} strokeWidth={1.6} />
+                Edit
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -849,8 +871,155 @@ function NoteDetail({ note: n }: { note: StoredItem }) {
           ))}
         </div>
       )}
+
+      {(outgoing.length > 0 || incoming.length > 0) && (
+        <div className="mt-10 pt-6 border-t border-[var(--line)] space-y-5">
+          <div className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] font-semibold text-[var(--muted-2)]">
+            <Link2 size={12} strokeWidth={1.7} />
+            Connections
+          </div>
+          {outgoing.length > 0 && (
+            <LinkGroup label="Links to" icon={ArrowUpRight} items={outgoing} />
+          )}
+          {incoming.length > 0 && (
+            <LinkGroup label="Linked from" icon={CornerDownLeft} items={incoming} />
+          )}
+        </div>
+      )}
     </div>
   );
+}
+
+function LinkGroup({
+  label,
+  icon: Icon,
+  items,
+}: {
+  label: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  items: StoredItem[];
+}) {
+  return (
+    <div>
+      <div className="inline-flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] mb-2.5">
+        <Icon size={12} strokeWidth={1.7} />
+        {label}
+        <span className="text-[var(--muted-2)] font-mono">· {items.length}</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((it) => (
+          <Link
+            key={it.id}
+            href={`/items/${it.id}`}
+            className="inline-flex items-center gap-2 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] hover:border-[var(--terra)] hover:bg-[var(--paper-2)] px-3 py-1.5 transition max-w-full"
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: kindColor(it.kind) }}
+            />
+            <span className="text-[13px] text-[var(--ink-2)] truncate">
+              {it.title?.trim() || "Untitled"}
+            </span>
+            <span className="text-[9.5px] uppercase tracking-[0.1em] text-[var(--muted-2)] font-semibold shrink-0">
+              {it.kind}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ConvertMenu({
+  note,
+  onConverted,
+}: {
+  note: StoredItem;
+  onConverted: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  async function convert(kind: "task" | "highlight", extra: Record<string, unknown>) {
+    try {
+      await updateItem(note.id, {
+        kind,
+        metadata: { ...(note.metadata ?? {}), ...extra },
+      });
+      toast.success(`Converted to ${kind}`);
+      setOpen(false);
+      onConverted(note.id);
+    } catch {
+      toast.error("Couldn't convert");
+    }
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="life-btn life-btn-sm life-btn-ghost"
+      >
+        <Shuffle size={12} strokeWidth={1.7} />
+        Convert
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1 w-44 rounded-[11px] border border-[var(--line-2)] bg-[var(--paper)] py-1.5 z-20"
+          style={{ boxShadow: "var(--shadow-3)" }}
+        >
+          <button
+            type="button"
+            onClick={() => convert("task", { priority: "medium", completedAt: null })}
+            className="w-full flex items-center gap-2.5 px-3.5 py-1.5 text-[12.5px] text-[var(--ink-2)] hover:bg-[var(--paper-2)] transition"
+          >
+            <ListTodo size={13} />
+            Make a task
+          </button>
+          <button
+            type="button"
+            onClick={() => convert("highlight", {})}
+            className="w-full flex items-center gap-2.5 px-3.5 py-1.5 text-[12.5px] text-[var(--ink-2)] hover:bg-[var(--paper-2)] transition"
+          >
+            <Quote size={13} />
+            Make a highlight
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function kindColor(kind: string): string {
+  switch (kind) {
+    case "task":
+      return "var(--terra)";
+    case "highlight":
+    case "decision":
+      return "var(--gold)";
+    case "journal":
+    case "habit":
+      return "var(--sage)";
+    case "person":
+    case "voice":
+    case "area":
+      return "var(--plum)";
+    case "project":
+    case "file":
+      return "var(--sky)";
+    default:
+      return "var(--muted)";
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────

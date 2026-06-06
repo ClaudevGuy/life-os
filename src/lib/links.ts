@@ -60,3 +60,26 @@ export function buildGraph(items: StoredItem[]): {
 
   return { nodes, edges };
 }
+
+/**
+ * Resolve the links for one item: `outgoing` = items this item's body links to
+ * via [[…]], `incoming` = items whose body links back to this one (backlinks).
+ */
+export function linksFor(
+  itemId: string,
+  items: StoredItem[],
+): { outgoing: StoredItem[]; incoming: StoredItem[] } {
+  const { edges } = buildGraph(items);
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const outIds = new Set<string>();
+  const inIds = new Set<string>();
+  for (const e of edges) {
+    if (e.source === itemId) outIds.add(e.target);
+    if (e.target === itemId) inIds.add(e.source);
+  }
+  const resolve = (ids: Set<string>) =>
+    [...ids]
+      .map((id) => byId.get(id))
+      .filter((x): x is StoredItem => Boolean(x));
+  return { outgoing: resolve(outIds), incoming: resolve(inIds) };
+}
