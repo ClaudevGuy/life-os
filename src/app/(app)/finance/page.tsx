@@ -30,6 +30,13 @@ import {
   Scale,
   ChevronDown,
   Check,
+  Plus,
+  X,
+  Copy,
+  ExternalLink,
+  Trash2,
+  TriangleAlert,
+  Loader2,
 } from "lucide-react";
 import { useItemsOfKind, type StoredItem } from "@/lib/store/items";
 import { useSnapshots, recordSnapshot } from "@/lib/store/snapshots";
@@ -60,6 +67,20 @@ import { ymd } from "@/lib/ymd";
 import { Donut, Sparkline } from "./charts";
 import { NewAccountButton, AccountModal } from "./account-modal";
 import { NewHoldingButton, HoldingModal } from "./holding-modal";
+import {
+  useWallets,
+  useWalletBalances,
+  addWallet,
+  removeWallet,
+  type TrackedWallet,
+  type WalletState,
+} from "@/lib/store/wallets";
+import {
+  isValidSolanaAddress,
+  truncateAddress,
+  type WalletAsset,
+} from "@/lib/solana";
+import { toast } from "sonner";
 
 type IconCmp = ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
 
@@ -129,6 +150,7 @@ export default function FinancePage() {
   const holdings = (useItemsOfKind("holding") ?? []) as StoredItem[];
   const subscriptions = (useItemsOfKind("subscription") ?? []) as StoredItem[];
   const snapshots = useSnapshots() ?? [];
+  const wallets = useWallets() ?? [];
 
   const [mounted, setMounted] = useState(false);
   const [base, setBase] = useState("USD");
@@ -304,6 +326,9 @@ export default function FinancePage() {
       .filter((x): x is HoldingView => x !== null);
   }, [holdings, quotes, base, fx]);
 
+  // Live, priced balances for each tracked on-chain wallet.
+  const walletStates = useWalletBalances(wallets, quoteNonce);
+
   // Lines for the net-worth summary.
   const lines = useMemo<FinLine[]>(() => {
     const out: FinLine[] = [];
@@ -326,12 +351,26 @@ export default function FinancePage() {
         currency: "USD",
       });
     }
+    // Tracked wallets count as crypto assets at their live total (USD).
+    for (const w of wallets) {
+      const d = walletStates[w.id]?.data;
+      if (d && d.totalUsd > 0) {
+        out.push({
+          id: `wallet:${w.id}`,
+          bucket: "asset",
+          category: "Crypto",
+          amount: d.totalUsd,
+          currency: "USD",
+        });
+      }
+    }
     return out;
-  }, [accountViews, holdingViews]);
+  }, [accountViews, holdingViews, wallets, walletStates]);
 
   const summary = useMemo(() => summarize(lines, base, fx), [lines, base, fx]);
 
-  const hasData = accounts.length > 0 || holdings.length > 0;
+  const hasData =
+    accounts.length > 0 || holdings.length > 0 || wallets.length > 0;
   const pricesReady = !quotesLoading;
 
   // Record a daily snapshot once figures are real.
@@ -437,6 +476,7 @@ export default function FinancePage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <BaseSelect base={base} onChange={setBase} />
+          <ConnectWalletButton variant="header" />
           <NewHoldingButton />
           <NewAccountButton />
         </div>
@@ -479,6 +519,15 @@ export default function FinancePage() {
             refreshing={quotesRefreshing}
             onRefresh={refreshQuotes}
             onEdit={setEditingHolding}
+          />
+
+          <WalletsCard
+            wallets={wallets}
+            states={walletStates}
+            base={base}
+            fx={fx}
+            refreshing={quotesRefreshing}
+            onRefresh={refreshQuotes}
           />
         </>
       )}
@@ -1545,5 +1594,484 @@ function EmptyHero() {
         <NewHoldingButton />
       </div>
     </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Wallets — watch-only on-chain tracking (Solana)
+// ──────────────────────────────────────────────────────────────────────
+
+type PhantomProvider = {
+  isPhantom?: boolean;
+  connect: (opts?: { onlyIfTrusted?: boolean }) => Promise<{
+    publicKey: { toString(): string };
+  }>;
+};
+
+function getPhantom(): PhantomProvider | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as {
+    phantom?: { solana?: PhantomProvider };
+    solana?: PhantomProvider;
+  };
+  const p = w.phantom?.solana ?? w.solana;
+  return p?.isPhantom ? p : null;
+}
+
+/** Solana gradient chip — avatar fallback for wallets and SOL. */
+function SolMark({ size = 28 }: { size?: number }) {
+  return (
+    <span
+      className="grid place-items-center rounded-[8px] shrink-0 font-bold text-white"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.42,
+        background: "linear-gradient(135deg, #9945FF 0%, #14F195 100%)",
+      }}
+    >
+      ◎
+    </span>
+  );
+}
+
+function ConnectWalletButton({
+  variant = "header",
+}: {
+  variant?: "header" | "primary";
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={
+          variant === "primary"
+            ? "life-btn life-btn-sm life-btn-primary"
+            : "life-btn life-btn-sm"
+        }
+      >
+        <Plus size={13} strokeWidth={2} />
+        Connect wallet
+      </button>
+      {open && <ConnectWalletModal onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function ConnectWalletModal({ onClose }: { onClose: () => void }) {
+  const [address, setAddress] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const phantom = getPhantom();
+
+  async function connectPhantom() {
+    const p = getPhantom();
+    if (!p) {
+      setErr(
+        "Phantom isn't detected here. Paste an address below, or install it from phantom.app.",
+      );
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      const resp = await p.connect();
+      const addr = resp.publicKey.toString();
+      const w = await addWallet({
+        chain: "solana",
+        address: addr,
+        label: "Phantom",
+      });
+      if (!w) {
+        setErr("That wallet is already tracked.");
+        setBusy(false);
+        return;
+      }
+      toast.success("Wallet connected");
+      onClose();
+    } catch {
+      setErr("Connection canceled.");
+      setBusy(false);
+    }
+  }
+
+  async function trackPasted() {
+    const a = address.trim();
+    if (!isValidSolanaAddress(a)) {
+      setErr("That doesn't look like a Solana address.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    const w = await addWallet({ chain: "solana", address: a });
+    if (!w) {
+      setErr("That wallet is already tracked.");
+      setBusy(false);
+      return;
+    }
+    toast.success("Wallet added");
+    onClose();
+  }
+
+  return (
+    <Portal>
+      <div
+        className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] pb-8 px-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-md rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
+          style={{ boxShadow: "var(--shadow-3)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-5 pb-4 flex items-start gap-3 border-b border-[var(--line)]">
+            <SolMark size={36} />
+            <div className="flex-1 min-w-0">
+              <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+                Track a wallet
+              </div>
+              <div className="mt-0.5 text-[17px] font-semibold tracking-[-0.015em] text-[var(--ink)]">
+                Solana
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="grid place-items-center w-8 h-8 rounded-[8px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition shrink-0"
+            >
+              <X size={14} strokeWidth={1.6} />
+            </button>
+          </div>
+
+          <div className="p-5 space-y-4">
+            <button
+              type="button"
+              onClick={connectPhantom}
+              disabled={busy}
+              className="w-full flex items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 text-[14px] font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
+              style={{ background: "#ab9ff2" }}
+            >
+              {busy ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <span className="text-[15px] leading-none">👻</span>
+              )}
+              Connect Phantom
+            </button>
+
+            <div className="flex items-center gap-3">
+              <span className="flex-1 h-px bg-[var(--line)]" />
+              <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[var(--muted-2)]">
+                or paste an address
+              </span>
+              <span className="flex-1 h-px bg-[var(--line)]" />
+            </div>
+
+            <div className="space-y-2">
+              <input
+                value={address}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  setErr(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") trackPasted();
+                }}
+                placeholder="Solana address (7xKX…9aQp)"
+                spellCheck={false}
+                autoComplete="off"
+                className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-[13px] font-mono text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
+              />
+              <button
+                type="button"
+                onClick={trackPasted}
+                disabled={busy || !address.trim()}
+                className="life-btn life-btn-sm life-btn-primary w-full justify-center disabled:opacity-50"
+              >
+                Track address
+              </button>
+            </div>
+
+            {err && (
+              <p className="text-[12px] text-[var(--bad)] flex items-start gap-1.5">
+                <TriangleAlert size={13} className="mt-0.5 shrink-0" />
+                <span>{err}</span>
+              </p>
+            )}
+
+            <p className="text-[11px] text-[var(--muted-2)] leading-relaxed border-t border-[var(--line)] pt-3">
+              Watch-only — Life OS reads balances from the public chain and never
+              asks you to sign anything. Remove a wallet anytime.
+            </p>
+          </div>
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
+function WalletsCard({
+  wallets,
+  states,
+  base,
+  fx,
+  refreshing,
+  onRefresh,
+}: {
+  wallets: TrackedWallet[];
+  states: Record<string, WalletState>;
+  base: string;
+  fx: FxRates | null;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const totalUsd = wallets.reduce(
+    (s, w) => s + (states[w.id]?.data?.totalUsd ?? 0),
+    0,
+  );
+  const totalBase = convert(totalUsd, "USD", base, fx);
+
+  return (
+    <div className="life-card overflow-hidden">
+      <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-[var(--line)]">
+        <h2 className="text-[11px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] flex items-center gap-2">
+          <span
+            className="grid place-items-center w-6 h-6 rounded-[7px]"
+            style={{
+              background: "color-mix(in oklch, #9945FF 18%, transparent)",
+              color: "#9945FF",
+            }}
+          >
+            <Wallet size={12} />
+          </span>
+          Wallets
+        </h2>
+        <div className="flex items-center gap-2">
+          {wallets.length > 0 && totalBase != null && totalUsd > 0 && (
+            <span className="text-[13px] font-mono tabular-nums font-semibold text-[var(--ink)]">
+              {fmtMoney(totalBase, base, { compact: true })}
+            </span>
+          )}
+          {wallets.length > 0 && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              title="Refresh balances"
+              aria-label="Refresh balances"
+              className="grid place-items-center w-7 h-7 rounded-md text-[var(--muted-2)] hover:text-[var(--terra)] transition"
+            >
+              <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+            </button>
+          )}
+          <ConnectWalletButton variant="header" />
+        </div>
+      </div>
+
+      {wallets.length === 0 ? (
+        <div className="px-5 py-9 flex flex-col items-center text-center">
+          <SolMark size={36} />
+          <p className="mt-3 text-[14px] font-medium text-[var(--ink)]">
+            Track an on-chain wallet
+          </p>
+          <p className="mt-1 text-[12.5px] text-[var(--muted)] max-w-xs leading-relaxed">
+            Connect Phantom or paste a Solana address — Life OS reads its live
+            balances and folds them into your net worth.
+          </p>
+          <div className="mt-4">
+            <ConnectWalletButton variant="primary" />
+          </div>
+        </div>
+      ) : (
+        <ul className="divide-y divide-[var(--line)]">
+          {wallets.map((w) => (
+            <WalletRow
+              key={w.id}
+              wallet={w}
+              state={states[w.id]}
+              base={base}
+              fx={fx}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function WalletRow({
+  wallet,
+  state,
+  base,
+  fx,
+}: {
+  wallet: TrackedWallet;
+  state: WalletState | undefined;
+  base: string;
+  fx: FxRates | null;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const data = state?.data ?? null;
+  const loading = state?.loading ?? true;
+  const error = state?.error ?? null;
+  const totalBase = data ? convert(data.totalUsd, "USD", base, fx) : null;
+  const label = wallet.label || truncateAddress(wallet.address);
+
+  const assets = data?.assets ?? [];
+  const shown = assets.slice(0, 6);
+  const moreCount = Math.max(0, assets.length - shown.length);
+
+  function copy() {
+    navigator.clipboard?.writeText(wallet.address);
+    toast.success("Address copied");
+  }
+  function remove() {
+    if (!confirm("Stop tracking this wallet?")) return;
+    removeWallet(wallet.id);
+    toast.success("Wallet removed");
+  }
+
+  return (
+    <li className="px-5 py-3.5">
+      <div className="flex items-center gap-3">
+        <SolMark size={34} />
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="flex-1 min-w-0 text-left group"
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-[14.5px] font-medium text-[var(--ink)] truncate">
+              {label}
+            </span>
+            <ChevronDown
+              size={13}
+              className={`text-[var(--muted-2)] transition-transform ${
+                expanded ? "rotate-180" : ""
+              }`}
+            />
+          </div>
+          <div className="text-[12px] text-[var(--muted)] font-mono truncate">
+            {truncateAddress(wallet.address, 6, 6)}
+          </div>
+        </button>
+
+        <div className="text-right shrink-0 min-w-[64px]">
+          {loading && !data ? (
+            <span className="text-[12px] text-[var(--muted-2)] inline-flex items-center gap-1.5">
+              <Loader2 size={11} className="animate-spin" /> Reading…
+            </span>
+          ) : totalBase != null ? (
+            <div className="text-[15px] font-mono tabular-nums font-semibold text-[var(--ink)]">
+              {fmtMoney(totalBase, base, { compact: true })}
+            </div>
+          ) : (
+            <span className="text-[12px] text-[var(--muted-2)]">—</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-0.5 shrink-0">
+          <a
+            href={`https://solscan.io/account/${wallet.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View on Solscan"
+            className="grid place-items-center w-7 h-7 rounded-md text-[var(--muted-2)] hover:text-[var(--terra)] transition"
+          >
+            <ExternalLink size={13} />
+          </a>
+          <button
+            type="button"
+            onClick={copy}
+            title="Copy address"
+            className="grid place-items-center w-7 h-7 rounded-md text-[var(--muted-2)] hover:text-[var(--ink)] transition"
+          >
+            <Copy size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={remove}
+            title="Remove wallet"
+            className="grid place-items-center w-7 h-7 rounded-md text-[var(--muted-2)] hover:text-[var(--bad)] transition"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </div>
+
+      {error && !data && (
+        <p className="mt-2 ml-[46px] text-[11.5px] text-[var(--muted)] flex items-start gap-1.5">
+          <TriangleAlert size={12} className="mt-0.5 text-[var(--gold)] shrink-0" />
+          <span>
+            {error === "invalid_address"
+              ? "That address looks invalid."
+              : "Couldn't reach the chain — the public RPC may be rate-limited. Try refresh, or set a custom SOLANA_RPC_URL."}
+          </span>
+        </p>
+      )}
+
+      {expanded && data && assets.length > 0 && (
+        <ul className="mt-3 ml-[46px] space-y-1.5">
+          {shown.map((a) => (
+            <WalletAssetRow key={a.mint} asset={a} base={base} fx={fx} />
+          ))}
+          {(moreCount > 0 || data.hiddenCount > 0) && (
+            <li className="text-[11px] text-[var(--muted-2)] pt-0.5">
+              {moreCount > 0 && `+${moreCount} more`}
+              {moreCount > 0 && data.hiddenCount > 0 && " · "}
+              {data.hiddenCount > 0 &&
+                `${data.hiddenCount} unpriced token${
+                  data.hiddenCount === 1 ? "" : "s"
+                }`}
+            </li>
+          )}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+function WalletAssetRow({
+  asset,
+  base,
+  fx,
+}: {
+  asset: WalletAsset;
+  base: string;
+  fx: FxRates | null;
+}) {
+  const valueBase =
+    asset.valueUsd != null ? convert(asset.valueUsd, "USD", base, fx) : null;
+  return (
+    <li className="flex items-center gap-2.5">
+      {asset.logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={asset.logo}
+          alt=""
+          loading="lazy"
+          className="w-6 h-6 rounded-full bg-[var(--bg-2)] shrink-0"
+        />
+      ) : asset.symbol === "SOL" ? (
+        <SolMark size={24} />
+      ) : (
+        <span className="grid place-items-center w-6 h-6 rounded-[6px] shrink-0 text-[9px] font-bold font-mono bg-[var(--bg-2)] text-[var(--muted)]">
+          {(asset.symbol || "?").replace("…", "").slice(0, 3)}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <span className="text-[13px] font-medium text-[var(--ink)]">
+          {asset.symbol || "Unknown"}
+        </span>
+        <span className="text-[11.5px] text-[var(--muted)] font-mono ml-1.5">
+          {fmtQty(asset.amount)}
+        </span>
+      </div>
+      <span className="text-[13px] font-mono tabular-nums text-[var(--ink-2)] shrink-0">
+        {valueBase != null ? fmtMoney(valueBase, base, { compact: true }) : "—"}
+      </span>
+    </li>
   );
 }
