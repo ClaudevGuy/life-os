@@ -20,7 +20,7 @@ import { SearchTrigger } from "@/components/search-trigger";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PomodoroPill } from "@/components/pomodoro-pill";
 import { AskPopover } from "@/components/ask-popover";
-import { VoiceButton } from "@/components/voice-capture";
+import { VoiceButton } from "@/components/voice-assistant";
 import { greetingFor, timeOfDay } from "@/lib/time-of-day";
 import { ymd } from "@/lib/ymd";
 

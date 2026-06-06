@@ -143,6 +143,22 @@ export function PomodoroPill() {
     };
   }, [running, mode, focusMin, breakMin]);
 
+  // Voice control: start a focus session on request (from the voice assistant).
+  useEffect(() => {
+    function onStartFocus(e: Event) {
+      const detail = (e as CustomEvent<{ minutes?: number }>).detail;
+      const mins = (detail?.minutes ?? 25) as Duration;
+      const valid: Duration[] = [15, 25, 50, 90];
+      const chosen = valid.includes(mins) ? mins : 25;
+      setMode("focus");
+      setFocusMin(chosen);
+      setSecondsLeft(chosen * 60);
+      setRunning(true);
+    }
+    window.addEventListener("lifeos:start-focus", onStartFocus);
+    return () => window.removeEventListener("lifeos:start-focus", onStartFocus);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {

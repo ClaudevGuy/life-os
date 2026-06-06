@@ -9,6 +9,13 @@ export function ThemeToggle() {
   useEffect(() => {
     const current = document.documentElement.dataset.theme;
     setTheme(current === "light" ? "light" : "dark");
+    // Stay in sync when something else (e.g. the voice assistant) flips it.
+    function onThemeEvent(e: Event) {
+      const mode = (e as CustomEvent<{ mode?: string }>).detail?.mode;
+      if (mode === "light" || mode === "dark") setTheme(mode);
+    }
+    window.addEventListener("lifeos:theme", onThemeEvent);
+    return () => window.removeEventListener("lifeos:theme", onThemeEvent);
   }, []);
 
   function toggle() {

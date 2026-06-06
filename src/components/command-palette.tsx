@@ -95,6 +95,17 @@ export function CommandPalette() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Voice control: open the palette pre-filled with a query.
+  useEffect(() => {
+    function onOpenSearch(e: Event) {
+      const query = (e as CustomEvent<{ query?: string }>).detail?.query ?? "";
+      setQ(query);
+      setOpen(true);
+    }
+    window.addEventListener("lifeos:open-search", onOpenSearch);
+    return () => window.removeEventListener("lifeos:open-search", onOpenSearch);
+  }, []);
+
   // Debounced in-browser search against IndexedDB
   useEffect(() => {
     if (!q.trim() || !open) {

@@ -13,6 +13,7 @@ import { LogoMark } from "@/components/logo-mark";
 import { MusicProvider } from "@/components/music-player";
 import { VaultProvider } from "@/components/vault/vault-provider";
 import { AppLockGate } from "@/components/vault/app-lock-gate";
+import { VoiceAssistantProvider } from "@/components/voice-assistant";
 
 export default function AppLayout({
   children,
@@ -21,6 +22,7 @@ export default function AppLayout({
 }) {
   return (
     <VaultProvider>
+    <VoiceAssistantProvider>
     <div className="h-screen flex relative z-[1]">
       <aside
         data-side="rail"
@@ -87,6 +89,7 @@ export default function AppLayout({
       <PwaBootstrap />
       <AppLockGate />
     </div>
+    </VoiceAssistantProvider>
     </VaultProvider>
   );
 }
