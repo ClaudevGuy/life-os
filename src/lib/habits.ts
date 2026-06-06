@@ -122,3 +122,124 @@ export function thisWeekCount(checkins: string[]): number {
   for (const d of weekDates()) if (set.has(d)) n++;
   return n;
 }
+
+/* ── insights ─────────────────────────────────────────────────────────── */
+
+/** A ymd string → a local Date at noon (avoids timezone edge cases). */
+function ymdToDate(s: string): Date {
+  return new Date(`${s}T12:00:00`);
+}
+
+function nextWeekday(d: Date): Date {
+  const x = new Date(d);
+  do {
+    x.setDate(x.getDate() + 1);
+  } while (x.getDay() === 0 || x.getDay() === 6);
+  return x;
+}
+
+/** The longest run of consecutive periods ever achieved (all-time best). */
+export function longestStreak(
+  checkins: Set<string>,
+  cadence: Cadence = "daily",
+): number {
+  if (checkins.size === 0) return 0;
+
+  if (cadence === "weekly") {
+    const weekKeys = new Set<string>();
+    for (const c of checkins) weekKeys.add(ymd(startOfWeek(ymdToDate(c))));
+    const weeks = [...weekKeys]
+      .map((w) => ymdToDate(w))
+      .sort((a, b) => a.getTime() - b.getTime());
+    let best = 0;
+    let run = 0;
+    let prev: Date | null = null;
+    for (const w of weeks) {
+      const gap = prev
+        ? Math.round((w.getTime() - prev.getTime()) / (7 * 86_400_000))
+        : 0;
+      run = prev && gap === 1 ? run + 1 : 1;
+      best = Math.max(best, run);
+      prev = w;
+    }
+    return best;
+  }
+
+  const skipWeekends = cadence === "weekdays";
+  const days = [...checkins]
+    .map((c) => ymdToDate(c))
+    .sort((a, b) => a.getTime() - b.getTime());
+  let best = 0;
+  let run = 0;
+  let prev: Date | null = null;
+  for (const d of days) {
+    let consecutive = false;
+    if (prev) {
+      consecutive = skipWeekends
+        ? ymd(nextWeekday(prev)) === ymd(d)
+        : Math.round((d.getTime() - prev.getTime()) / 86_400_000) === 1;
+    }
+    run = consecutive ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = d;
+  }
+  return best;
+}
+
+/** done / expected over the last `windowDays` (cadence-aware). */
+export function completionRate(
+  checkins: Set<string>,
+  cadence: Cadence,
+  windowDays: number,
+): { done: number; total: number; pct: number } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (cadence === "weekly") {
+    const weeks = Math.max(1, Math.round(windowDays / 7));
+    let done = 0;
+    for (let w = 0; w < weeks; w++) {
+      const ws = startOfWeek(today);
+      ws.setDate(ws.getDate() - w * 7);
+      let hit = false;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(ws);
+        d.setDate(ws.getDate() + i);
+        if (d <= today && checkins.has(ymd(d))) {
+          hit = true;
+          break;
+        }
+      }
+      if (hit) done++;
+    }
+    return { done, total: weeks, pct: Math.round((done / weeks) * 100) };
+  }
+
+  let done = 0;
+  let total = 0;
+  for (let i = 0; i < windowDays; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dow = d.getDay();
+    if (cadence === "weekdays" && (dow === 0 || dow === 6)) continue;
+    total++;
+    if (checkins.has(ymd(d))) done++;
+  }
+  return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+}
+
+/** The weekday (0=Sun … 6=Sat) the habit is checked off most often. */
+export function bestWeekday(checkins: Set<string>): number | null {
+  if (checkins.size === 0) return null;
+  const counts = new Array(7).fill(0) as number[];
+  for (const c of checkins) counts[ymdToDate(c).getDay()]++;
+  let best = 0;
+  for (let i = 1; i < 7; i++) if (counts[i] > counts[best]) best = i;
+  return counts[best] > 0 ? best : null;
+}
+
+/** Earliest check-in ymd, or null. */
+export function firstCheckin(checkins: Set<string>): string | null {
+  if (checkins.size === 0) return null;
+  return [...checkins].sort()[0];
+}

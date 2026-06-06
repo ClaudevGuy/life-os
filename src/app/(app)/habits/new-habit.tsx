@@ -8,7 +8,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
-  CalendarRange,
+  Bell,
+  Trophy,
+  Sparkles,
 } from "lucide-react";
 import { captureItem, updateItem, type StoredItem } from "@/lib/store/items";
 import { Portal } from "@/components/portal";
@@ -16,8 +18,21 @@ import { ymd } from "@/lib/ymd";
 import {
   type Cadence,
   calcStreak,
-  thisWeekCount,
+  longestStreak,
+  completionRate,
+  bestWeekday,
+  firstCheckin,
 } from "@/lib/habits";
+
+const WEEKDAY_FULL = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 const CADENCES: Cadence[] = ["daily", "weekdays", "weekly"];
 
@@ -69,11 +84,15 @@ export function HabitFormModal({
   const existingMeta = (existing?.metadata ?? {}) as {
     cadence?: Cadence;
     checkins?: string[];
+    reminderTime?: string;
   };
   const [title, setTitle] = useState(existing?.title ?? "");
   const [summary, setSummary] = useState(existing?.body ?? "");
   const [cadence, setCadence] = useState<Cadence>(
     existingMeta.cadence ?? "daily",
+  );
+  const [reminderTime, setReminderTime] = useState(
+    existingMeta.reminderTime ?? "",
   );
   // Local copy of checkins so calendar toggles feel instant while we persist.
   const [checkins, setCheckins] = useState<Set<string>>(
@@ -104,6 +123,7 @@ export function HabitFormModal({
               ...existingMeta,
               cadence,
               checkins: [...checkins],
+              reminderTime: reminderTime || undefined,
             },
           });
           toast.success("Updated");
@@ -112,7 +132,11 @@ export function HabitFormModal({
             kind: "habit",
             title: title.trim(),
             body: summary.trim() || null,
-            metadata: { cadence, checkins: [] },
+            metadata: {
+              cadence,
+              checkins: [],
+              reminderTime: reminderTime || undefined,
+            },
           });
           toast.success("Habit added");
         }
@@ -149,11 +173,28 @@ export function HabitFormModal({
     () => calcStreak(checkins, cadence),
     [checkins, cadence],
   );
-  const weekCount = useMemo(
-    () => thisWeekCount([...checkins]),
-    [checkins],
+  const best = useMemo(
+    () => longestStreak(checkins, cadence),
+    [checkins, cadence],
+  );
+  const since = useMemo(() => firstCheckin(checkins), [checkins]);
+  const bestWd = useMemo(() => bestWeekday(checkins), [checkins]);
+  const windows = useMemo(
+    () => [
+      { label: "7 days", ...completionRate(checkins, cadence, 7) },
+      { label: "30 days", ...completionRate(checkins, cadence, 30) },
+      { label: "90 days", ...completionRate(checkins, cadence, 90) },
+    ],
+    [checkins, cadence],
   );
   const total = checkins.size;
+  const unit = cadence === "weekly" ? "w" : "d";
+  const sinceLabel = since
+    ? new Date(`${since}T12:00:00`).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
 
   return (
     <Portal>
@@ -230,35 +271,99 @@ export function HabitFormModal({
               </p>
             </div>
 
-            {/* History — only for an existing habit */}
+            {/* Reminder */}
+            <div className="mt-4">
+              <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] mb-2 inline-flex items-center gap-1.5">
+                <Bell size={12} strokeWidth={1.7} />
+                Reminder
+              </div>
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-1.5 text-[13.5px] text-[var(--ink)] focus:outline-none focus:border-[var(--terra)] transition tabular-nums"
+                />
+                {reminderTime ? (
+                  <button
+                    type="button"
+                    onClick={() => setReminderTime("")}
+                    className="text-[12px] text-[var(--muted)] hover:text-[var(--ink)] transition"
+                  >
+                    Clear
+                  </button>
+                ) : (
+                  <span className="text-[12px] text-[var(--muted-2)]">Off</span>
+                )}
+              </div>
+              <p className="mt-1.5 text-[11.5px] text-[var(--muted-2)]">
+                A nudge at this time while Life OS is open (needs notifications
+                enabled).
+              </p>
+            </div>
+
+            {/* Insights — only for an existing habit */}
             {existing && (
               <>
                 <div className="mt-6 mb-3 inline-flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
-                  <CalendarRange size={12} strokeWidth={1.6} />
-                  History
+                  <Sparkles size={12} strokeWidth={1.6} />
+                  Insights
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  <Stat
-                    label={cadence === "weekly" ? "Streak (wks)" : "Streak"}
-                    value={`${streak}${cadence === "weekly" ? "w" : "d"}`}
-                    color="var(--terra)"
-                  />
-                  <Stat
-                    label="This week"
-                    value={`${weekCount}/7`}
-                    color={color}
-                  />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                  <Stat label="Current" value={`${streak}${unit}`} color="var(--terra)" />
+                  <Stat label="Best" value={`${best}${unit}`} color="var(--gold)" icon={Trophy} />
                   <Stat label="Total" value={total} color="var(--ink)" />
+                  <Stat label="Since" value={sinceLabel} color="var(--muted)" />
                 </div>
+
+                {/* Completion rate by window */}
+                <div className="rounded-[12px] border border-[var(--line)] bg-[var(--paper-2)] p-4 mb-4">
+                  <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] mb-3">
+                    Completion rate
+                  </div>
+                  <div className="space-y-2.5">
+                    {windows.map((w) => (
+                      <div key={w.label} className="flex items-center gap-3">
+                        <span className="w-14 text-[11.5px] text-[var(--muted)] shrink-0">
+                          {w.label}
+                        </span>
+                        <span
+                          className="flex-1 h-2 rounded-full overflow-hidden"
+                          style={{ background: "var(--bg-2)" }}
+                        >
+                          <span
+                            className="block h-full rounded-full transition-[width]"
+                            style={{ width: `${w.pct}%`, background: color }}
+                          />
+                        </span>
+                        <span className="w-[70px] text-right text-[11.5px] tabular-nums shrink-0">
+                          <span className="font-semibold text-[var(--ink-2)]">
+                            {w.pct}%
+                          </span>
+                          <span className="text-[var(--muted-2)]">
+                            {" "}
+                            · {w.done}/{w.total}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {bestWd !== null && (
+                  <div className="mb-4 inline-flex items-center gap-1.5 text-[12.5px] text-[var(--muted)]">
+                    <Sparkles size={12} className="text-[var(--gold)]" />
+                    Most consistent on{" "}
+                    <span className="font-semibold text-[var(--ink-2)]">
+                      {WEEKDAY_FULL[bestWd]}s
+                    </span>
+                    .
+                  </div>
+                )}
 
                 {/* Calendar */}
-                <Calendar
-                  checkins={checkins}
-                  color={color}
-                  onToggle={toggleDay}
-                />
+                <Calendar checkins={checkins} color={color} onToggle={toggleDay} />
               </>
             )}
           </div>
@@ -295,14 +400,17 @@ function Stat({
   label,
   value,
   color,
+  icon: Icon,
 }: {
   label: string;
   value: string | number;
   color: string;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
 }) {
   return (
     <div className="rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] p-3">
-      <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
+      <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)] inline-flex items-center gap-1">
+        {Icon && <Icon size={10} />}
         {label}
       </div>
       <div

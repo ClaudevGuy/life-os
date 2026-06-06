@@ -8,6 +8,7 @@
  */
 import type { StoredItem } from "@/lib/store/db";
 import { ymd } from "@/lib/ymd";
+import { isPending, type Cadence } from "@/lib/habits";
 
 const ENABLED_KEY = "lifeos.notify.enabled";
 const FIRED_KEY = "lifeos.notify.fired";
@@ -104,7 +105,26 @@ export function dueNotifications(items: StoredItem[], now = new Date()): Notif[]
 
     if (it.kind === "habit") {
       const checkins = (m.checkins as string[] | undefined) ?? [];
+      const cadence = (m.cadence as Cadence | undefined) ?? "daily";
       if (!checkins.includes(today)) habitsPending++;
+      // Per-habit reminder time → fire once when the clock crosses it.
+      const rt = m.reminderTime as string | undefined;
+      if (rt && isPending(checkins, cadence)) {
+        const [hh, mm] = rt.split(":");
+        const h = Number(hh);
+        if (!Number.isNaN(h)) {
+          const due = new Date(now);
+          due.setHours(h, Number(mm) || 0, 0, 0);
+          if (due.getTime() <= t + 30_000 && due.getTime() >= t - 90_000) {
+            out.push({
+              key: `habit:${it.id}:${today}`,
+              title: `🔥 ${it.title ?? "Habit"}`,
+              body: `Time for ${it.title ?? "your habit"}`,
+              url: "/habits",
+            });
+          }
+        }
+      }
     }
   }
 
