@@ -3,10 +3,12 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ComponentType,
 } from "react";
 import Link from "next/link";
+import { Portal } from "@/components/portal";
 import {
   Wallet,
   Landmark,
@@ -26,6 +28,8 @@ import {
   Pencil,
   Building2,
   Scale,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { useItemsOfKind, type StoredItem } from "@/lib/store/items";
 import { useSnapshots, recordSnapshot } from "@/lib/store/snapshots";
@@ -466,23 +470,127 @@ function BaseSelect({
   base: string;
   onChange: (c: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{
+    top: number;
+    right: number;
+    minWidth: number;
+  } | null>(null);
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  function toggle() {
+    const r = ref.current?.getBoundingClientRect();
+    if (r)
+      setPos({
+        top: r.bottom + 6,
+        right: window.innerWidth - r.right,
+        minWidth: r.width,
+      });
+    setOpen((o) => !o);
+  }
+
   return (
-    <label className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line-2)] bg-[var(--paper)] pl-3 pr-1.5 py-1 text-[12px] text-[var(--muted)]">
-      <span className="uppercase tracking-[0.12em] text-[10.5px] font-semibold">
-        Base
-      </span>
-      <select
-        value={base}
-        onChange={(e) => onChange(e.target.value)}
-        className="bg-transparent text-[13px] font-medium text-[var(--ink)] focus:outline-none appearance-none cursor-pointer pr-1"
+    <>
+      <button
+        ref={ref}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`inline-flex items-center gap-2 rounded-full bg-[var(--paper)] border pl-3 pr-2.5 py-1.5 transition ${
+          open
+            ? "border-[var(--terra)]"
+            : "border-[var(--line-2)] hover:border-[var(--terra)]"
+        }`}
       >
-        {CURRENCIES.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-    </label>
+        <span className="uppercase tracking-[0.12em] text-[10.5px] font-semibold text-[var(--muted)]">
+          Base
+        </span>
+        <span className="text-[13px] font-semibold text-[var(--ink)] tabular-nums">
+          {base}
+        </span>
+        <ChevronDown
+          size={14}
+          strokeWidth={2}
+          className={`text-[var(--muted-2)] transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {open && pos && (
+        <Portal>
+          <div
+            className="fixed inset-0 z-[60]"
+            onClick={() => setOpen(false)}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div
+              role="listbox"
+              className="absolute rounded-[12px] border border-[var(--line-2)] bg-[var(--paper)] p-1.5 life-rise max-h-[300px] overflow-y-auto"
+              style={{
+                top: pos.top,
+                right: pos.right,
+                minWidth: Math.max(pos.minWidth, 138),
+                boxShadow: "var(--shadow-3)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {CURRENCIES.map((c) => {
+                const active = c === base;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    onClick={() => {
+                      onChange(c);
+                      setOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[8px] text-[13.5px] font-medium transition ${
+                      active
+                        ? "text-[var(--terra)]"
+                        : "text-[var(--ink-2)] hover:bg-[var(--paper-2)]"
+                    }`}
+                    style={active ? { background: "var(--terra-tint)" } : undefined}
+                  >
+                    <span
+                      className="grid place-items-center w-6 h-6 rounded-[7px] text-[12px] font-semibold shrink-0"
+                      style={{
+                        background: active
+                          ? "color-mix(in oklch, var(--terra) 18%, transparent)"
+                          : "var(--bg-2)",
+                        color: active ? "var(--terra)" : "var(--muted)",
+                      }}
+                    >
+                      {currencySymbol(c)}
+                    </span>
+                    <span className="flex-1 text-left tabular-nums">{c}</span>
+                    {active && <Check size={14} strokeWidth={2.4} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Portal>
+      )}
+    </>
   );
 }
 
