@@ -110,6 +110,18 @@ type HoldingView = {
   pnlPct: number | null;
 };
 
+/** Portfolio-level aggregates across all holdings, in base currency. */
+type HoldingsRollup = {
+  marketValue: number | null;
+  costBasis: number | null;
+  unrealized: number | null;
+  unrealizedPct: number | null;
+  todayMove: number | null;
+  todayPct: number | null;
+  costCount: number;
+  total: number;
+};
+
 const BASE_KEY = "lifeos.finance.base";
 
 export default function FinancePage() {
@@ -364,10 +376,50 @@ export default function FinancePage() {
     return { trendValues: values, changeAbs, changePct, changeWindow };
   }, [snapshots, base, summary.net]);
 
-  const totalHoldingsBase = holdingViews.reduce(
-    (acc, h) => acc + (h.valueBase ?? 0),
-    0,
-  );
+  // Portfolio roll-up: market value, cost basis, unrealized gain and the true
+  // 24h move — all summed in the base currency from the same live quotes the
+  // rows use. Unrealized/Today each cover only the positions that carry the
+  // needed inputs (a cost basis / a 24h change), so the math stays honest.
+  const holdingsRollup = useMemo<HoldingsRollup>(() => {
+    let marketValue = 0;
+    let hasValue = false;
+    let costBasis = 0;
+    let costMarket = 0; // market value of the cost-basis'd subset
+    let costCount = 0;
+    let curr = 0;
+    let prev = 0; // yesterday's value of the 24h-moving subset
+    for (const h of holdingViews) {
+      if (h.valueBase != null) {
+        marketValue += h.valueBase;
+        hasValue = true;
+      }
+      if (h.valueBase != null && h.meta.costBasis != null) {
+        const cbBase = convert(h.meta.costBasis, h.meta.currency, base, fx);
+        if (cbBase != null) {
+          costBasis += cbBase;
+          costMarket += h.valueBase;
+          costCount++;
+        }
+      }
+      if (h.valueBase != null && h.change != null) {
+        curr += h.valueBase;
+        prev += h.valueBase / (1 + h.change / 100);
+      }
+    }
+    return {
+      marketValue: hasValue ? marketValue : null,
+      costBasis: costCount > 0 ? costBasis : null,
+      unrealized: costCount > 0 ? costMarket - costBasis : null,
+      unrealizedPct:
+        costCount > 0 && costBasis > 0
+          ? ((costMarket - costBasis) / costBasis) * 100
+          : null,
+      todayMove: prev > 0 ? curr - prev : null,
+      todayPct: prev > 0 ? ((curr - prev) / prev) * 100 : null,
+      costCount,
+      total: holdingViews.length,
+    };
+  }, [holdingViews, base, fx]);
 
   return (
     <div className="p-6 sm:p-8 max-w-6xl mx-auto pg-enter space-y-5">
@@ -422,7 +474,7 @@ export default function FinancePage() {
           <HoldingsCard
             views={holdingViews}
             base={base}
-            totalBase={totalHoldingsBase}
+            rollup={holdingsRollup}
             loading={quotesLoading}
             refreshing={quotesRefreshing}
             onRefresh={refreshQuotes}
@@ -1043,10 +1095,64 @@ function AccountRow({
 // Holdings
 // ──────────────────────────────────────────────────────────────────────
 
+/** "+$1.2K" / "−$840" / "—" — a signed, compact money figure for roll-up stats. */
+function signedMoney(n: number | null, base: string): string {
+  if (n == null) return "—";
+  const sign = n >= 0 ? "+" : "−";
+  return `${sign}${fmtMoney(Math.abs(n), base, { compact: true })}`;
+}
+
+function toneOf(n: number | null): "up" | "down" | undefined {
+  if (n == null) return undefined;
+  return n >= 0 ? "up" : "down";
+}
+
+function RollStat({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "up" | "down";
+}) {
+  const color =
+    tone === "up"
+      ? "var(--sage)"
+      : tone === "down"
+        ? "var(--bad)"
+        : "var(--ink)";
+  return (
+    <div className="min-w-0">
+      <div className="text-[9.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted-2)]">
+        {label}
+      </div>
+      <div className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">
+        <span
+          className="text-[15px] font-mono tabular-nums font-semibold leading-none"
+          style={{ color }}
+        >
+          {value}
+        </span>
+        {sub && (
+          <span
+            className="text-[11.5px] font-semibold tabular-nums leading-none"
+            style={{ color }}
+          >
+            {sub}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function HoldingsCard({
   views,
   base,
-  totalBase,
+  rollup,
   loading,
   refreshing,
   onRefresh,
@@ -1054,7 +1160,7 @@ function HoldingsCard({
 }: {
   views: HoldingView[];
   base: string;
-  totalBase: number;
+  rollup: HoldingsRollup;
   loading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
@@ -1073,11 +1179,6 @@ function HoldingsCard({
           Holdings
         </h2>
         <div className="flex items-center gap-2">
-          {views.length > 0 && (
-            <span className="text-[13px] font-mono tabular-nums font-semibold text-[var(--ink)]">
-              {fmtMoney(totalBase, base, { compact: true })}
-            </span>
-          )}
           <button
             type="button"
             onClick={onRefresh}
@@ -1090,6 +1191,52 @@ function HoldingsCard({
           <NewHoldingButton />
         </div>
       </div>
+
+      {/* Portfolio roll-up */}
+      {views.length > 0 && (
+        <div className="border-b border-[var(--line)]">
+          <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3.5">
+            <RollStat
+              label="Value"
+              value={
+                rollup.marketValue != null
+                  ? fmtMoney(rollup.marketValue, base, { compact: true })
+                  : "—"
+              }
+            />
+            <RollStat
+              label="Cost basis"
+              value={
+                rollup.costBasis != null
+                  ? fmtMoney(rollup.costBasis, base, { compact: true })
+                  : "—"
+              }
+            />
+            <RollStat
+              label="Unrealized"
+              value={signedMoney(rollup.unrealized, base)}
+              sub={
+                rollup.unrealizedPct != null
+                  ? fmtPct(rollup.unrealizedPct)
+                  : undefined
+              }
+              tone={toneOf(rollup.unrealized)}
+            />
+            <RollStat
+              label="Today"
+              value={signedMoney(rollup.todayMove, base)}
+              sub={rollup.todayPct != null ? fmtPct(rollup.todayPct) : undefined}
+              tone={toneOf(rollup.todayMove)}
+            />
+          </div>
+          {rollup.costCount > 0 && rollup.costCount < rollup.total && (
+            <p className="px-5 pb-3 text-[10.5px] text-[var(--muted-2)] leading-snug">
+              Unrealized P/L covers the {rollup.costCount} of {rollup.total}{" "}
+              position{rollup.total === 1 ? "" : "s"} with a recorded cost basis.
+            </p>
+          )}
+        </div>
+      )}
 
       {views.length === 0 ? (
         <p className="px-5 py-8 text-[13px] text-[var(--muted)] text-center">
