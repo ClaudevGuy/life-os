@@ -18,6 +18,7 @@ import {
   Loader2,
   LogOut,
   ExternalLink,
+  AlertTriangle,
 } from "lucide-react";
 import { useMusic } from "@/components/music-player";
 import type { Playlist, Track } from "@/lib/youtube-types";
@@ -116,7 +117,11 @@ function MusicInner() {
       <div className="relative p-8 max-w-6xl mx-auto pg-enter">
         <Header name={status.connected ? status.name : null} />
         {!status.configured ? (
-          <SetupGuide />
+          status.connected ? (
+            <CredentialsMissing name={status.name} />
+          ) : (
+            <SetupGuide />
+          )
         ) : !status.connected ? (
           <ConnectScreen />
         ) : (
@@ -995,6 +1000,66 @@ function ConnectScreen() {
           browser).
         </p>
       </div>
+    </div>
+  );
+}
+
+function CredentialsMissing({ name }: { name: string | null }) {
+  const [showSteps, setShowSteps] = useState(false);
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div
+        className="rounded-[16px] border p-6"
+        style={{
+          borderColor: "color-mix(in oklch, var(--gold) 45%, transparent)",
+          background: "color-mix(in oklch, var(--gold) 8%, var(--paper))",
+        }}
+      >
+        <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--ink)] inline-flex items-center gap-2">
+          <AlertTriangle size={18} strokeWidth={1.8} style={{ color: "var(--gold)" }} />
+          Your Google credentials aren&apos;t loaded
+        </h2>
+        <p className="mt-2 text-[13.5px] text-[var(--muted)] leading-relaxed">
+          You&apos;re still signed in
+          {name ? (
+            <>
+              {" "}
+              as <span className="font-medium text-[var(--ink-2)]">{name}</span>
+            </>
+          ) : null}{" "}
+          — that login is cached in this browser — but this server can&apos;t find
+          your <Code>YOUTUBE_CLIENT_ID</Code> / <Code>YOUTUBE_CLIENT_SECRET</Code>,
+          so it can&apos;t talk to YouTube. You don&apos;t need to redo the Google
+          setup, just restore the keys.
+        </p>
+        <ol className="mt-4 space-y-3">
+          <Step n={1}>
+            Make sure a <Code>.env.local</Code> file exists in the project root
+            with both values:
+            <Code block>
+              {`YOUTUBE_CLIENT_ID=your-id\nYOUTUBE_CLIENT_SECRET=your-secret`}
+            </Code>
+          </Step>
+          <Step n={2}>
+            <span className="font-medium text-[var(--ink)]">
+              Restart the dev server
+            </span>{" "}
+            (env files are only read at startup), then refresh this page.
+          </Step>
+        </ol>
+        <button
+          type="button"
+          onClick={() => setShowSteps((s) => !s)}
+          className="mt-4 text-[12.5px] text-[var(--terra)] hover:underline"
+        >
+          {showSteps ? "Hide" : "Show"} the full Google Cloud setup steps
+        </button>
+      </div>
+      {showSteps && (
+        <div className="mt-4">
+          <SetupGuide />
+        </div>
+      )}
     </div>
   );
 }
