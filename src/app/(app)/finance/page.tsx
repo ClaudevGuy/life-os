@@ -72,14 +72,12 @@ import {
   useWalletBalances,
   addWallet,
   removeWallet,
+  detectChain,
   type TrackedWallet,
   type WalletState,
+  type WalletChain,
 } from "@/lib/store/wallets";
-import {
-  isValidSolanaAddress,
-  truncateAddress,
-  type WalletAsset,
-} from "@/lib/solana";
+import { truncateAddress, type WalletAsset } from "@/lib/solana";
 import { toast } from "sonner";
 
 type IconCmp = ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
@@ -1635,6 +1633,59 @@ function SolMark({ size = 28 }: { size?: number }) {
   );
 }
 
+/** EVM gradient chip — ETH blue → BNB gold, since the wallet spans both. */
+function EvmMark({ size = 28 }: { size?: number }) {
+  return (
+    <span
+      className="grid place-items-center rounded-[8px] shrink-0 font-bold text-white"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.4,
+        background: "linear-gradient(135deg, #627EEA 0%, #F3BA2F 100%)",
+      }}
+    >
+      ◆
+    </span>
+  );
+}
+
+function ChainMark({
+  chain,
+  size = 28,
+}: {
+  chain: WalletChain;
+  size?: number;
+}) {
+  return chain === "evm" ? <EvmMark size={size} /> : <SolMark size={size} />;
+}
+
+/** The official Phantom ghost glyph (white, for the connect button). */
+function PhantomLogo({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 128 128"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M110.584 64.9142H99.142C99.142 41.7651 80.1721 23 56.7724 23C33.6612 23 14.8716 41.3057 14.4118 64.0583C13.936 88.1142 35.5286 109 59.5972 109H62.6592C84.6079 109 113.732 91.875 117.394 71.6597C118.045 68.0689 115.13 64.9142 110.584 64.9142ZM39.7689 65.5118C39.7689 69.6651 36.3882 73.0459 32.2349 73.0459C28.0816 73.0459 24.7009 69.6651 24.7009 65.5118V57.9776C24.7009 53.8243 28.0816 50.4435 32.2349 50.4435C36.3882 50.4435 39.7689 53.8243 39.7689 57.9776V65.5118ZM65.5827 65.5118C65.5827 69.6651 62.2019 73.0459 58.0486 73.0459C53.8953 73.0459 50.5146 69.6651 50.5146 65.5118V57.9776C50.5146 53.8243 53.8953 50.4435 58.0486 50.4435C62.2019 50.4435 65.5827 53.8243 65.5827 57.9776V65.5118Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function explorerUrl(chain: WalletChain, address: string): string {
+  return chain === "evm"
+    ? `https://etherscan.io/address/${address}`
+    : `https://solscan.io/account/${address}`;
+}
+
 function ConnectWalletButton({
   variant = "header",
 }: {
@@ -1699,13 +1750,14 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
 
   async function trackPasted() {
     const a = address.trim();
-    if (!isValidSolanaAddress(a)) {
-      setErr("That doesn't look like a Solana address.");
+    const chain = detectChain(a);
+    if (!chain) {
+      setErr("That doesn't look like a Solana, Ethereum, or BNB address.");
       return;
     }
     setBusy(true);
     setErr(null);
-    const w = await addWallet({ chain: "solana", address: a });
+    const w = await addWallet({ chain, address: a });
     if (!w) {
       setErr("That wallet is already tracked.");
       setBusy(false);
@@ -1727,13 +1779,18 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-5 pb-4 flex items-start gap-3 border-b border-[var(--line)]">
-            <SolMark size={36} />
+            <span
+              className="grid place-items-center w-9 h-9 rounded-[9px] shrink-0"
+              style={{ background: "var(--terra-tint)", color: "var(--terra)" }}
+            >
+              <Wallet size={16} strokeWidth={1.6} />
+            </span>
             <div className="flex-1 min-w-0">
               <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
                 Track a wallet
               </div>
               <div className="mt-0.5 text-[17px] font-semibold tracking-[-0.015em] text-[var(--ink)]">
-                Solana
+                Solana · Ethereum · BNB
               </div>
             </div>
             <button
@@ -1757,10 +1814,15 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
               {busy ? (
                 <Loader2 size={15} className="animate-spin" />
               ) : (
-                <span className="text-[15px] leading-none">👻</span>
+                <PhantomLogo size={17} />
               )}
               Connect Phantom
             </button>
+            {!phantom && (
+              <p className="-mt-2 text-[11px] text-[var(--muted-2)] text-center">
+                No Phantom here? Paste any address below to watch it.
+              </p>
+            )}
 
             <div className="flex items-center gap-3">
               <span className="flex-1 h-px bg-[var(--line)]" />
@@ -1780,7 +1842,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") trackPasted();
                 }}
-                placeholder="Solana address (7xKX…9aQp)"
+                placeholder="Solana, Ethereum (0x…) or BNB address"
                 spellCheck={false}
                 autoComplete="off"
                 className="w-full rounded-[10px] bg-[var(--paper-2)] border border-[var(--line)] px-3 py-2 text-[13px] font-mono text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
@@ -1841,8 +1903,8 @@ function WalletsCard({
           <span
             className="grid place-items-center w-6 h-6 rounded-[7px]"
             style={{
-              background: "color-mix(in oklch, #9945FF 18%, transparent)",
-              color: "#9945FF",
+              background: "var(--terra-tint)",
+              color: "var(--terra)",
             }}
           >
             <Wallet size={12} />
@@ -1872,13 +1934,16 @@ function WalletsCard({
 
       {wallets.length === 0 ? (
         <div className="px-5 py-9 flex flex-col items-center text-center">
-          <SolMark size={36} />
+          <div className="flex items-center gap-1.5">
+            <SolMark size={32} />
+            <EvmMark size={32} />
+          </div>
           <p className="mt-3 text-[14px] font-medium text-[var(--ink)]">
             Track an on-chain wallet
           </p>
           <p className="mt-1 text-[12.5px] text-[var(--muted)] max-w-xs leading-relaxed">
-            Connect Phantom or paste a Solana address — Life OS reads its live
-            balances and folds them into your net worth.
+            Connect Phantom, or paste a Solana, Ethereum, or BNB address — Life OS
+            reads live balances and folds them into your net worth.
           </p>
           <div className="mt-4">
             <ConnectWalletButton variant="primary" />
@@ -1936,7 +2001,7 @@ function WalletRow({
   return (
     <li className="px-5 py-3.5">
       <div className="flex items-center gap-3">
-        <SolMark size={34} />
+        <ChainMark chain={wallet.chain} size={34} />
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
@@ -1974,10 +2039,12 @@ function WalletRow({
 
         <div className="flex items-center gap-0.5 shrink-0">
           <a
-            href={`https://solscan.io/account/${wallet.address}`}
+            href={explorerUrl(wallet.chain, wallet.address)}
             target="_blank"
             rel="noopener noreferrer"
-            title="View on Solscan"
+            title={
+              wallet.chain === "evm" ? "View on Etherscan" : "View on Solscan"
+            }
             className="grid place-items-center w-7 h-7 rounded-md text-[var(--muted-2)] hover:text-[var(--terra)] transition"
           >
             <ExternalLink size={13} />
@@ -2007,7 +2074,11 @@ function WalletRow({
           <span>
             {error === "invalid_address"
               ? "That address looks invalid."
-              : "Couldn't reach the chain — the public RPC may be rate-limited. Try refresh, or set a custom SOLANA_RPC_URL."}
+              : `Couldn't reach the chain — the public RPC may be rate-limited. Try refresh, or set ${
+                  wallet.chain === "evm"
+                    ? "ETH_RPC_URL / BSC_RPC_URL"
+                    : "a custom SOLANA_RPC_URL"
+                }.`}
           </span>
         </p>
       )}
@@ -2015,7 +2086,13 @@ function WalletRow({
       {expanded && data && assets.length > 0 && (
         <ul className="mt-3 ml-[46px] space-y-1.5">
           {shown.map((a) => (
-            <WalletAssetRow key={a.mint} asset={a} base={base} fx={fx} />
+            <WalletAssetRow
+              key={a.mint}
+              asset={a}
+              base={base}
+              fx={fx}
+              showChain={wallet.chain === "evm"}
+            />
           ))}
           {(moreCount > 0 || data.hiddenCount > 0) && (
             <li className="text-[11px] text-[var(--muted-2)] pt-0.5">
@@ -2037,13 +2114,24 @@ function WalletAssetRow({
   asset,
   base,
   fx,
+  showChain = false,
 }: {
   asset: WalletAsset;
   base: string;
   fx: FxRates | null;
+  showChain?: boolean;
 }) {
   const valueBase =
     asset.valueUsd != null ? convert(asset.valueUsd, "USD", base, fx) : null;
+  const isBnb = asset.chain === "BNB Chain";
+  const chainShort = isBnb ? "BNB" : asset.chain === "Ethereum" ? "ETH" : null;
+  const chainColor = isBnb ? "#F3BA2F" : "#627EEA";
+  // Skip the badge when it would just echo the symbol (native ETH on Ethereum,
+  // BNB on BNB Chain); keep it where it disambiguates (USDC on ETH, ETH on BNB).
+  const showBadge =
+    showChain &&
+    !!chainShort &&
+    chainShort !== (asset.symbol ?? "").toUpperCase();
   return (
     <li className="flex items-center gap-2.5">
       {asset.logo ? (
@@ -2061,11 +2149,22 @@ function WalletAssetRow({
           {(asset.symbol || "?").replace("…", "").slice(0, 3)}
         </span>
       )}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 flex items-center gap-1.5">
         <span className="text-[13px] font-medium text-[var(--ink)]">
           {asset.symbol || "Unknown"}
         </span>
-        <span className="text-[11.5px] text-[var(--muted)] font-mono ml-1.5">
+        {showBadge && (
+          <span
+            className="text-[9px] uppercase tracking-[0.06em] font-bold px-1.5 py-[1px] rounded-full shrink-0"
+            style={{
+              color: chainColor,
+              background: `color-mix(in oklch, ${chainColor} 16%, transparent)`,
+            }}
+          >
+            {chainShort}
+          </span>
+        )}
+        <span className="text-[11.5px] text-[var(--muted)] font-mono truncate">
           {fmtQty(asset.amount)}
         </span>
       </div>

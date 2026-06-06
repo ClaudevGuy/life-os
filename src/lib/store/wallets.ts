@@ -10,11 +10,21 @@ import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { nanoid } from "nanoid";
 import { db } from "@/lib/store/db";
-import type { WalletData } from "@/lib/solana";
+import type { WalletData } from "@/lib/wallet-types";
+import { isValidSolanaAddress } from "@/lib/solana";
+import { isValidEvmAddress } from "@/lib/evm";
 
 const KEY = "finance.wallets";
 
-export type WalletChain = "solana";
+export type WalletChain = "solana" | "evm";
+
+/** Infer which chain an address belongs to from its shape (0x… → EVM). */
+export function detectChain(address: string): WalletChain | null {
+  const a = address.trim();
+  if (isValidEvmAddress(a)) return "evm";
+  if (isValidSolanaAddress(a)) return "solana";
+  return null;
+}
 
 export type TrackedWallet = {
   id: string;
