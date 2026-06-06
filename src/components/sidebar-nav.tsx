@@ -50,6 +50,9 @@ type RailItem = {
 
 type RailSection = { heading: string; items: RailItem[] };
 
+// Today stands on its own above every category — the home / "face" of the app.
+const LEAD: RailItem = { href: "/today", label: "Today", icon: Sun };
+
 const SECTIONS: RailSection[] = [
   {
     heading: "Capture",
@@ -63,7 +66,6 @@ const SECTIONS: RailSection[] = [
   {
     heading: "Daily",
     items: [
-      { href: "/today", label: "Today", icon: Sun },
       { href: "/calendar", label: "Calendar", icon: CalendarDays },
       {
         href: "/tasks",
@@ -132,8 +134,13 @@ export function SidebarNav() {
 
   return (
     <>
-      {SECTIONS.map((section, gi) => (
-        <div key={section.heading} className={gi === 0 ? "mt-[10px]" : "mt-[18px]"}>
+      {/* Today leads, standing apart from the categories below it. */}
+      <div className="mt-[10px]">
+        <RailLink item={LEAD} pathname={pathname} stats={stats} />
+      </div>
+
+      {SECTIONS.map((section) => (
+        <div key={section.heading} className="mt-[18px]">
           <div
             className="px-[10px] pb-2 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]"
             data-rail-section
@@ -141,55 +148,71 @@ export function SidebarNav() {
             {section.heading}
           </div>
           <div className="flex flex-col gap-[2px]">
-            {section.items.map(({ href, label, icon: Icon, badgeKey, alertWhen }) => {
-              const active =
-                pathname === href ||
-                (href !== "/" && pathname.startsWith(href + "/"));
-              const badge = badgeKey ? stats[badgeKey] : 0;
-              const alert = alertWhen ? stats[alertWhen] > 0 : false;
-
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  title={label}
-                  className={`group relative flex items-center gap-[10px] px-[10px] py-2 rounded-[9px] text-[13.5px] transition-colors ${
-                    active
-                      ? "text-[var(--ink)] bg-[var(--paper-2)] font-medium"
-                      : "text-[var(--ink-2)] hover:bg-[var(--bg-2)] font-normal"
-                  }`}
-                >
-                  <Icon
-                    size={17}
-                    strokeWidth={1.6}
-                    className={`shrink-0 transition ${
-                      active ? "text-[var(--terra)]" : "text-[var(--muted)]"
-                    }`}
-                  />
-                  <span data-rail-text className="flex-1 truncate">
-                    {label}
-                  </span>
-                  {badge > 0 && (
-                    <span
-                      data-rail-text
-                      className={`tabular-nums text-[10.5px] font-mono px-1.5 py-[2px] rounded-full ${
-                        alert
-                          ? "bg-[var(--bad)] text-[var(--paper)]"
-                          : active
-                          ? "bg-[var(--terra)] text-[var(--paper)]"
-                          : "bg-[var(--bg-2)] text-[var(--muted)]"
-                      }`}
-                    >
-                      {badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+            {section.items.map((item) => (
+              <RailLink
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                stats={stats}
+              />
+            ))}
           </div>
         </div>
       ))}
     </>
+  );
+}
+
+function RailLink({
+  item,
+  pathname,
+  stats,
+}: {
+  item: RailItem;
+  pathname: string;
+  stats: Stats;
+}) {
+  const { href, label, icon: Icon, badgeKey, alertWhen } = item;
+  const active =
+    pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+  const badge = badgeKey ? stats[badgeKey] : 0;
+  const alert = alertWhen ? stats[alertWhen] > 0 : false;
+
+  return (
+    <Link
+      href={href}
+      title={label}
+      className={`group relative flex items-center gap-[10px] px-[10px] py-2 rounded-[9px] text-[13.5px] transition-colors ${
+        active
+          ? "text-[var(--ink)] bg-[var(--paper-2)] font-medium"
+          : "text-[var(--ink-2)] hover:bg-[var(--bg-2)] font-normal"
+      }`}
+    >
+      <Icon
+        size={17}
+        strokeWidth={1.6}
+        className={`shrink-0 transition ${
+          active ? "text-[var(--terra)]" : "text-[var(--muted)]"
+        }`}
+      />
+      <span data-rail-text className="flex-1 truncate">
+        {label}
+      </span>
+      {badge > 0 && (
+        <span
+          data-rail-text
+          className={`tabular-nums text-[10.5px] font-mono px-1.5 py-[2px] rounded-full ${
+            alert
+              ? "bg-[var(--bad)] text-[var(--paper)]"
+              : active
+              ? "bg-[var(--terra)] text-[var(--paper)]"
+              : "bg-[var(--bg-2)] text-[var(--muted)]"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
+    </Link>
   );
 }
 
