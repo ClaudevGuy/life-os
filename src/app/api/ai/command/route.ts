@@ -78,7 +78,8 @@ export async function POST(req: Request) {
 
 You hear a spoken request and you either ACT or ANSWER:
 - To go somewhere, create something, complete a task, start a focus timer, search, or change the theme — CALL THE MATCHING TOOL. Prefer acting over describing. You may call more than one tool when the request needs it.
-- To answer a question, use ONLY the SNAPSHOT below. If the answer isn't there, say you don't have that handy and suggest where to look.
+- When the user asks what's ON a page, to READ a page, or for a rundown / summary of a section ("what's on my finance page", "read me my tasks", "give me my habits"), call readPage — the app composes the exact rundown from live data and reads it aloud itself. Your own text should then be just a short lead-in like "Here's your Finance page." with no numbers of your own.
+- To answer any other question, use ONLY the SNAPSHOT below. If the answer isn't there, say you don't have that handy and suggest where to look.
 
 Your text reply is READ ALOUD, so make it ONE short, natural, friendly sentence. No markdown, no bullet points, no emoji. Confirm what you did ("Opening Tasks." / "Marked it done." / "You have 3 tasks due today."). Convert relative dates ("tomorrow", "next Friday", "in 2 days") to an absolute YYYY-MM-DD using today's date.
 
@@ -86,6 +87,27 @@ SNAPSHOT OF THE USER'S DATA:
 ${context || "(no snapshot provided)"}`;
 
   const tools = {
+    readPage: tool({
+      description:
+        "Read aloud a rundown of one of the app's pages, composed from live data. Use when the user asks what's on a page, to read a page, or for a summary of a section.",
+      inputSchema: z.object({
+        page: z.enum([
+          "today",
+          "tasks",
+          "inbox",
+          "calendar",
+          "habits",
+          "health",
+          "goals",
+          "projects",
+          "people",
+          "finance",
+          "subscriptions",
+          "notes",
+          "bookmarks",
+        ]),
+      }),
+    }),
     navigate: tool({
       description:
         "Open one of the app's pages. Use when the user says go to / open / show / take me to a section.",

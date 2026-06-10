@@ -36,6 +36,7 @@ import {
   Loader2,
   KeyRound,
   Check,
+  Ear,
 } from "lucide-react";
 import { Portal } from "@/components/portal";
 import { useSpeechRecognition } from "@/lib/use-speech";
@@ -52,8 +53,15 @@ import {
   streamCommand,
   executeCommand,
   type Turn,
-  type AppliedAction,
+  type CommandResult,
 } from "@/lib/voice/commands";
+import {
+  startWake,
+  stopWake,
+  wakeEnabled,
+  setWakeEnabled,
+  wakeSupported,
+} from "@/lib/voice/wake";
 import {
   speak,
   stopSpeaking,
@@ -75,6 +83,7 @@ export function VoiceAssistantProvider({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [wakeOn, setWakeOn] = useState(false);
   const value = useMemo<Ctx>(() => ({ open: () => setOpen(true) }), []);
 
   // Global hotkey: ⌘⇧V (mac) / Ctrl+Shift+V.
@@ -93,6 +102,33 @@ export function VoiceAssistantProvider({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // "Hey Aria" wake word — armed only while the preference is on and the
+  // overlay is closed (so the two recognizers never fight over the mic).
+  useEffect(() => {
+    setWakeOn(wakeEnabled() && wakeSupported());
+    function onPref(e: Event) {
+      setWakeOn(Boolean((e as CustomEvent<{ on?: boolean }>).detail?.on));
+    }
+    function onBlocked() {
+      setWakeOn(false);
+    }
+    window.addEventListener("lifeos:wake-pref", onPref);
+    window.addEventListener("lifeos:wake-blocked", onBlocked);
+    return () => {
+      window.removeEventListener("lifeos:wake-pref", onPref);
+      window.removeEventListener("lifeos:wake-blocked", onBlocked);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!wakeOn || open) {
+      stopWake();
+      return;
+    }
+    startWake(() => setOpen(true));
+    return () => stopWake();
+  }, [wakeOn, open]);
 
   return (
     <VoiceCtx.Provider value={value}>
@@ -147,10 +183,11 @@ function VoiceOverlay({ onClose }: { onClose: () => void }) {
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [reply, setReply] = useState("");
-  const [actions, setActions] = useState<AppliedAction[]>([]);
+  const [actions, setActions] = useState<CommandResult[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [tts, setTts] = useState(true);
   const [continuous, setContinuous] = useState(true);
+  const [wake, setWake] = useState(false);
   const [typed, setTyped] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
@@ -170,6 +207,7 @@ function VoiceOverlay({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     setTts(ttsEnabled());
     setHasWhisper(whisperAvailable());
+    setWake(wakeEnabled() && wakeSupported());
     try {
       setContinuous(localStorage.getItem("lifeos.voice.continuous") !== "off");
     } catch {
@@ -308,7 +346,7 @@ function VoiceOverlay({ onClose }: { onClose: () => void }) {
       navigatedRef.current = false;
 
       let acc = "";
-      const applied: AppliedAction[] = [];
+      const applied: CommandResult[] = [];
       let errored: string | null = null;
 
       await streamCommand(text, historyRef.current, {
@@ -335,10 +373,19 @@ function VoiceOverlay({ onClose }: { onClose: () => void }) {
 
       historyRef.current.push({ role: "user", text });
 
+      // Page digests (readPage) carry exact prose to read aloud — append it to
+      // the model's short lead-in, on screen and out loud.
+      const digestSpeech = applied
+        .map((a) => a.speech)
+        .filter((s): s is string => Boolean(s))
+        .join(" ");
       const spoken =
-        acc.trim() ||
+        [acc.trim(), digestSpeech].filter(Boolean).join(" ") ||
         (applied[0]?.label ? `${applied[0].label}.` : "") ||
         (errored ? "" : "Done.");
+      if (digestSpeech) {
+        setReply([acc.trim(), digestSpeech].filter(Boolean).join(" "));
+      }
       if (spoken) historyRef.current.push({ role: "assistant", text: spoken });
 
       if (errored && !acc.trim() && applied.length === 0) {
@@ -362,8 +409,13 @@ function VoiceOverlay({ onClose }: { onClose: () => void }) {
       if (tts && ttsSupported() && spoken) {
         speak(spoken, { onend: afterSpeak });
       } else {
-        // No TTS — pause briefly so the reply is readable, then continue.
-        setTimeout(afterSpeak, navigatedRef.current ? 600 : 1400);
+        // No TTS — pause long enough to actually read the reply (longer for
+        // page digests), then continue.
+        const ms = Math.min(
+          9000,
+          Math.max(navigatedRef.current && !digestSpeech ? 600 : 1400, spoken.length * 38),
+        );
+        setTimeout(afterSpeak, ms);
       }
     },
     [router, tts, continuous, beginListening, cleanup, onClose],
@@ -502,8 +554,8 @@ function VoiceOverlay({ onClose }: { onClose: () => void }) {
             </p>
           </div>
 
-          {/* transcript / reply */}
-          <div className="px-6 pb-2 min-h-[40px]">
+          {/* transcript / reply (digests can run long — keep it scrollable) */}
+          <div className="px-6 pb-2 min-h-[40px] max-h-44 overflow-y-auto">
             {phase === "listening" && liveText && (
               <p className="text-center text-[15px] text-[var(--ink)] leading-snug">
                 {liveText}
@@ -628,6 +680,24 @@ function VoiceOverlay({ onClose }: { onClose: () => void }) {
               label="Conversation"
               title="Keep listening for follow-ups"
             />
+            {wakeSupported() && (
+              <FootToggle
+                on={wake}
+                onClick={() => {
+                  const next = !wake;
+                  setWake(next);
+                  setWakeEnabled(next);
+                  window.dispatchEvent(
+                    new CustomEvent("lifeos:wake-pref", {
+                      detail: { on: next },
+                    }),
+                  );
+                }}
+                icon={Ear}
+                label="“Hey Aria”"
+                title="Listen in the background and open when you say Hey Aria"
+              />
+            )}
             {!hasWhisper && (
               <button
                 type="button"

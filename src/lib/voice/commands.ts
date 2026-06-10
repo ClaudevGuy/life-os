@@ -19,9 +19,13 @@ import {
   type AskAction,
   type AppliedAction,
 } from "@/lib/ask";
+import { digestPage } from "@/lib/voice/digest";
 import type { StoredItem } from "@/lib/store/db";
 
 export type { AppliedAction } from "@/lib/ask";
+
+/** An applied action, optionally carrying extra prose to read aloud. */
+export type CommandResult = AppliedAction & { speech?: string };
 
 export type Turn = { role: "user" | "assistant"; text: string };
 
@@ -302,10 +306,24 @@ function snapFocus(minutes: number): 15 | 25 | 50 | 90 {
 export async function executeCommand(
   a: AskAction,
   ctx: CommandCtx,
-): Promise<AppliedAction | null> {
+): Promise<CommandResult | null> {
   const i = a.input ?? {};
   try {
     switch (a.name) {
+      case "readPage": {
+        const key = String(i.page ?? "");
+        const digest = await digestPage(key);
+        if (!digest) return null;
+        // Show the page while reading it out.
+        const dest = NAV[key];
+        if (dest) ctx.navigate(dest.href);
+        return {
+          label: `Read ${digest.title}`,
+          sub: null,
+          href: dest?.href ?? "",
+          speech: digest.speech,
+        };
+      }
       case "navigate": {
         const dest = NAV[String(i.to)];
         if (!dest) return null;
