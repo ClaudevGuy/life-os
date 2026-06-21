@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DollarSign, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
 import { Sparkline } from "./charts";
 import { fmtPct } from "@/lib/finance";
@@ -45,13 +45,13 @@ export function UsdCard() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(
-    async (p: string, r: string, signal?: AbortSignal) => {
+    async (p: string, r: string, ok: () => boolean) => {
       try {
         const res = await fetch(`/api/markets/usd?pair=${p}&range=${r}`, {
-          signal,
           cache: "no-store",
         });
         const j = (await res.json()) as Partial<UsdData> & { error?: string };
+        if (!ok()) return;
         if (!res.ok || j.error || !Array.isArray(j.points))
           throw new Error("bad");
         setData({
@@ -61,27 +61,42 @@ export function UsdCard() {
           points: j.points,
         });
         setError(false);
-      } catch (e) {
-        if ((e as Error)?.name === "AbortError") return;
-        setError(true);
+      } catch {
+        if (ok()) setError(true);
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (ok()) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [],
   );
 
+  // Alive across the component's life (StrictMode-safe): the mount sets it true,
+  // the throwaway dev unmount sets it false, the real remount sets it true.
+  const aliveRef = useRef(true);
   useEffect(() => {
-    const ctrl = new AbortController();
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
     setLoading(true);
-    load(pair, range, ctrl.signal);
-    return () => ctrl.abort();
+    // Ignore the result if a newer pair/range superseded it, or we unmounted —
+    // a liveness flag instead of aborting, so the dev overlay stays quiet.
+    load(pair, range, () => aliveRef.current && !ignore);
+    return () => {
+      ignore = true;
+    };
   }, [pair, range, load]);
 
   function refresh() {
     setRefreshing(true);
-    load(pair, range);
+    load(pair, range, () => aliveRef.current);
   }
 
   const quote = QUOTES.find((q) => q.key === pair) ?? QUOTES[0];

@@ -109,7 +109,9 @@ export function useWalletBalances(
       setStates({});
       return;
     }
-    const ctrl = new AbortController();
+    // A liveness flag (not an AbortController) — aborting in-flight fetches on
+    // cleanup makes the Next dev overlay surface a noisy AbortError; we just
+    // ignore late results instead.
     let active = true;
 
     // Seed loading state for new wallets; drop any that were removed.
@@ -133,7 +135,7 @@ export function useWalletBalances(
         }));
         const r = await fetch(
           `/api/wallet/${w.chain}?address=${encodeURIComponent(w.address)}`,
-          { signal: ctrl.signal, cache: "no-store" },
+          { cache: "no-store" },
         );
         const j = (await r.json()) as WalletData & { error?: string };
         if (!active) return;
@@ -152,8 +154,8 @@ export function useWalletBalances(
             [w.id]: { loading: false, error: null, data: j },
           }));
         }
-      } catch (e) {
-        if ((e as Error)?.name === "AbortError" || !active) return;
+      } catch {
+        if (!active) return;
         setStates((prev) => ({
           ...prev,
           [w.id]: {
@@ -169,7 +171,6 @@ export function useWalletBalances(
     const t = setInterval(() => wallets.forEach(loadOne), 90_000);
     return () => {
       active = false;
-      ctrl.abort();
       clearInterval(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

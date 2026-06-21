@@ -180,23 +180,28 @@ export default function FinancePage() {
     }
   }, [base, mounted]);
 
-  // FX rates for the chosen base.
+  // FX rates for the chosen base. A liveness flag (not an AbortController) drops
+  // a stale response when the base changes or we unmount — aborting the fetch
+  // makes the Next dev overlay surface a noisy AbortError.
   useEffect(() => {
-    const ctrl = new AbortController();
+    let ignore = false;
     (async () => {
       try {
         const r = await fetch(`/api/markets/fx?base=${base}`, {
-          signal: ctrl.signal,
+          cache: "no-store",
         });
         const j = (await r.json()) as Partial<FxRates> & { error?: string };
+        if (ignore) return;
         if (j && j.rates && j.base) {
           setFx({ base: j.base, date: j.date ?? null, rates: j.rates });
         }
-      } catch (e) {
-        if ((e as Error)?.name !== "AbortError") setFx(null);
+      } catch {
+        if (!ignore) setFx(null);
       }
     })();
-    return () => ctrl.abort();
+    return () => {
+      ignore = true;
+    };
   }, [base]);
 
   // Live quotes for holdings.
@@ -235,28 +240,31 @@ export default function FinancePage() {
       setQuotesRefreshing(false);
       return;
     }
-    const ctrl = new AbortController();
+    let ignore = false;
     const load = async () => {
       try {
         const r = await fetch(
           `/api/markets/quote?coins=${encodeURIComponent(
             coinKey,
           )}&stocks=${encodeURIComponent(symKey)}`,
-          { signal: ctrl.signal, cache: "no-store" },
+          { cache: "no-store" },
         );
         const j = (await r.json()) as Quotes;
+        if (ignore) return;
         setQuotes({ crypto: j.crypto ?? {}, stocks: j.stocks ?? {} });
-      } catch (e) {
-        if ((e as Error)?.name === "AbortError") return;
+      } catch {
+        /* keep the prior quotes on a failed refresh */
       } finally {
-        setQuotesLoading(false);
-        setQuotesRefreshing(false);
+        if (!ignore) {
+          setQuotesLoading(false);
+          setQuotesRefreshing(false);
+        }
       }
     };
     load();
     const t = setInterval(load, 60_000);
     return () => {
-      ctrl.abort();
+      ignore = true;
       clearInterval(t);
     };
   }, [coinKey, symKey, quoteNonce]);

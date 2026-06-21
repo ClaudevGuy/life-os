@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { Coins, LineChart, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -30,32 +30,36 @@ function useMarket<T>(url: string, key: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // A liveness flag instead of an AbortController: a 60s price refresh has no
+  // need to actually cancel the request, and aborting an in-flight fetch on
+  // unmount makes the Next dev overlay surface a noisy "AbortError". We just
+  // ignore the result if we've since unmounted.
+  const aliveRef = useRef(true);
 
-  const load = useCallback(
-    async (signal?: AbortSignal) => {
-      try {
-        const res = await fetch(url, { signal, cache: "no-store" });
-        const j = (await res.json()) as Record<string, unknown>;
-        if (!res.ok || j.error || !Array.isArray(j[key])) throw new Error("bad");
-        setData(j[key] as T[]);
-        setError(false);
-      } catch (e) {
-        if ((e as Error)?.name === "AbortError") return;
-        setError(true);
-      } finally {
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      const j = (await res.json()) as Record<string, unknown>;
+      if (!aliveRef.current) return;
+      if (!res.ok || j.error || !Array.isArray(j[key])) throw new Error("bad");
+      setData(j[key] as T[]);
+      setError(false);
+    } catch {
+      if (aliveRef.current) setError(true);
+    } finally {
+      if (aliveRef.current) {
         setLoading(false);
         setRefreshing(false);
       }
-    },
-    [url, key],
-  );
+    }
+  }, [url, key]);
 
   useEffect(() => {
-    const ctrl = new AbortController();
-    load(ctrl.signal);
-    const t = setInterval(() => load(), 60_000);
+    aliveRef.current = true;
+    load();
+    const t = setInterval(load, 60_000);
     return () => {
-      ctrl.abort();
+      aliveRef.current = false;
       clearInterval(t);
     };
   }, [load]);
