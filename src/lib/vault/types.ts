@@ -17,6 +17,8 @@ export type VaultField = {
   secret?: boolean;
   textarea?: boolean;
   placeholder?: string;
+  /** Show a password generator on this field (only where generating fits). */
+  generate?: boolean;
 };
 
 export const VAULT_TYPES: { type: VaultType; label: string }[] = [
@@ -40,7 +42,7 @@ export const VAULT_TYPE_LABEL: Record<VaultType, string> = {
 export const TYPE_FIELDS: Record<VaultType, VaultField[]> = {
   login: [
     { key: "username", label: "Username / email", placeholder: "you@email.com" },
-    { key: "password", label: "Password", secret: true },
+    { key: "password", label: "Password", secret: true, generate: true },
     { key: "url", label: "Website", placeholder: "https://…" },
     { key: "notes", label: "Notes", textarea: true },
   ],
@@ -56,7 +58,7 @@ export const TYPE_FIELDS: Record<VaultType, VaultField[]> = {
     { key: "notes", label: "Notes", textarea: true },
   ],
   secret: [
-    { key: "value", label: "Secret", secret: true, textarea: true },
+    { key: "value", label: "Secret", secret: true, textarea: true, generate: true },
     { key: "notes", label: "Notes", textarea: true },
   ],
   api: [

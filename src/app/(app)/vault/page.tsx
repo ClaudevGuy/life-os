@@ -22,11 +22,13 @@ import { Portal } from "@/components/portal";
 import {
   primaryField,
   subtitleFor,
+  VAULT_TYPES,
   VAULT_TYPE_LABEL,
   passcodeStrength,
   type VaultEntry,
   type VaultType,
 } from "@/lib/vault/types";
+import { monogram } from "@/lib/vault/avatar";
 import { ItemModal, TYPE_ICON } from "./item-modal";
 
 export default function VaultPage() {
@@ -91,7 +93,13 @@ function VaultDashboard() {
   const [filter, setFilter] = useState<VaultType | "all">("all");
   const [editing, setEditing] = useState<VaultEntry | null>(null);
   const [creating, setCreating] = useState(false);
+  const [createType, setCreateType] = useState<VaultType>("login");
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  function openCreate(t: VaultType = "login") {
+    setCreateType(t);
+    setCreating(true);
+  }
 
   const typesPresent = useMemo(
     () => Array.from(new Set(items.map((i) => i.type))),
@@ -142,7 +150,7 @@ function VaultDashboard() {
           </button>
           <button
             type="button"
-            onClick={() => setCreating(true)}
+            onClick={() => openCreate("login")}
             className="life-btn life-btn-sm life-btn-primary"
           >
             <Plus size={13} strokeWidth={2} />
@@ -152,7 +160,7 @@ function VaultDashboard() {
       </header>
 
       {items.length === 0 ? (
-        <EmptyVault onAdd={() => setCreating(true)} />
+        <EmptyVault onAdd={openCreate} />
       ) : (
         <>
           {/* Search + filter */}
@@ -206,6 +214,7 @@ function VaultDashboard() {
       {(creating || editing) && (
         <ItemModal
           existing={editing}
+          initialType={createType}
           onClose={() => {
             setCreating(false);
             setEditing(null);
@@ -228,6 +237,7 @@ function VaultCard({
   const subtitle = subtitleFor(entry);
   const pf = primaryField(entry.type);
   const secret = pf ? entry.data[pf] : null;
+  const mono = entry.type === "login" ? monogram(entry.title) : null;
 
   return (
     <div
@@ -243,16 +253,25 @@ function VaultCard({
       className="group text-left life-card p-4 hover:border-[var(--terra)]/40 transition relative overflow-hidden cursor-pointer focus:outline-none focus-visible:border-[var(--terra)]"
     >
       <div className="flex items-start gap-3">
-        <span
-          className="grid place-items-center w-10 h-10 rounded-[11px] shrink-0"
-          style={{
-            background: "color-mix(in oklch, var(--terra) 12%, transparent)",
-            color: "var(--terra)",
-            border: "1px solid color-mix(in oklch, var(--terra) 24%, transparent)",
-          }}
-        >
-          <Icon size={17} strokeWidth={1.7} />
-        </span>
+        {mono ? (
+          <span
+            className="grid place-items-center w-10 h-10 rounded-[11px] shrink-0 text-white text-[16px] font-semibold"
+            style={{ background: mono.color }}
+          >
+            {mono.letter}
+          </span>
+        ) : (
+          <span
+            className="grid place-items-center w-10 h-10 rounded-[11px] shrink-0"
+            style={{
+              background: "color-mix(in oklch, var(--terra) 12%, transparent)",
+              color: "var(--terra)",
+              border: "1px solid color-mix(in oklch, var(--terra) 24%, transparent)",
+            }}
+          >
+            <Icon size={17} strokeWidth={1.7} />
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <div className="text-[14.5px] font-semibold text-[var(--ink)] truncate">
             {entry.title || "Untitled"}
@@ -530,9 +549,9 @@ function FilterPill({
   );
 }
 
-function EmptyVault({ onAdd }: { onAdd: () => void }) {
+function EmptyVault({ onAdd }: { onAdd: (t: VaultType) => void }) {
   return (
-    <div className="rounded-[16px] border border-dashed border-[var(--line-2)] py-14 px-6 text-center">
+    <div className="rounded-[16px] border border-dashed border-[var(--line-2)] py-12 px-6 text-center">
       <div
         className="mx-auto mb-4 grid place-items-center w-[56px] h-[56px] rounded-full bg-[var(--paper)] text-[var(--terra)]"
         style={{ boxShadow: "var(--shadow-1)" }}
@@ -543,17 +562,35 @@ function EmptyVault({ onAdd }: { onAdd: () => void }) {
         Your vault is empty.
       </div>
       <p className="mt-1.5 text-[13px] text-[var(--muted)] max-w-sm mx-auto leading-relaxed">
-        Store logins, cards, recovery codes, and anything else you need kept
-        safe. It&apos;s all encrypted with your passcode — on this device only.
+        Pick what to add — everything&apos;s encrypted with your passcode, on
+        this device only.
       </p>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="mt-5 life-btn life-btn-sm life-btn-primary inline-flex"
-      >
-        <Plus size={13} strokeWidth={2} />
-        Add your first item
-      </button>
+      <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-lg mx-auto">
+        {VAULT_TYPES.map((t) => {
+          const Icon = TYPE_ICON[t.type];
+          return (
+            <button
+              key={t.type}
+              type="button"
+              onClick={() => onAdd(t.type)}
+              className="group flex flex-col items-center gap-2 py-4 px-3 rounded-[12px] border border-[var(--line)] bg-[var(--paper)] hover:border-[var(--terra)] hover:-translate-y-px transition"
+            >
+              <span
+                className="grid place-items-center w-9 h-9 rounded-[10px] group-hover:scale-105 transition"
+                style={{
+                  background: "color-mix(in oklch, var(--terra) 12%, transparent)",
+                  color: "var(--terra)",
+                }}
+              >
+                <Icon size={17} strokeWidth={1.7} />
+              </span>
+              <span className="text-[12.5px] font-medium text-[var(--ink)]">
+                {t.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
