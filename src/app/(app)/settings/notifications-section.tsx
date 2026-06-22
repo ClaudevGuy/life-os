@@ -11,17 +11,31 @@ import {
   setNotifyEnabled,
   testNotification,
 } from "@/lib/notify";
+import {
+  getCats,
+  setCat,
+  NOTIF_CATS,
+  CAT_LABEL,
+  type NotifCat,
+} from "@/lib/notify-state";
 
 export function NotificationsSection() {
   const [mounted, setMounted] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [perm, setPerm] = useState<NotificationPermission>("default");
   const [sending, setSending] = useState(false);
+  const [cats, setCats] = useState<Record<NotifCat, boolean>>({
+    task: true,
+    subscription: true,
+    deadline: true,
+    birthday: true,
+  });
 
   useEffect(() => {
     setMounted(true);
     setEnabled(notifyEnabled());
     setPerm(notifyPermission());
+    setCats(getCats());
   }, []);
 
   async function toggle() {
@@ -44,6 +58,12 @@ export function NotificationsSection() {
     } else {
       toast.error("Permission denied — allow notifications in your browser.");
     }
+  }
+
+  function toggleCat(cat: NotifCat) {
+    const next = !cats[cat];
+    setCat(cat, next);
+    setCats((c) => ({ ...c, [cat]: next }));
   }
 
   async function sendTest() {
@@ -75,9 +95,9 @@ export function NotificationsSection() {
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium">Reminders &amp; nudges</div>
           <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">
-            Get notified when a reminder comes due, a subscription renews,
-            it&apos;s someone&apos;s birthday, or habits are still pending —
-            while Life OS is open.
+            Get a heads-up 5, 3 and 1 days before — and on the day — for upcoming
+            tasks, subscription renewals, deadlines and birthdays, plus habit
+            nudges. Shown on your desktop and in the bell, while Life OS is open.
           </p>
           {!supported && (
             <p className="text-xs text-[var(--bad)] mt-1">
@@ -104,6 +124,38 @@ export function NotificationsSection() {
             style={{ left: enabled ? 21 : 3, boxShadow: "0 1px 3px rgba(0,0,0,0.25)" }}
           />
         </button>
+      </div>
+
+      <div className="px-4 py-3">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-faint)] mb-1">
+          What to notify about
+        </div>
+        <div className="divide-y divide-[var(--border-soft)]">
+          {NOTIF_CATS.map((cat) => (
+            <div key={cat} className="flex items-center gap-3 py-2">
+              <span className="flex-1 text-sm">{CAT_LABEL[cat]}</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={cats[cat]}
+                aria-label={CAT_LABEL[cat]}
+                onClick={() => toggleCat(cat)}
+                className="relative w-[40px] h-[24px] rounded-full transition-colors shrink-0"
+                style={{
+                  background: cats[cat] ? "var(--accent)" : "var(--border-strong)",
+                }}
+              >
+                <span
+                  className="absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-[left] duration-200"
+                  style={{
+                    left: cats[cat] ? 19 : 3,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+                  }}
+                />
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {enabled && (

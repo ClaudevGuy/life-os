@@ -21,6 +21,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { PomodoroPill } from "@/components/pomodoro-pill";
 import { AskPopover } from "@/components/ask-popover";
 import { VoiceButton } from "@/components/voice-assistant";
+import { NotificationBell } from "@/components/notification-bell";
 import { greetingFor, timeOfDay } from "@/lib/time-of-day";
 import { ymd } from "@/lib/ymd";
 
@@ -128,6 +129,7 @@ export function TopBar() {
           </span>
         </button>
         <PomodoroPill />
+        <NotificationBell />
         <ThemeToggle />
         <LiveClock />
       </div>
