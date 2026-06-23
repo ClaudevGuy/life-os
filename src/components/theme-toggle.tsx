@@ -50,7 +50,7 @@ export function ThemeToggle() {
         size={12}
         strokeWidth={1.8}
         className="absolute left-[8px] top-1/2 -translate-y-1/2 transition-opacity"
-        style={{ color: "#E0A94A", opacity: isDark ? 0.35 : 0 }}
+        style={{ color: "#F4B860", opacity: isDark ? 0.72 : 0 }}
       />
       <Moon
         size={11}

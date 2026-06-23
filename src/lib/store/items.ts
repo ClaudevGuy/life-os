@@ -15,6 +15,7 @@ import {
   type StoredTrash,
 } from "./db";
 import { schedulePushIfConfigured } from "@/lib/sync/gist";
+import { readSubscription, rolledChargeDate } from "@/lib/subscriptions";
 
 export type { StoredItem, ItemKind, ItemStatus, StoredTrash } from "./db";
 
@@ -182,6 +183,34 @@ export async function setTaskDone(id: string, done: boolean): Promise<void> {
     updatedAt: new Date(),
   });
   schedulePushIfConfigured();
+}
+
+/**
+ * Roll every active, unpaused subscription whose charge date has fully passed
+ * forward to its next billing cycle. Idempotent — anything already on today or
+ * a future date is untouched, so this is safe to run on every scheduler tick.
+ * Paused subscriptions and cancelled (archived) ones are skipped. Returns how
+ * many were advanced.
+ */
+export async function reconcileSubscriptions(
+  now: Date = new Date(),
+): Promise<number> {
+  const subs = await db.items.where("kind").equals("subscription").toArray();
+  let changed = 0;
+  for (const it of subs) {
+    if (it.status === "archived") continue; // cancelled
+    const sub = readSubscription(it);
+    if (!sub || sub.paused || !sub.nextChargeAt) continue;
+    const rolled = rolledChargeDate(sub.nextChargeAt, sub.cycle, now);
+    if (!rolled) continue;
+    await db.items.update(it.id, {
+      metadata: { ...(it.metadata ?? {}), nextChargeAt: rolled },
+      updatedAt: new Date(),
+    });
+    changed++;
+  }
+  if (changed > 0) schedulePushIfConfigured();
+  return changed;
 }
 
 // ---------- Reads (one-shot) ----------

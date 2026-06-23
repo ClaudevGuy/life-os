@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { db } from "@/lib/store/db";
+import { reconcileSubscriptions } from "@/lib/store/items";
 import { fireDue, notifyEnabled } from "@/lib/notify";
 import { maybeAutoBackup } from "@/lib/backup";
 
@@ -23,7 +24,15 @@ export function PwaBootstrap() {
   useEffect(() => {
     let stopped = false;
     async function tick() {
-      if (stopped || !notifyEnabled()) return;
+      if (stopped) return;
+      // Roll subscriptions past their charge date forward to the next cycle.
+      // Runs regardless of notification settings — it's data upkeep, not a nudge.
+      try {
+        await reconcileSubscriptions();
+      } catch {
+        /* ignore */
+      }
+      if (!notifyEnabled()) return;
       try {
         const items = await db.items.toArray();
         const fresh = await fireDue(items);
