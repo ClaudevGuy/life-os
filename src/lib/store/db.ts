@@ -250,6 +250,33 @@ class LifeOSDB extends Dexie {
       workouts: "id, date, focus",
       routines: "id, name",
     });
+    // v10: a workout can have multiple focuses (Legs + Shoulders). Migrate the
+    // single `focus` string to a `*focus` multi-entry array.
+    this.version(10)
+      .stores({
+        items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+        blobs: "id, createdAt",
+        tombstones: "id, deletedAt",
+        trash: "id, trashedAt, kind",
+        dayNotes: "date, updatedAt",
+        netWorthSnapshots: "date, updatedAt",
+        vault: "id, type, updatedAt",
+        healthLogs: "date, updatedAt",
+        appKV: "key",
+        exercises: "id, name, muscle, type, custom",
+        workouts: "id, date, *focus",
+        routines: "id, name",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table("workouts")
+          .toCollection()
+          .modify((w) => {
+            if (!Array.isArray(w.focus)) {
+              w.focus = typeof w.focus === "string" && w.focus ? [w.focus] : [];
+            }
+          });
+      });
   }
 }
 

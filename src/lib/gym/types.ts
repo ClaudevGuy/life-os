@@ -66,7 +66,8 @@ export type WorkoutEntry = {
 export type Workout = {
   id: string;
   date: string;
-  focus: string | null;
+  /** Training focuses for the session, e.g. ["Legs", "Shoulders"]. */
+  focus: string[];
   title?: string;
   notes?: string;
   entries: WorkoutEntry[];
@@ -192,4 +193,10 @@ export function focusColor(focus: string | null | undefined): string {
   let h = 0;
   for (let i = 0; i < focus.length; i++) h = (h * 31 + focus.charCodeAt(i)) >>> 0;
   return PALETTE[h % PALETTE.length];
+}
+
+/** Normalize a workout's focus to an array (tolerates legacy string/null rows). */
+export function focusesOf(focus: string[] | string | null | undefined): string[] {
+  if (Array.isArray(focus)) return focus;
+  return focus ? [focus] : [];
 }

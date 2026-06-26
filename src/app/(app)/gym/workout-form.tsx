@@ -13,6 +13,7 @@ import {
 import {
   FOCUS_PRESETS,
   focusColor,
+  focusesOf,
   MUSCLE_LABEL,
   type Exercise,
   type SetEntry,
@@ -26,7 +27,7 @@ import { fmtWeight } from "./ui";
 export type FormInitial = {
   workout?: Workout;
   date?: string;
-  focus?: string | null;
+  focus?: string[];
   title?: string;
   entries?: WorkoutEntry[];
 };
@@ -49,8 +50,8 @@ export function WorkoutForm({
   const [date, setDate] = useState(
     initial.workout?.date ?? initial.date ?? "",
   );
-  const [focus, setFocus] = useState<string | null>(
-    initial.workout?.focus ?? initial.focus ?? null,
+  const [focus, setFocus] = useState<string[]>(
+    initial.workout ? focusesOf(initial.workout.focus) : (initial.focus ?? []),
   );
   const [title, setTitle] = useState(
     initial.workout?.title ?? initial.title ?? "",
@@ -165,8 +166,7 @@ export function WorkoutForm({
 
   const totalSets = entries.reduce((n, e) => n + e.sets.length, 0);
   const totalVol = entries.reduce((v, e) => v + entryVolume(e), 0);
-  const customFocus =
-    focus && !FOCUS_PRESETS.includes(focus) ? focus : "";
+  const customFocus = focus.find((f) => !FOCUS_PRESETS.includes(f)) ?? "";
 
   return (
     <Portal>
@@ -210,12 +210,18 @@ export function WorkoutForm({
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {FOCUS_PRESETS.map((f) => {
-                const on = focus === f;
+                const on = focus.includes(f);
                 return (
                   <button
                     key={f}
                     type="button"
-                    onClick={() => setFocus(on ? null : f)}
+                    onClick={() =>
+                      setFocus((prev) =>
+                        prev.includes(f)
+                          ? prev.filter((x) => x !== f)
+                          : [...prev, f],
+                      )
+                    }
                     className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium transition active:scale-[0.97] ${
                       on
                         ? "text-white"
@@ -229,7 +235,13 @@ export function WorkoutForm({
               })}
               <input
                 value={customFocus}
-                onChange={(e) => setFocus(e.target.value.trim() || null)}
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  setFocus((prev) => [
+                    ...prev.filter((x) => FOCUS_PRESETS.includes(x)),
+                    ...(v ? [v] : []),
+                  ]);
+                }}
                 placeholder="Custom…"
                 className="w-[88px] rounded-full bg-[var(--paper-2)] border border-[var(--line)] px-3 py-1 text-[11.5px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)]"
               />

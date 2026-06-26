@@ -105,16 +105,22 @@ export async function deleteWorkout(id: string): Promise<void> {
   await db.workouts.delete(id);
 }
 
-/** Fast path: set the focus for a day, creating an empty workout if none exists. */
+/** Fast path: set the focuses for a day, creating an empty workout if none. */
 export async function upsertDayFocus(
   date: string,
-  focus: string | null,
+  focus: string[],
 ): Promise<void> {
   const existing = await db.workouts.where("date").equals(date).first();
   if (existing) {
-    await db.workouts.update(existing.id, { focus, updatedAt: new Date() });
+    // Clearing the last focus on an otherwise-empty day removes it entirely.
+    if (focus.length === 0 && existing.entries.length === 0) {
+      await db.workouts.delete(existing.id);
+    } else {
+      await db.workouts.update(existing.id, { focus, updatedAt: new Date() });
+    }
     return;
   }
+  if (focus.length === 0) return;
   const now = new Date();
   await db.workouts.add({
     id: crypto.randomUUID(),

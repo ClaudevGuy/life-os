@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { Plus, Dumbbell, X, Pencil, Check } from "lucide-react";
 import { Portal } from "@/components/portal";
 import { upsertDayFocus } from "@/lib/store/gym";
@@ -10,6 +9,7 @@ import type { WeightUnit } from "@/lib/store/health";
 import {
   FOCUS_GROUPS,
   focusColor,
+  focusesOf,
   type Workout,
 } from "@/lib/gym/types";
 import { workoutVolume, workoutSetCount } from "@/lib/gym/calc";
@@ -59,6 +59,7 @@ export function LogTab({
         <div className="grid grid-cols-7 gap-1.5">
           {week.map((d) => {
             const w = byDate.get(d);
+            const focuses = focusesOf(w?.focus);
             const isToday = d === today;
             const date = new Date(`${d}T12:00:00`);
             return (
@@ -86,15 +87,16 @@ export function LogTab({
                 >
                   {date.getDate()}
                 </div>
-                {w?.focus ? (
+                {focuses.length > 0 ? (
                   <div
                     className="text-[9.5px] font-semibold rounded-[6px] py-0.5 truncate px-0.5"
                     style={{
-                      color: focusColor(w.focus),
-                      background: `color-mix(in oklch, ${focusColor(w.focus)} 16%, transparent)`,
+                      color: focusColor(focuses[0]),
+                      background: `color-mix(in oklch, ${focusColor(focuses[0])} 16%, transparent)`,
                     }}
                   >
-                    {w.focus}
+                    {focuses[0]}
+                    {focuses.length > 1 ? ` +${focuses.length - 1}` : ""}
                   </div>
                 ) : w ? (
                   <div className="text-[9.5px] text-[var(--muted)]">logged</div>
@@ -151,12 +153,15 @@ export function LogTab({
       {sheetDay && (
         <DayFocusSheet
           day={sheetDay}
-          current={dayWorkout?.focus ?? null}
-          onPick={async (f) => {
-            await upsertDayFocus(sheetDay, f);
-            toast.success(f ? `${f} logged` : "Cleared");
-            setSheetDay(null);
+          current={focusesOf(dayWorkout?.focus)}
+          onToggle={(f) => {
+            const cur = focusesOf(dayWorkout?.focus);
+            const next = cur.includes(f)
+              ? cur.filter((x) => x !== f)
+              : [...cur, f];
+            void upsertDayFocus(sheetDay, next);
           }}
+          onClear={() => void upsertDayFocus(sheetDay, [])}
           onFullLog={() => {
             const d = sheetDay;
             setSheetDay(null);
@@ -182,6 +187,8 @@ function WorkoutCard({
   const date = new Date(`${w.date}T12:00:00`);
   const vol = workoutVolume(w);
   const sets = workoutSetCount(w);
+  const focuses = focusesOf(w.focus);
+  const tint = focusColor(focuses[0]);
   const label = date.toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
@@ -196,28 +203,30 @@ function WorkoutCard({
       <span
         className="grid place-items-center w-10 h-10 rounded-[11px] shrink-0"
         style={{
-          background: `color-mix(in oklch, ${focusColor(w.focus)} 14%, transparent)`,
-          color: focusColor(w.focus),
+          background: `color-mix(in oklch, ${tint} 14%, transparent)`,
+          color: tint,
         }}
       >
         <Dumbbell size={17} strokeWidth={1.7} />
       </span>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[13.5px] font-semibold text-[var(--ink)] truncate">
-            {w.title || w.focus || "Workout"}
+            {w.title || (focuses.length ? focuses.join(", ") : "Workout")}
           </span>
-          {w.focus && (
-            <span
-              className="text-[10px] font-semibold rounded-[6px] px-1.5 py-0.5 shrink-0"
-              style={{
-                color: focusColor(w.focus),
-                background: `color-mix(in oklch, ${focusColor(w.focus)} 15%, transparent)`,
-              }}
-            >
-              {w.focus}
-            </span>
-          )}
+          {w.title &&
+            focuses.map((f) => (
+              <span
+                key={f}
+                className="text-[10px] font-semibold rounded-[6px] px-1.5 py-0.5 shrink-0"
+                style={{
+                  color: focusColor(f),
+                  background: `color-mix(in oklch, ${focusColor(f)} 15%, transparent)`,
+                }}
+              >
+                {f}
+              </span>
+            ))}
         </div>
         <div className="text-[11.5px] text-[var(--muted)] tabular-nums mt-0.5">
           {label}
@@ -237,13 +246,15 @@ function WorkoutCard({
 function DayFocusSheet({
   day,
   current,
-  onPick,
+  onToggle,
+  onClear,
   onFullLog,
   onClose,
 }: {
   day: string;
-  current: string | null;
-  onPick: (f: string | null) => void;
+  current: string[];
+  onToggle: (f: string) => void;
+  onClear: () => void;
   onFullLog: () => void;
   onClose: () => void;
 }) {
@@ -273,17 +284,18 @@ function DayFocusSheet({
                     day: "numeric",
                   })}
                 </span>
-                {current && (
+                {current.map((f) => (
                   <span
+                    key={f}
                     className="text-[10px] font-semibold rounded-[6px] px-1.5 py-0.5"
                     style={{
-                      color: focusColor(current),
-                      background: `color-mix(in oklch, ${focusColor(current)} 16%, transparent)`,
+                      color: focusColor(f),
+                      background: `color-mix(in oklch, ${focusColor(f)} 16%, transparent)`,
                     }}
                   >
-                    {current}
+                    {f}
                   </span>
-                )}
+                ))}
               </div>
             </div>
             <button
@@ -305,13 +317,13 @@ function DayFocusSheet({
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {g.items.map((f) => {
-                    const on = current === f;
+                    const on = current.includes(f);
                     const c = focusColor(f);
                     return (
                       <button
                         key={f}
                         type="button"
-                        onClick={() => onPick(on ? null : f)}
+                        onClick={() => onToggle(f)}
                         className={`inline-flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full text-[12.5px] font-medium border transition active:scale-[0.97] ${
                           on
                             ? "text-white"
@@ -334,17 +346,20 @@ function DayFocusSheet({
                 </div>
               </div>
             ))}
+            <p className="text-[10.5px] text-[var(--muted-2)] pt-0.5">
+              Tap all that apply.
+            </p>
           </div>
 
           {/* Footer */}
           <div className="border-t border-[var(--line)]">
-            {current && (
+            {current.length > 0 && (
               <button
                 type="button"
-                onClick={() => onPick(null)}
+                onClick={onClear}
                 className="w-full px-5 py-2.5 text-left text-[11.5px] text-[var(--muted)] hover:text-[var(--bad)] transition border-b border-[var(--line)]"
               >
-                Clear focus
+                Clear all
               </button>
             )}
             <button

@@ -3,6 +3,7 @@
  * muscle/split balance. No React, no DOM, no storage: easy to unit-test.
  */
 import { ymd } from "@/lib/ymd";
+import { focusesOf } from "./types";
 import type { MuscleGroup, SetEntry, Workout, WorkoutEntry } from "./types";
 
 /** Epley estimated 1-rep max. Single reps return the weight itself. */
@@ -112,8 +113,12 @@ export function splitBalance(
   const out: Record<string, number> = {};
   for (const w of workouts) {
     if (!inLastDays(w.date, days, now)) continue;
-    const f = w.focus || "Other";
-    out[f] = (out[f] ?? 0) + 1;
+    const fs = focusesOf(w.focus);
+    if (fs.length === 0) {
+      out.Other = (out.Other ?? 0) + 1;
+    } else {
+      for (const f of fs) out[f] = (out[f] ?? 0) + 1;
+    }
   }
   return out;
 }

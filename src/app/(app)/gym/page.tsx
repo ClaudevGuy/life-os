@@ -70,7 +70,7 @@ export default function GymPage() {
   const openFromRoutine = (r: Routine) =>
     setForm({
       date: today,
-      focus: r.focus,
+      focus: r.focus ? [r.focus] : [],
       title: r.name,
       entries: routineToEntries(r.items),
     });
