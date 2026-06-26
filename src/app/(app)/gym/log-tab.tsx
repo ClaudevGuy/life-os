@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Dumbbell, X, Pencil } from "lucide-react";
+import { Plus, Dumbbell, X, Pencil, Check } from "lucide-react";
 import { Portal } from "@/components/portal";
 import { upsertDayFocus } from "@/lib/store/gym";
 import { ymd } from "@/lib/ymd";
 import type { WeightUnit } from "@/lib/store/health";
 import {
-  FOCUS_PRESETS,
+  FOCUS_GROUPS,
   focusColor,
   type Workout,
 } from "@/lib/gym/types";
@@ -255,71 +255,107 @@ function DayFocusSheet({
         onClick={onClose}
       >
         <div
-          className="w-full max-w-sm rounded-[16px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
+          className="w-full max-w-[400px] rounded-[18px] border border-[var(--line-2)] bg-[var(--paper)] life-rise overflow-hidden"
           style={{ boxShadow: "var(--shadow-3)" }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)]">
-            <div>
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-4 pb-3.5 border-b border-[var(--line)]">
+            <div className="min-w-0">
               <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
                 What did you train?
               </div>
-              <div className="text-[14px] font-semibold text-[var(--ink)]">
-                {date.toLocaleDateString(undefined, {
-                  weekday: "long",
-                  month: "short",
-                  day: "numeric",
-                })}
+              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                <span className="text-[15px] font-semibold text-[var(--ink)]">
+                  {date.toLocaleDateString(undefined, {
+                    weekday: "long",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+                {current && (
+                  <span
+                    className="text-[10px] font-semibold rounded-[6px] px-1.5 py-0.5"
+                    style={{
+                      color: focusColor(current),
+                      background: `color-mix(in oklch, ${focusColor(current)} 16%, transparent)`,
+                    }}
+                  >
+                    {current}
+                  </span>
+                )}
               </div>
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="grid place-items-center w-8 h-8 rounded-md text-[var(--muted)] hover:text-[var(--ink)] transition"
+              className="grid place-items-center w-8 h-8 rounded-md text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition shrink-0"
             >
               <X size={14} />
             </button>
           </div>
-          <div className="p-4">
-            <div className="flex flex-wrap gap-1.5">
-              {FOCUS_PRESETS.map((f) => {
-                const on = current === f;
-                return (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => onPick(f)}
-                    className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition active:scale-[0.97] ${
-                      on
-                        ? "text-white"
-                        : "border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]"
-                    }`}
-                    style={on ? { background: focusColor(f) } : undefined}
-                  >
-                    {f}
-                  </button>
-                );
-              })}
-            </div>
+
+          {/* Grouped focus chips */}
+          <div className="px-5 py-4 space-y-4">
+            {FOCUS_GROUPS.map((g) => (
+              <div key={g.label}>
+                <div className="text-[10px] uppercase tracking-[0.12em] font-semibold text-[var(--muted-2)] mb-2">
+                  {g.label}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {g.items.map((f) => {
+                    const on = current === f;
+                    const c = focusColor(f);
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => onPick(on ? null : f)}
+                        className={`inline-flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full text-[12.5px] font-medium border transition active:scale-[0.97] ${
+                          on
+                            ? "text-white"
+                            : "bg-[var(--paper)] border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--terra)] hover:-translate-y-px"
+                        }`}
+                        style={on ? { background: c, borderColor: c } : undefined}
+                      >
+                        {on ? (
+                          <Check size={13} strokeWidth={3} />
+                        ) : (
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ background: c }}
+                          />
+                        )}
+                        {f}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-[var(--line)]">
             {current && (
               <button
                 type="button"
                 onClick={() => onPick(null)}
-                className="mt-3 text-[11.5px] text-[var(--muted)] hover:text-[var(--bad)] transition"
+                className="w-full px-5 py-2.5 text-left text-[11.5px] text-[var(--muted)] hover:text-[var(--bad)] transition border-b border-[var(--line)]"
               >
                 Clear focus
               </button>
             )}
+            <button
+              type="button"
+              onClick={onFullLog}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[12.5px] font-medium text-[var(--terra)] hover:bg-[var(--bg-card-hover)] transition"
+            >
+              <Plus size={14} />
+              Log full workout (sets &amp; reps)
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onFullLog}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-t border-[var(--line)] text-[12.5px] font-medium text-[var(--terra)] hover:bg-[var(--bg-card-hover)] transition"
-          >
-            <Plus size={14} />
-            Log full workout (sets &amp; reps)
-          </button>
         </div>
       </div>
     </Portal>

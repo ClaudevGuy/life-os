@@ -152,21 +152,14 @@ export const EQUIPMENT_LABEL: Record<Equipment, string> = {
 
 // ── focus / split ───────────────────────────────────────────────────────────
 
-/** The preset "what did I train" labels. Custom strings are allowed too. */
-export const FOCUS_PRESETS: string[] = [
-  "Push",
-  "Pull",
-  "Legs",
-  "Upper",
-  "Lower",
-  "Full body",
-  "Chest",
-  "Back",
-  "Shoulders",
-  "Arms",
-  "Core",
-  "Cardio",
+/** Preset "what did I train" labels, grouped for tidy pickers. */
+export const FOCUS_GROUPS: { label: string; items: string[] }[] = [
+  { label: "Splits", items: ["Push", "Pull", "Legs", "Upper", "Lower", "Full body"] },
+  { label: "By muscle", items: ["Chest", "Back", "Shoulders", "Arms", "Core", "Cardio"] },
 ];
+
+/** Flat list of preset focus labels. Custom strings are allowed too. */
+export const FOCUS_PRESETS: string[] = FOCUS_GROUPS.flatMap((g) => g.items);
 
 const PALETTE = [
   "var(--terra)",
