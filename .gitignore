@@ -45,3 +45,9 @@ next-env.d.ts
 
 # local dev/preview tooling
 /.claude/launch.json
+/.claude/settings.local.json
+
+# agent skills (installed per-machine via `npx skills add`)
+/.agents/
+/.claude/skills/
+/skills-lock.json
