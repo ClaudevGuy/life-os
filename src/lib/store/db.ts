@@ -6,6 +6,7 @@
  * server-only fields (`userId`, `embedding`).
  */
 import Dexie, { type EntityTable } from "dexie";
+import type { Exercise, Routine, Workout } from "@/lib/gym/types";
 
 export type ItemKind =
   | "note"
@@ -159,6 +160,9 @@ class LifeOSDB extends Dexie {
   vault!: EntityTable<StoredVaultItem, "id">;
   healthLogs!: EntityTable<StoredHealthLog, "date">;
   appKV!: EntityTable<StoredKV, "key">;
+  exercises!: EntityTable<Exercise, "id">;
+  workouts!: EntityTable<Workout, "id">;
+  routines!: EntityTable<Routine, "id">;
 
   constructor() {
     super("life-os");
@@ -230,6 +234,21 @@ class LifeOSDB extends Dexie {
       vault: "id, type, updatedAt",
       healthLogs: "date, updatedAt",
       appKV: "key",
+    });
+    // v9: gym tracker — exercise library, logged workouts, routine templates.
+    this.version(9).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
+      trash: "id, trashedAt, kind",
+      dayNotes: "date, updatedAt",
+      netWorthSnapshots: "date, updatedAt",
+      vault: "id, type, updatedAt",
+      healthLogs: "date, updatedAt",
+      appKV: "key",
+      exercises: "id, name, muscle, type, custom",
+      workouts: "id, date, focus",
+      routines: "id, name",
     });
   }
 }

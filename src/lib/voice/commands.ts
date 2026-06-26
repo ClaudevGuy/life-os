@@ -219,7 +219,7 @@ const NAV: Record<string, { href: string; label: string }> = {
   calendar: { href: "/calendar", label: "Calendar" },
   tasks: { href: "/tasks", label: "Tasks" },
   habits: { href: "/habits", label: "Habits" },
-  health: { href: "/health", label: "Health" },
+  gym: { href: "/gym", label: "Gym" },
   goals: { href: "/goals", label: "Goals" },
   projects: { href: "/projects", label: "Projects" },
   people: { href: "/people", label: "People" },

@@ -22,7 +22,7 @@ import {
   Wallet,
   Target,
   Shield,
-  HeartPulse,
+  Dumbbell,
   Waypoints,
 } from "lucide-react";
 
@@ -80,7 +80,7 @@ const SECTIONS: RailSection[] = [
         icon: Flame,
         badgeKey: "habitsPending",
       },
-      { href: "/health", label: "Health", icon: HeartPulse },
+      { href: "/gym", label: "Gym", icon: Dumbbell },
     ],
   },
   {
