@@ -15,7 +15,8 @@ import {
   NotebookPen,
   Plus,
   Search,
-  LayoutGrid,
+  Layers,
+  Star,
   Pencil,
   Clock,
   Menu,
@@ -45,7 +46,7 @@ import { BlobImg } from "@/components/blob-img";
 import { ItemActions } from "@/components/item-actions";
 import { Markdown } from "@/components/markdown";
 
-type View = "editor" | "grid";
+type View = "editor" | "deck";
 
 export default function NotesPage() {
   return (
@@ -59,8 +60,11 @@ function NotesScreen() {
   const rows = useItemsOfKind("note") ?? [];
   const router = useRouter();
   const params = useSearchParams();
-  const view: View = params.get("view") === "grid" ? "grid" : "editor";
   const selectedId = params.get("id");
+  // Default landing is the cinematic deck; a selected note (or explicit
+  // ?view=editor) drops into the master-detail reader.
+  const view: View =
+    selectedId || params.get("view") === "editor" ? "editor" : "deck";
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -83,11 +87,19 @@ function NotesScreen() {
     );
   }, [rows, query]);
 
-  function setView(next: View) {
+  function goDeck() {
+    router.push("/notes");
+  }
+
+  function goEditor() {
     const sp = new URLSearchParams(params.toString());
-    if (next === "grid") sp.set("view", "grid");
-    else sp.delete("view");
-    router.replace(`/notes${sp.toString() ? `?${sp.toString()}` : ""}`);
+    sp.set("view", "editor");
+    if (!selectedId && rows[0]) sp.set("id", rows[0].id);
+    router.push(`/notes?${sp.toString()}`);
+  }
+
+  function openNote(id: string) {
+    router.push(`/notes?id=${id}`);
   }
 
   function selectNote(id: string) {
@@ -116,14 +128,15 @@ function NotesScreen() {
     });
   }
 
-  if (view === "grid") {
+  if (view === "deck") {
     return (
-      <GridView
+      <DeckView
         rows={rows}
         filtered={filtered}
         query={query}
         onQuery={setQuery}
-        onSwitchToEditor={() => setView("editor")}
+        onSwitchToEditor={goEditor}
+        onOpen={openNote}
         onCreate={createNote}
         creating={pending}
       />
@@ -138,7 +151,7 @@ function NotesScreen() {
       onQuery={setQuery}
       selectedId={selectedId}
       onSelect={selectNote}
-      onSwitchToGrid={() => setView("grid")}
+      onSwitchToDeck={goDeck}
       onCreate={createNote}
       creating={pending}
     />
@@ -156,7 +169,7 @@ function EditorView({
   onQuery,
   selectedId,
   onSelect,
-  onSwitchToGrid,
+  onSwitchToDeck,
   onCreate,
   creating,
 }: {
@@ -166,7 +179,7 @@ function EditorView({
   onQuery: (q: string) => void;
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onSwitchToGrid: () => void;
+  onSwitchToDeck: () => void;
   onCreate: () => void;
   creating: boolean;
 }) {
@@ -190,12 +203,12 @@ function EditorView({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onSwitchToGrid}
-              title="Grid view"
-              aria-label="Switch to grid view"
+              onClick={onSwitchToDeck}
+              title="Gallery view"
+              aria-label="Switch to gallery view"
               className="grid place-items-center w-9 h-9 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
             >
-              <LayoutGrid size={15} strokeWidth={1.6} />
+              <Layers size={15} strokeWidth={1.6} />
             </button>
             <button
               type="button"
@@ -268,15 +281,16 @@ function EditorView({
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// GRID view
+// WALL view — every note in sight at once, as a mosaic of cards
 // ──────────────────────────────────────────────────────────────────────
 
-function GridView({
+function DeckView({
   rows,
   filtered,
   query,
   onQuery,
   onSwitchToEditor,
+  onOpen,
   onCreate,
   creating,
 }: {
@@ -285,155 +299,193 @@ function GridView({
   query: string;
   onQuery: (q: string) => void;
   onSwitchToEditor: () => void;
+  onOpen: (id: string) => void;
   onCreate: () => void;
   creating: boolean;
 }) {
-  const now = Date.now();
-  const weekAgo = now - 7 * 86_400_000;
-  const monthAgo = now - 30 * 86_400_000;
-
-  let pinned = 0;
-  let week = 0;
-  let month = 0;
-  for (const r of rows) {
-    if (r.isPinned) pinned++;
-    const ts = new Date(r.updatedAt).getTime();
-    if (ts >= weekAgo) week++;
-    if (ts >= monthAgo) month++;
-  }
+  const wall = useMemo(
+    () =>
+      [...filtered].sort((a, b) => {
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }),
+    [filtered],
+  );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto pg-enter">
-      <header className="flex items-baseline justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="life-h1 inline-flex items-center gap-2">
-            <NotebookPen size={20} className="text-[var(--terra)]" strokeWidth={1.6} />
-            Notes
-          </h1>
-          <p className="text-[14.5px] text-[var(--muted)] mt-1">
-            Thoughts, conversation logs, scraps you want to keep.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onSwitchToEditor}
-            title="Editor view"
-            className="life-btn life-btn-sm life-btn-secondary"
-          >
-            <Menu size={13} strokeWidth={1.6} />
-            Editor
-          </button>
-          <button
-            type="button"
-            onClick={onCreate}
-            disabled={creating}
-            className="life-btn life-btn-sm life-btn-primary"
-          >
-            <Plus size={13} strokeWidth={2} />
-            New note
-          </button>
-        </div>
-      </header>
+    <div className="relative flex flex-col h-[calc(100vh-61px)] min-h-0 overflow-hidden">
+      {/* Ambient atmosphere */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(90% 55% at 50% -8%, color-mix(in oklch, var(--terra) 10%, transparent), transparent 70%)",
+        }}
+      />
 
-      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 life-stagger">
-        <Stat label="Total" value={rows.length} tone="ink" />
-        <Stat label="Pinned" value={pinned} tone="gold" />
-        <Stat label="This week" value={week} tone="sage" />
-        <Stat label="This month" value={month} tone="ink" />
-      </div>
-
-      <div className="mt-4">
-        <div className="relative">
+      <header className="relative z-10 flex items-center gap-3 px-6 pt-5 pb-4 flex-wrap">
+        <h1 className="inline-flex items-center gap-2 text-[22px] font-semibold tracking-[-0.02em] text-[var(--ink)]">
+          <NotebookPen size={20} className="text-[var(--terra)]" strokeWidth={1.6} />
+          Notes
+          <span className="text-[14px] font-medium text-[var(--muted)] ml-1 tabular-nums">
+            {rows.length}
+          </span>
+        </h1>
+        <div className="relative flex-1 min-w-[160px] max-w-[420px] mx-auto">
           <Search
             size={14}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none"
           />
           <input
             value={query}
             onChange={(e) => onQuery(e.target.value)}
             placeholder="Search notes…"
-            className="w-full rounded-[12px] bg-[var(--paper)] border border-[var(--line)] pl-10 pr-3 py-3 text-[14px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
+            className="w-full rounded-full bg-[var(--paper)] border border-[var(--line)] pl-10 pr-3 py-2 text-[13.5px] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--terra)] transition"
           />
         </div>
-      </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onSwitchToEditor}
+            title="Reading view"
+            aria-label="Switch to reading view"
+            className="grid place-items-center w-9 h-9 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper-2)] transition"
+          >
+            <Menu size={15} strokeWidth={1.6} />
+          </button>
+          <button
+            type="button"
+            onClick={onCreate}
+            disabled={creating}
+            title="New note"
+            aria-label="New note"
+            className="grid place-items-center w-9 h-9 rounded-[10px] bg-[var(--ink)] text-[var(--paper)] hover:opacity-90 active:scale-95 transition disabled:opacity-50"
+          >
+            <Plus size={16} strokeWidth={2} />
+          </button>
+        </div>
+      </header>
 
-      {filtered.length === 0 ? (
-        <div className="mt-12 life-card p-12 text-center">
-          <p className="text-[14px] text-[var(--muted)]">
-            {query ? "No matching notes." : "No notes yet."}
-          </p>
+      {wall.length === 0 ? (
+        <div className="relative z-10 flex-1 grid place-items-center px-6 text-center">
+          <div>
+            <p className="text-[14px] text-[var(--muted)]">
+              {query ? "No matching notes." : "No notes yet."}
+            </p>
+            {!query && (
+              <button
+                type="button"
+                onClick={onCreate}
+                disabled={creating}
+                className="life-btn life-btn-sm life-btn-primary mt-4 mx-auto"
+              >
+                <Plus size={13} strokeWidth={2} />
+                New note
+              </button>
+            )}
+          </div>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 life-stagger">
-          {filtered.map((n) => (
-            <NoteGridCard key={n.id} note={n} />
-          ))}
+        <div className="relative z-10 flex-1 overflow-y-auto px-6 pb-8">
+          <div
+            className="grid gap-4 life-stagger"
+            style={{
+              gridTemplateColumns:
+                "repeat(auto-fill, minmax(min(100%, 264px), 1fr))",
+            }}
+          >
+            {wall.map((n) => (
+              <DeckCard key={n.id} note={n} onClick={() => onOpen(n.id)} />
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function Stat({
-  label,
-  value,
-  tone,
+function DeckCard({
+  note: n,
+  onClick,
 }: {
-  label: string;
-  value: number;
-  tone: "ink" | "gold" | "sage";
+  note: StoredItem;
+  onClick: () => void;
 }) {
-  const color =
-    tone === "gold"
-      ? "var(--gold)"
-      : tone === "sage"
-      ? "var(--sage)"
-      : "var(--ink)";
-  return (
-    <div className="life-card p-5">
-      <div className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-[var(--muted)]">
-        {label}
-      </div>
-      <div
-        className="mt-2 text-[34px] font-semibold tabular-nums tracking-[-0.02em] leading-none"
-        style={{ color }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function NoteGridCard({ note: n }: { note: StoredItem }) {
   const dot = topicColor(n.topic);
   const tag = n.topic ?? statusTag(n.status);
+  const cover = ((n.metadata ?? {}) as { photos?: string[] }).photos?.[0];
+  const preview = plainPreview(n.body);
+  const words = (preview.match(/\S+/g) ?? []).length;
+
   return (
-    <Link
-      href={`/items/${n.id}`}
-      className="life-card life-card-hover flex flex-col min-h-[240px] p-5 transition"
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Open note: ${n.title ?? "Untitled"}`}
+      style={{ "--g": `color-mix(in oklch, ${dot} 42%, transparent)` } as React.CSSProperties}
+      className="group relative flex flex-col h-[316px] rounded-[20px] overflow-hidden border border-[var(--line)] bg-[var(--paper)] text-left shadow-[var(--shadow-1)] transition duration-300 will-change-transform hover:-translate-y-1 hover:border-[var(--terra)] hover:shadow-[0_22px_55px_-20px_var(--g)]"
     >
-      <h3 className="text-[16px] font-semibold text-[var(--ink)] leading-snug line-clamp-2">
-        {n.title ?? "Untitled"}
-      </h3>
-      <div className="mt-2 text-[13.5px] text-[var(--ink-2)] leading-relaxed line-clamp-6 whitespace-pre-line">
-        {plainPreview(n.body) || <em className="text-[var(--muted)] not-italic">Empty.</em>}
+      <div className="relative h-[150px] w-full overflow-hidden shrink-0">
+        {cover ? (
+          <BlobImg
+            id={cover}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div
+            className="w-full h-full"
+            style={{
+              background: `linear-gradient(150deg, color-mix(in oklch, ${dot} 32%, var(--paper)), color-mix(in oklch, ${dot} 7%, var(--paper)))`,
+            }}
+          />
+        )}
+        {/* Fade the cover into the card body */}
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, transparent 48%, var(--paper))" }}
+        />
+        {!cover && (
+          <NotebookPen
+            size={58}
+            strokeWidth={1.1}
+            className="absolute right-4 top-4 opacity-20"
+            style={{ color: dot }}
+          />
+        )}
+        {n.isPinned && (
+          <span
+            className="absolute left-3.5 top-3.5 grid place-items-center w-7 h-7 rounded-full bg-[var(--paper)]/85 backdrop-blur"
+            style={{ color: "var(--gold)" }}
+          >
+            <Star size={13} fill="currentColor" strokeWidth={0} />
+          </span>
+        )}
       </div>
-      <div className="mt-auto pt-4 border-t border-dashed border-[var(--line)] flex items-center justify-between gap-3">
+
+      <div className="relative px-4 pb-4 flex flex-col flex-1 min-h-0">
         <span
-          className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.12em]"
-          style={{
-            color: dot,
-            background: `color-mix(in oklch, ${dot} 14%, transparent)`,
-          }}
+          className="inline-flex self-start items-center gap-1.5 px-2.5 py-1 rounded-full text-[9.5px] font-semibold uppercase tracking-[0.12em] mb-2"
+          style={{ color: dot, background: `color-mix(in oklch, ${dot} 16%, var(--paper))` }}
         >
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: dot }} />
           {tag}
         </span>
-        <span className="text-[10.5px] uppercase tracking-[0.14em] text-[var(--muted-2)] font-semibold">
-          {relDate(n.updatedAt).toUpperCase()}
-        </span>
+        <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-[var(--ink)] leading-snug line-clamp-2">
+          {n.title ?? "Untitled"}
+        </h3>
+        <p className="mt-1.5 text-[13px] text-[var(--ink-2)] leading-relaxed line-clamp-3 whitespace-pre-line">
+          {preview || "Empty note."}
+        </p>
+        <div className="mt-auto pt-3 flex items-center justify-between text-[10px] uppercase tracking-[0.13em] font-semibold text-[var(--muted-2)]">
+          <span>{relDate(n.updatedAt).toUpperCase()}</span>
+          <span className="tabular-nums">
+            {words} {words === 1 ? "word" : "words"}
+          </span>
+        </div>
       </div>
-    </Link>
+    </button>
   );
 }
 
