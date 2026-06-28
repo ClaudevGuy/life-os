@@ -2,18 +2,17 @@
  * Unified messaging — shared types for the Messages inbox. Pure types (no React,
  * no DOM) so the Dexie store in db.ts can import the row shapes directly.
  *
- * Each external service (Telegram, Gmail) is a "channel" with its own
- * adapter, added one phase at a time. The store and the inbox UI stay
- * channel-agnostic — they only ever talk to the rows below and the adapter
- * interface, never to a specific provider's SDK.
+ * Each external service (currently Gmail) is a "channel" with its own adapter.
+ * The store and the inbox UI stay channel-agnostic — they only ever talk to the
+ * rows below and the adapter interface, never to a specific provider's SDK, so
+ * more channels can be added later without touching them.
  */
 
-export type Channel = "telegram" | "gmail";
+export type Channel = "gmail";
 
-export const CHANNELS: Channel[] = ["telegram", "gmail"];
+export const CHANNELS: Channel[] = ["gmail"];
 
 export const CHANNEL_LABEL: Record<Channel, string> = {
-  telegram: "Telegram",
   gmail: "Gmail",
 };
 
@@ -27,7 +26,7 @@ export type AccountStatus = "connected" | "disconnected" | "error";
 export type MsgAccount = {
   id: string;
   channel: Channel;
-  label: string; // email address, phone number, or @handle
+  label: string; // email address or @handle
   status: AccountStatus;
   error?: string;
   addedAt: Date;
@@ -46,7 +45,7 @@ export type MsgThread = {
   lastTs: number; // ms epoch of last activity — primary sort key
   avatarText?: string; // initials for the avatar
   link?: string; // optional deep link into the native app
-  raw?: unknown; // channel-specific payload (peer ids, etc.)
+  raw?: unknown; // channel-specific payload
   updatedAt: Date;
 };
 
@@ -64,9 +63,9 @@ export type MsgMessage = {
 };
 
 /**
- * What every channel implements (Telegram, Gmail). Adapters read/write the
- * Dexie store through the helpers in
- * store/messaging.ts and register themselves via `registerAdapter`.
+ * What every channel implements (currently Gmail). Adapters read/write the
+ * Dexie store through the helpers in store/messaging.ts and register themselves
+ * via `registerAdapter`.
  */
 export interface ChannelAdapter {
   channel: Channel;

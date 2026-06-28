@@ -3,7 +3,7 @@
 /**
  * Unified messaging store: live queries + helpers over the `msgAccounts`,
  * `msgThreads` and `msgMessages` Dexie tables, plus a small adapter registry so
- * each channel (Telegram, Gmail) can plug its sync/send logic in.
+ * each channel (currently Gmail) can plug its sync/send logic in.
  *
  * These tables are deliberately NOT part of Gist sync or JSON backup — message
  * volume is high and credentials are sensitive, so messaging stays on-device.
@@ -11,6 +11,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "./db";
 import { captureItem } from "./items";
+import { CHANNELS } from "@/lib/messaging/types";
 import type {
   Channel,
   ChannelAdapter,
@@ -39,6 +40,38 @@ export function useMsgAccounts(): MsgAccount[] | undefined {
 
 export async function upsertAccount(account: MsgAccount): Promise<void> {
   await db.msgAccounts.put({ ...account, updatedAt: new Date() });
+}
+
+/**
+ * One-time hygiene run on load: drop any stored data for channels no longer in
+ * CHANNELS (e.g. after Telegram was removed) so the inbox never references a
+ * missing adapter/brand, and wipe leftover Telegram session keys from appKV.
+ * A no-op once the store is clean.
+ */
+export async function purgeRemovedChannels(): Promise<void> {
+  const valid = new Set<string>(CHANNELS);
+  const accounts = await db.msgAccounts.toArray();
+  for (const a of accounts) {
+    if (valid.has(a.channel)) continue;
+    await db.msgMessages.where("accountId").equals(a.id).delete();
+    await db.msgThreads.where("accountId").equals(a.id).delete();
+    await db.msgAccounts.delete(a.id);
+  }
+  // Belt-and-suspenders: any orphan threads/messages from a removed channel.
+  const orphans = (await db.msgThreads.toArray())
+    .filter((t) => !valid.has(t.channel))
+    .map((t) => t.id);
+  if (orphans.length) {
+    await db.msgMessages.where("threadId").anyOf(orphans).delete();
+    await db.msgThreads.bulkDelete(orphans);
+  }
+  // Leftover Telegram credentials/session (full-account secret) — wipe it.
+  await db.appKV.bulkDelete([
+    "msg.tg.apiId",
+    "msg.tg.apiHash",
+    "msg.tg.session",
+    "msg.tg.syncKinds",
+  ]);
 }
 
 /** Remove an account and everything cached under it. Sequential (not a single

@@ -45,7 +45,7 @@ const SECTIONS: SectionDef[] = [
     label: "Connections",
     icon: MessagesSquare,
     tint: "var(--sky)",
-    desc: "Telegram and Gmail — your unified inbox, all on-device.",
+    desc: "Gmail — your inbox, on-device.",
     Comp: ConnectionsSection,
   },
   {

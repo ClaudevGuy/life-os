@@ -12,13 +12,7 @@ import { useMsgAccounts, useMsgThreads } from "@/lib/store/messaging";
 import { BrandLogo } from "@/components/brand-icons";
 import { Conversation } from "./conversation";
 
-const CHANNEL_DOT: Record<Channel, string> = {
-  telegram: "#2AABEE",
-  gmail: "#EA4335",
-};
-
 const ONBOARD: { channel: Channel; blurb: string }[] = [
-  { channel: "telegram", blurb: "Your chats, DMs and groups" },
   { channel: "gmail", blurb: "Your Gmail inbox and threads" },
 ];
 
@@ -278,11 +272,11 @@ function Onboarding() {
             <MessagesSquare size={28} strokeWidth={1.7} />
           </div>
           <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-[var(--ink)]">
-            Bring your inboxes together
+            Your inbox, in Life OS
           </h1>
           <p className="mt-2 text-[14px] text-[var(--muted)] leading-relaxed max-w-[360px] mx-auto">
-            Read and reply to Telegram and Gmail in one place. Everything
-            stays on this device — no server.
+            Read and reply to your Gmail right here. Everything stays on this
+            device — no server.
           </p>
         </div>
 
@@ -317,8 +311,7 @@ function Onboarding() {
         </div>
 
         <p className="mt-5 text-center text-[11.5px] text-[var(--muted-2)] leading-relaxed">
-          Set each up once in Settings → Connections. Telegram is the quickest to
-          start.
+          Set it up once in Settings → Connections.
         </p>
       </div>
     </div>
