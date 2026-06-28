@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Density = "compact" | "cozy" | "comfortable";
-type Theme = "dark" | "light" | "system";
+type Theme = "dark" | "light" | "cloudy" | "system";
 
 const KEYS = {
   theme: "lifeos.theme",
@@ -29,11 +29,15 @@ export function SettingsClient() {
 
   return (
     <div className="life-card divide-y divide-[var(--border-soft)] overflow-hidden">
-      <Row label="Theme" hint="Dark by default, light for daytime, system follows your OS.">
+      <Row
+        label="Theme"
+        hint="Dark by default, light for daytime, cloudy mirror for a futuristic frosted-glass look, system follows your OS."
+      >
         <Pill
           options={[
             { value: "dark", label: "Dark" },
             { value: "light", label: "Light" },
+            { value: "cloudy", label: "Cloudy" },
             { value: "system", label: "System" },
           ]}
           value={theme}

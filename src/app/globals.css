@@ -132,6 +132,156 @@ html[data-theme="dark"] {
   --accent-hot: #EF8E73;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Cloudy mirror — glassmorphism. Frosted, translucent "hollow glass"
+   panels with a real backdrop blur, floating over a vibrant aurora and
+   edged with bright hairline borders. A dark-family theme (light ink).
+   Only the base tokens are redefined here; the legacy aliases in :root
+   (--accent, --text, --kind-*, …) follow via var() at use-time.
+   ───────────────────────────────────────────────────────────── */
+html[data-theme="cloudy"] {
+  /* Deep indigo base; the aurora is painted on body::before, below. */
+  --bg:       #0B1024;
+  --bg-2:     rgba(255, 255, 255, 0.08);
+
+  /* Surfaces stay solid + dark so "on-accent" text (color: var(--paper))
+     and small controls read crisply; the glass is built per-surface. */
+  --paper:    #141B38;
+  --paper-2:  #1C2550;
+
+  /* Translucent dark panes the rail + cards refract the aurora through. */
+  --glass:        rgba(18, 25, 54, 0.45);
+  --glass-strong: rgba(26, 34, 70, 0.55);
+  --bg-rail:      var(--glass-strong);
+
+  --ink:      #F3F6FF;
+  --ink-2:    #DCE4F7;
+  --muted:    #AEB9D8;
+  --muted-2:  #828FB6;
+
+  /* Bright hairline edges — the "hollow glass" outline. */
+  --line:     rgba(255, 255, 255, 0.14);
+  --line-2:   rgba(255, 255, 255, 0.26);
+
+  /* Vivid, luminous accents that glow against the dark glass. */
+  --terra:        #6AA6FF;
+  --terra-soft:   rgba(106, 166, 255, 0.30);
+  --terra-tint:   rgba(106, 166, 255, 0.16);
+  --sage:         #54E6B0;
+  --sage-soft:    rgba(84, 230, 176, 0.28);
+  --sage-tint:    rgba(84, 230, 176, 0.14);
+  --gold:         #FFCE73;
+  --gold-soft:    rgba(255, 206, 115, 0.28);
+  --gold-tint:    rgba(255, 206, 115, 0.14);
+  --plum:         #C79BFF;
+  --plum-tint:    rgba(199, 155, 255, 0.18);
+  --sky:          #5BC8FF;
+  --sky-tint:     rgba(91, 200, 255, 0.18);
+
+  --ok:   #54E6B0;
+  --warn: #FFCE73;
+  --bad:  #FF7A8A;
+
+  --accent-hot:  #8FBEFF;
+  --accent-glow: rgba(106, 166, 255, 0.45);
+
+  /* Deep, soft shadows with a bright top edge to sell the glass. */
+  --shadow-1: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 2px 8px rgba(4, 8, 24, 0.34);
+  --shadow-2: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 14px 40px -12px rgba(4, 8, 24, 0.6);
+  --shadow-3: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 26px 70px -16px rgba(4, 8, 24, 0.72);
+}
+
+/* The aurora — a vibrant, slowly drifting field the glass refracts. Painted
+   on a fixed ::before (z-index:-1) so it sits above body's solid base but
+   behind all content, and stays put while the page scrolls. */
+html[data-theme="cloudy"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 38% at 16% 20%, rgba(96, 150, 255, 0.55) 0%, transparent 60%),
+    radial-gradient(38% 34% at 84% 14%, rgba(80, 200, 255, 0.50) 0%, transparent 60%),
+    radial-gradient(48% 44% at 80% 82%, rgba(74, 232, 178, 0.46) 0%, transparent 62%),
+    radial-gradient(46% 46% at 18% 88%, rgba(168, 120, 255, 0.50) 0%, transparent 60%),
+    radial-gradient(70% 70% at 50% 45%, rgba(40, 64, 150, 0.35) 0%, transparent 72%),
+    linear-gradient(160deg, #0E1640 0%, #0A0F2C 55%, #0C1030 100%);
+  animation: cloudy-aurora 28s ease-in-out infinite;
+}
+@keyframes cloudy-aurora {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.04); }
+  50%      { transform: translate3d(0, -2.5%, 0) scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="cloudy"] body::before { animation: none; }
+}
+
+/* Frosted glass cards — the signature surface. A translucent dark pane +
+   backdrop blur (the aurora behind blurs through) + a bright hollow edge. */
+html[data-theme="cloudy"] .life-card {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid var(--line);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 14px 40px -14px rgba(4, 8, 24, 0.6);
+}
+html[data-theme="cloudy"] .life-card-hover:hover {
+  background: var(--glass-strong);
+  border-color: var(--line-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 20px 56px -16px rgba(4, 8, 24, 0.72);
+}
+
+/* The rail is glass too (layout binds its surface to var(--bg-rail)). */
+html[data-theme="cloudy"] aside[data-side="rail"] {
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+}
+
+/* Secondary buttons become little glass chips. */
+html[data-theme="cloudy"] .life-btn-secondary[class] {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--line-2);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+html[data-theme="cloudy"] .life-btn-secondary[class]:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Light, cool scrollbar for the dark glass. */
+html[data-theme="cloudy"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+html[data-theme="cloudy"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.30);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+
+/* Headline shine — white → azure → mint. */
+html[data-theme="cloudy"] .life-shine {
+  background: linear-gradient(135deg, #FFFFFF 0%, var(--terra) 52%, var(--sage) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* FAB pulse glows in the azure accent. */
+html[data-theme="cloudy"] .life-pulse {
+  animation: life-pulse-cloudy 2.6s ease-in-out infinite;
+}
+@keyframes life-pulse-cloudy {
+  0%, 100% { box-shadow: 0 8px 24px rgba(106, 166, 255, 0.40), 0 0 0 0 rgba(106, 166, 255, 0.5); }
+  50%      { box-shadow: 0 8px 24px rgba(106, 166, 255, 0.50), 0 0 0 8px rgba(106, 166, 255, 0); }
+}
+
 /* System: respect OS preference */
 @media (prefers-color-scheme: dark) {
   html[data-theme="system"] {
@@ -408,7 +558,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.15);
 }
 html[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
-html[data-theme="system"] input[type="date"]::-webkit-calendar-picker-indicator {
+html[data-theme="system"] input[type="date"]::-webkit-calendar-picker-indicator,
+html[data-theme="cloudy"] input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.85);
 }
 
