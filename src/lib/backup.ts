@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Backups. A complete snapshot of every table (items, day notes, health logs,
- * net-worth snapshots, and the encrypted vault + its guard) as one JSON file.
+ * Backups. A complete snapshot of every table (items, day notes, net-worth
+ * snapshots, and the encrypted vault + its guard) as one JSON file.
  * Optionally writes that snapshot to a folder you pick — via the File System
  * Access API — automatically, so a browser eviction can't wipe your life.
  */
@@ -26,11 +26,10 @@ export function supportsFolderBackup(): boolean {
 // ── build / restore ───────────────────────────────────────────────────────────
 
 export async function buildBackupObject() {
-  const [items, dayNotes, healthLogs, netWorthSnapshots, vault] =
+  const [items, dayNotes, netWorthSnapshots, vault] =
     await Promise.all([
       db.items.toArray(),
       db.dayNotes.toArray(),
-      db.healthLogs.toArray(),
       db.netWorthSnapshots.toArray(),
       db.vault.toArray(),
     ]);
@@ -48,7 +47,6 @@ export async function buildBackupObject() {
     counts: { items: items.length },
     items,
     dayNotes,
-    healthLogs,
     netWorthSnapshots,
     vault,
     vaultGuard,
@@ -75,8 +73,6 @@ export async function restoreFromObject(
   const n = await importItems(items);
   const dn = revive(data.dayNotes, ["updatedAt"]);
   if (dn.length) await db.dayNotes.bulkPut(dn as never);
-  const hl = revive(data.healthLogs, ["updatedAt"]);
-  if (hl.length) await db.healthLogs.bulkPut(hl as never);
   const ns = revive(data.netWorthSnapshots, ["updatedAt"]);
   if (ns.length) await db.netWorthSnapshots.bulkPut(ns as never);
   const v = revive(data.vault, ["createdAt", "updatedAt"]);

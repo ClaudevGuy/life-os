@@ -11,8 +11,10 @@ import {
   Database,
   Trash2,
   Lock,
+  MessagesSquare,
 } from "lucide-react";
 import { SettingsClient } from "./settings-client";
+import { ConnectionsSection } from "./connections-section";
 import { NotificationsSection } from "./notifications-section";
 import { AiKeySection } from "./ai-key-section";
 import { SyncSection } from "./sync-section";
@@ -37,6 +39,14 @@ const SECTIONS: SectionDef[] = [
     tint: "var(--terra)",
     desc: "Theme and density — how Life OS looks and feels.",
     Comp: SettingsClient,
+  },
+  {
+    id: "connections",
+    label: "Connections",
+    icon: MessagesSquare,
+    tint: "var(--sky)",
+    desc: "Telegram and Gmail — your unified inbox, all on-device.",
+    Comp: ConnectionsSection,
   },
   {
     id: "notifications",

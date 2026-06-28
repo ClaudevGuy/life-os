@@ -9,6 +9,7 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { PersistBootstrap } from "@/components/persist-bootstrap";
 import { SyncBootstrap } from "@/components/sync-bootstrap";
 import { PwaBootstrap } from "@/components/pwa-bootstrap";
+import { MessagingBootstrap } from "@/components/messaging-bootstrap";
 import { LogoMark } from "@/components/logo-mark";
 import { MusicProvider } from "@/components/music-player";
 import { VaultProvider } from "@/components/vault/vault-provider";
@@ -28,7 +29,7 @@ export default function AppLayout({
         data-side="rail"
         className="w-[248px] shrink-0 flex flex-col relative transition-all"
         style={{
-          background: "var(--paper)",
+          background: "var(--bg-rail)",
           borderRight: "1px solid var(--line)",
         }}
       >
@@ -87,6 +88,7 @@ export default function AppLayout({
       <PersistBootstrap />
       <SyncBootstrap />
       <PwaBootstrap />
+      <MessagingBootstrap />
       <AppLockGate />
     </div>
     </VoiceAssistantProvider>

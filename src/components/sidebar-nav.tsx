@@ -22,8 +22,7 @@ import {
   Wallet,
   Target,
   Shield,
-  Dumbbell,
-  Waypoints,
+  MessagesSquare,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -58,6 +57,7 @@ const SECTIONS: RailSection[] = [
     heading: "Capture",
     items: [
       { href: "/inbox", label: "Inbox", icon: Inbox, badgeKey: "inboxCount" },
+      { href: "/messages", label: "Messages", icon: MessagesSquare },
       { href: "/notes", label: "Notes", icon: NotebookPen },
       { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
       { href: "/files", label: "Files", icon: Files },
@@ -80,7 +80,6 @@ const SECTIONS: RailSection[] = [
         icon: Flame,
         badgeKey: "habitsPending",
       },
-      { href: "/gym", label: "Gym", icon: Dumbbell },
     ],
   },
   {
@@ -102,7 +101,6 @@ const SECTIONS: RailSection[] = [
     heading: "Explore",
     items: [
       { href: "/ask", label: "Ask my notes", icon: MessageSquare },
-      { href: "/graph", label: "Connections", icon: Waypoints },
       { href: "/music", label: "Music", icon: Music },
       { href: "/vault", label: "Vault", icon: Shield },
     ],

@@ -14,6 +14,7 @@ import { db } from "@/lib/store/db";
 import { aiHeaders } from "@/lib/ai-key";
 import { setTaskDone } from "@/lib/store/items";
 import { ymd } from "@/lib/ymd";
+import { CHANNEL_LABEL } from "@/lib/messaging/types";
 import {
   executeAction,
   type AskAction,
@@ -132,6 +133,21 @@ export async function buildSnapshot(): Promise<string> {
   if (holdings.length) lines.push(`Holdings: ${holdings.join(", ")}.`);
   if (recent.length) lines.push(`Recent items: ${recent.join("; ")}.`);
 
+  try {
+    const threads = await db.msgThreads.toArray();
+    const unread = threads.filter((t) => t.unread > 0);
+    if (unread.length) {
+      lines.push(
+        `Unread messages (${unread.length}): ${unread
+          .slice(0, 8)
+          .map((t) => `"${t.title}" on ${CHANNEL_LABEL[t.channel]}`)
+          .join("; ")}.`,
+      );
+    }
+  } catch {
+    /* messaging not set up */
+  }
+
   return lines.join("\n");
 }
 
@@ -213,20 +229,19 @@ export async function streamCommand(
 const NAV: Record<string, { href: string; label: string }> = {
   today: { href: "/today", label: "Today" },
   inbox: { href: "/inbox", label: "Inbox" },
+  messages: { href: "/messages", label: "Messages" },
   notes: { href: "/notes", label: "Notes" },
   bookmarks: { href: "/bookmarks", label: "Bookmarks" },
   files: { href: "/files", label: "Files" },
   calendar: { href: "/calendar", label: "Calendar" },
   tasks: { href: "/tasks", label: "Tasks" },
   habits: { href: "/habits", label: "Habits" },
-  gym: { href: "/gym", label: "Gym" },
   goals: { href: "/goals", label: "Goals" },
   projects: { href: "/projects", label: "Projects" },
   people: { href: "/people", label: "People" },
   finance: { href: "/finance", label: "Finance" },
   subscriptions: { href: "/subscriptions", label: "Subscriptions" },
   ask: { href: "/ask", label: "Ask my notes" },
-  graph: { href: "/graph", label: "Connections" },
   music: { href: "/music", label: "Music" },
   vault: { href: "/vault", label: "Vault" },
   settings: { href: "/settings", label: "Settings" },
@@ -282,7 +297,7 @@ async function findItem(query?: string): Promise<StoredItem | null> {
   return bestMatch(rows, query);
 }
 
-function applyTheme(mode: "light" | "dark"): void {
+function applyTheme(mode: "light" | "dark" | "cloudy"): void {
   try {
     document.documentElement.dataset.theme = mode;
     window.localStorage.setItem("lifeos.theme", mode);
@@ -355,10 +370,15 @@ export async function executeCommand(
         return { label: "Focus timer started", sub: `${mins} minutes`, href: "" };
       }
       case "setTheme": {
-        const mode = i.mode === "light" ? "light" : "dark";
+        const mode =
+          i.mode === "light"
+            ? "light"
+            : i.mode === "cloudy" || i.mode === "mirror"
+              ? "cloudy"
+              : "dark";
         applyTheme(mode);
         return {
-          label: `Switched to ${mode} mode`,
+          label: `Switched to ${mode === "cloudy" ? "cloudy mirror" : mode} mode`,
           sub: null,
           href: "",
         };

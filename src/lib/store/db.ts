@@ -6,7 +6,7 @@
  * server-only fields (`userId`, `embedding`).
  */
 import Dexie, { type EntityTable } from "dexie";
-import type { Exercise, Routine, Workout } from "@/lib/gym/types";
+import type { MsgAccount, MsgMessage, MsgThread } from "@/lib/messaging/types";
 
 export type ItemKind =
   | "note"
@@ -117,24 +117,8 @@ export type StoredNetWorthSnapshot = {
   updatedAt: Date;
 };
 
-/**
- * A daily health check-in, keyed by YYYY-MM-DD (one row per day). Weight is
- * always stored in kg; the UI converts for display.
- */
 /** Small key/value store for app-level settings (e.g. the backup folder handle). */
 export type StoredKV = { key: string; value: unknown };
-
-export type StoredHealthLog = {
-  date: string; // YYYY-MM-DD (primary key)
-  mood?: number; // 1–5
-  energy?: number; // 1–5
-  sleepHours?: number;
-  weightKg?: number;
-  activeMin?: number;
-  water?: number; // glasses
-  note?: string;
-  updatedAt: Date;
-};
 
 /**
  * An encrypted vault entry. Only `type` and timestamps are in the clear (for
@@ -158,11 +142,10 @@ class LifeOSDB extends Dexie {
   dayNotes!: EntityTable<StoredDayNote, "date">;
   netWorthSnapshots!: EntityTable<StoredNetWorthSnapshot, "date">;
   vault!: EntityTable<StoredVaultItem, "id">;
-  healthLogs!: EntityTable<StoredHealthLog, "date">;
   appKV!: EntityTable<StoredKV, "key">;
-  exercises!: EntityTable<Exercise, "id">;
-  workouts!: EntityTable<Workout, "id">;
-  routines!: EntityTable<Routine, "id">;
+  msgAccounts!: EntityTable<MsgAccount, "id">;
+  msgThreads!: EntityTable<MsgThread, "id">;
+  msgMessages!: EntityTable<MsgMessage, "id">;
 
   constructor() {
     super("life-os");
@@ -277,6 +260,25 @@ class LifeOSDB extends Dexie {
             }
           });
       });
+    // v11: unified messaging — connected accounts, threads, cached messages.
+    // Kept out of Gist sync / JSON backup (volume + credentials).
+    this.version(11).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
+      trash: "id, trashedAt, kind",
+      dayNotes: "date, updatedAt",
+      netWorthSnapshots: "date, updatedAt",
+      vault: "id, type, updatedAt",
+      healthLogs: "date, updatedAt",
+      appKV: "key",
+      exercises: "id, name, muscle, type, custom",
+      workouts: "id, date, *focus",
+      routines: "id, name",
+      msgAccounts: "id, channel, status",
+      msgThreads: "id, accountId, channel, lastTs",
+      msgMessages: "id, threadId, accountId, ts",
+    });
   }
 }
 

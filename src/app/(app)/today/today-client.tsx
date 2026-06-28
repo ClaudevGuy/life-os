@@ -26,6 +26,7 @@ import {
   SkipForward,
   ArrowRight,
   Disc3,
+  MessagesSquare,
 } from "lucide-react";
 import {
   DndContext,
@@ -63,6 +64,8 @@ import {
 } from "@/lib/subscriptions";
 import { useMusic } from "@/components/music-player";
 import { CryptoCard, StocksCard } from "@/components/market-widgets";
+import { useMsgThreads, useMsgUnreadCount } from "@/lib/store/messaging";
+import { BrandLogo } from "@/components/brand-icons";
 import { Brief } from "./brief";
 import { TodayHero } from "./hero";
 import { WeekStrip } from "./week-strip";
@@ -78,6 +81,7 @@ type WidgetId =
   | "weekStrip"
   | "brief"
   | "agenda"
+  | "messages"
   | "topTasks"
   | "habits"
   | "music"
@@ -95,6 +99,7 @@ const WIDGET_META: Record<WidgetId, string> = {
   weekStrip: "Week strip",
   brief: "Daily brief",
   agenda: "Next 7 days",
+  messages: "Messages",
   topTasks: "Top tasks",
   habits: "Habits to check",
   music: "Music",
@@ -120,6 +125,7 @@ const DEFAULT_LAYOUT: Layout = {
     { id: "weekStrip", w: "full" },
     { id: "brief", w: "half" },
     { id: "agenda", w: "half" },
+    { id: "messages", w: "half" },
     { id: "topTasks", w: "half" },
     { id: "habits", w: "half" },
     { id: "music", w: "half" },
@@ -230,6 +236,7 @@ export function TodayClient() {
   const onThisDayRows = useOnThisDay() ?? [];
   const weekCounts = useWeekCounts(7) ?? new Array(7).fill(0);
   const allItems = useAllItems() ?? [];
+  const unreadCount = useMsgUnreadCount() ?? 0;
 
   const [mounted, setMounted] = useState(false);
   const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT);
@@ -332,6 +339,8 @@ export function TodayClient() {
         return onThisDayRows.length === 0;
       case "subscriptions":
         return activeSubs.length === 0;
+      case "messages":
+        return unreadCount === 0;
       default:
         return false;
     }
@@ -347,6 +356,8 @@ export function TodayClient() {
         return <Brief recentCount={recent.length} />;
       case "agenda":
         return <AgendaCard upcoming={upcoming} startOfToday={startOfToday} />;
+      case "messages":
+        return <MessagesCard />;
       case "topTasks":
         return <TopTasksCard openTasks={openTasks} />;
       case "habits":
@@ -944,6 +955,37 @@ function AgendaCard({
               +{upcoming.length - 6} more
             </li>
           )}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function MessagesCard() {
+  const threads = useMsgThreads("all") ?? [];
+  const unread = threads.filter((t) => t.unread > 0).slice(0, 4);
+  return (
+    <Card icon={MessagesSquare} title="Messages" href="/messages" tint="var(--sky)">
+      {unread.length === 0 ? (
+        <p className="text-sm text-[var(--text-faint)]">All caught up.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {unread.map((t) => (
+            <li key={t.id} className="flex items-center gap-2.5">
+              <span className="grid place-items-center w-5 h-5 rounded-full bg-white shrink-0">
+                <BrandLogo channel={t.channel} size={13} />
+              </span>
+              <Link
+                href="/messages"
+                className="text-sm text-[var(--text)] hover:text-[var(--accent)] truncate flex-1"
+              >
+                {t.title}
+              </Link>
+              <span className="shrink-0 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-[var(--accent)] text-white text-[10px] font-semibold tabular-nums">
+                {t.unread}
+              </span>
+            </li>
+          ))}
         </ul>
       )}
     </Card>

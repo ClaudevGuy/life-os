@@ -18,7 +18,6 @@ import { Keyboard } from "lucide-react";
  * g s  → Stats
  * g r  → Reviews
  * g l  → Highlights
- * g m  → Templates
  * g f  → Projects
  *
  *  ? → open this help
@@ -36,7 +35,6 @@ const MAP: Record<string, { href: string; label: string }> = {
   k: { href: "/calendar", label: "Calendar" },
   r: { href: "/reviews", label: "Reviews" },
   l: { href: "/highlights", label: "Highlights" },
-  m: { href: "/templates", label: "Templates" },
   f: { href: "/projects", label: "Projects" },
 };
 

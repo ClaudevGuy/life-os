@@ -19,20 +19,19 @@ const TEXT_MODEL = process.env.LIFEOS_TEXT_MODEL ?? "anthropic/claude-haiku-4-5"
 const NAV_KEYS = [
   "today",
   "inbox",
+  "messages",
   "notes",
   "bookmarks",
   "files",
   "calendar",
   "tasks",
   "habits",
-  "health",
   "goals",
   "projects",
   "people",
   "finance",
   "subscriptions",
   "ask",
-  "graph",
   "music",
   "vault",
   "settings",
@@ -97,7 +96,6 @@ ${context || "(no snapshot provided)"}`;
           "inbox",
           "calendar",
           "habits",
-          "health",
           "goals",
           "projects",
           "people",
@@ -139,9 +137,10 @@ ${context || "(no snapshot provided)"}`;
       }),
     }),
     setTheme: tool({
-      description: "Switch the app between light and dark appearance.",
+      description:
+        "Switch the app's appearance. 'cloudy' is the cloudy-mirror mode — a soft, cool, frosted-glass look between light and dark.",
       inputSchema: z.object({
-        mode: z.enum(["light", "dark"]),
+        mode: z.enum(["light", "dark", "cloudy"]),
       }),
     }),
     search: tool({

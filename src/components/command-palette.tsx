@@ -23,9 +23,12 @@ import {
   CreditCard,
   Bookmark,
   Music,
+  MessagesSquare,
 } from "lucide-react";
 import { db } from "@/lib/store/db";
 import { Portal } from "@/components/portal";
+import { BrandLogo } from "@/components/brand-icons";
+import type { Channel } from "@/lib/messaging/types";
 
 type Hit = {
   id: string;
@@ -35,6 +38,13 @@ type Hit = {
   topic: string | null;
 };
 
+type MsgHit = {
+  id: string;
+  channel: Channel;
+  title: string;
+  preview: string;
+};
+
 const NAV: Array<{
   href: string;
   label: string;
@@ -42,6 +52,7 @@ const NAV: Array<{
 }> = [
   { href: "/today", label: "Today", icon: Sun },
   { href: "/inbox", label: "Inbox", icon: Inbox },
+  { href: "/messages", label: "Messages", icon: MessagesSquare },
   { href: "/notes", label: "Notes", icon: NotebookPen },
   { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
@@ -82,6 +93,7 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
+  const [msgHits, setMsgHits] = useState<MsgHit[]>([]);
 
   // ⌘K / Ctrl+K to toggle
   useEffect(() => {
@@ -110,6 +122,7 @@ export function CommandPalette() {
   useEffect(() => {
     if (!q.trim() || !open) {
       setHits([]);
+      setMsgHits([]);
       return;
     }
     let cancelled = false;
@@ -135,6 +148,39 @@ export function CommandPalette() {
         }
       }
       if (!cancelled) setHits(matches);
+
+      // Messages: match threads (title/snippet) + message bodies → thread.
+      const [threads, msgs] = await Promise.all([
+        db.msgThreads.toArray(),
+        db.msgMessages.toArray(),
+      ]);
+      if (cancelled) return;
+      const tById = new Map(threads.map((t) => [t.id, t] as const));
+      const mh = new Map<string, MsgHit>();
+      for (const t of threads) {
+        if (`${t.title} ${t.snippet}`.toLowerCase().includes(needle)) {
+          mh.set(t.id, {
+            id: t.id,
+            channel: t.channel,
+            title: t.title,
+            preview: t.snippet,
+          });
+        }
+      }
+      for (const m of msgs) {
+        if (mh.size >= 8) break;
+        if (!m.body.toLowerCase().includes(needle)) continue;
+        const t = tById.get(m.threadId);
+        if (t && !mh.has(t.id)) {
+          mh.set(t.id, {
+            id: t.id,
+            channel: t.channel,
+            title: t.title,
+            preview: m.body.slice(0, 90),
+          });
+        }
+      }
+      if (!cancelled) setMsgHits([...mh.values()].slice(0, 8));
     }, 100);
     return () => {
       cancelled = true;
@@ -263,6 +309,33 @@ export function CommandPalette() {
                     </Command.Item>
                   );
                 })}
+              </Command.Group>
+            )}
+
+            {msgHits.length > 0 && (
+              <Command.Group heading="Messages" className="paletteGroup">
+                {msgHits.map((m) => (
+                  <Command.Item
+                    key={m.id}
+                    value={`msg-${m.id}`}
+                    onSelect={() => go("/messages")}
+                    className="flex items-start gap-3 px-3 py-2.5 mx-2 rounded-[9px] aria-selected:bg-[var(--paper-2)] cursor-pointer transition"
+                  >
+                    <span className="grid place-items-center w-7 h-7 rounded-[8px] shrink-0 mt-px bg-white">
+                      <BrandLogo channel={m.channel} size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-[13.5px] text-[var(--ink)] truncate">
+                        {m.title}
+                      </span>
+                      {m.preview && (
+                        <p className="text-[11.5px] text-[var(--muted)] line-clamp-1 mt-0.5">
+                          {m.preview}
+                        </p>
+                      )}
+                    </div>
+                  </Command.Item>
+                ))}
               </Command.Group>
             )}
           </Command.List>

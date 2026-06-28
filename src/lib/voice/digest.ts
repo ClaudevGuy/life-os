@@ -23,7 +23,6 @@ const PAGE_TITLES: Record<string, string> = {
   inbox: "Inbox",
   calendar: "Calendar",
   habits: "Habits",
-  health: "Health",
   goals: "Goals",
   projects: "Projects",
   people: "People",
@@ -202,26 +201,6 @@ export async function digestPage(page: string): Promise<PageDigest | null> {
       if (pending.length) parts.push(`Still to do: ${listNames(pending, 4)}.`);
       if (bestStreak > 1) parts.push(`Best streak: ${bestStreak} days on ${bestName}.`);
       return { title, speech: parts.join(" ") };
-    }
-
-    case "health": {
-      const logs = await db.healthLogs.orderBy("date").reverse().limit(1).toArray();
-      const log = logs[0];
-      if (!log) return { title, speech: "No health logs yet." };
-      const bits: string[] = [];
-      if (typeof log.sleepHours === "number") bits.push(`${log.sleepHours} hours of sleep`);
-      if (typeof log.mood === "number") bits.push(`mood ${log.mood} out of 5`);
-      if (typeof log.energy === "number") bits.push(`energy ${log.energy} out of 5`);
-      if (typeof log.weightKg === "number") bits.push(`weight ${log.weightKg} kilos`);
-      if (typeof log.activeMin === "number") bits.push(`${log.activeMin} active minutes`);
-      if (typeof log.water === "number") bits.push(`${log.water} glasses of water`);
-      const when = log.date === todayKey ? "Today" : `On ${log.date}`;
-      return {
-        title,
-        speech: bits.length
-          ? `${when}: ${bits.join(", ")}.`
-          : `${when} has a log, but no numbers were recorded.`,
-      };
     }
 
     case "goals":
