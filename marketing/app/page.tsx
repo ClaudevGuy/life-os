@@ -7,7 +7,7 @@ import {
   Wallet,
   Shield,
   Target,
-  HeartPulse,
+  PenTool,
   CalendarDays,
   ListTodo,
   Flame,
@@ -35,25 +35,71 @@ import {
   ChevronRight,
   Bell,
   Mic,
-  Waypoints,
+  Palette,
   FolderDown,
+  Sun,
+  Cloud,
+  Moon,
+  Inbox,
+  Search,
+  MessagesSquare,
 } from "lucide-react";
 
 const GITHUB = "https://github.com/ClaudevGuy/life-os";
 
 // ───────────────────────────────────────────────────────────────────────────
+// Theme — mirrors the app's light / cloudy / dark system (data-theme on <html>)
+// ───────────────────────────────────────────────────────────────────────────
+
+const THEME_ORDER = ["light", "cloudy", "dark"] as const;
+type LpTheme = (typeof THEME_ORDER)[number];
+const THEME_ICON: Record<LpTheme, typeof Sun> = { light: Sun, cloudy: Cloud, dark: Moon };
+const THEME_LABEL: Record<LpTheme, string> = { light: "Light", cloudy: "Cloudy", dark: "Dark" };
+
+function useTheme(): [LpTheme, () => void] {
+  const [theme, setTheme] = useState<LpTheme>("light");
+  useEffect(() => {
+    const t = document.documentElement.dataset.theme as LpTheme | undefined;
+    if (t && THEME_ORDER.includes(t)) setTheme(t);
+  }, []);
+  function cycle() {
+    setTheme((cur) => {
+      const next = THEME_ORDER[(THEME_ORDER.indexOf(cur) + 1) % THEME_ORDER.length];
+      document.documentElement.dataset.theme = next;
+      try {
+        localStorage.setItem("lifeos.landing.theme", next);
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+  return [theme, cycle];
+}
+
+function ThemeToggle() {
+  const [theme, cycle] = useTheme();
+  const Icon = THEME_ICON[theme];
+  const next = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
+  return (
+    <button
+      type="button"
+      onClick={cycle}
+      title={`Theme: ${THEME_LABEL[theme]} — switch to ${THEME_LABEL[next]}`}
+      aria-label={`Theme: ${THEME_LABEL[theme]}. Switch to ${THEME_LABEL[next]}.`}
+      className="grid place-items-center w-9 h-9 rounded-[10px] transition-transform active:scale-95"
+      style={{ border: "1px solid var(--lp-line-2)", background: "var(--lp-card)", color: "var(--lp-terra)" }}
+    >
+      <Icon size={16} />
+    </button>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 // Motion helpers
 // ───────────────────────────────────────────────────────────────────────────
 
-function Reveal({
-  children,
-  className,
-  delay = 0,
-}: {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-}) {
+function Reveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [seen, setSeen] = useState(false);
   useEffect(() => {
@@ -72,11 +118,7 @@ function Reveal({
     return () => io.disconnect();
   }, []);
   return (
-    <div
-      ref={ref}
-      className={`lp-reveal ${seen ? "lp-in" : ""} ${className ?? ""}`}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
+    <div ref={ref} className={`lp-reveal ${seen ? "lp-in" : ""} ${className ?? ""}`} style={{ transitionDelay: `${delay}ms` }}>
       {children}
     </div>
   );
@@ -143,9 +185,7 @@ function AskDemo() {
         timers.push(setTimeout(type, 34));
       } else {
         timers.push(setTimeout(() => !cancelled && setShowResult(true), 260));
-        timers.push(
-          setTimeout(() => !cancelled && setIdx((p) => (p + 1) % ASK_LINES.length), 2800),
-        );
+        timers.push(setTimeout(() => !cancelled && setIdx((p) => (p + 1) % ASK_LINES.length), 2800));
       }
     };
     timers.push(setTimeout(type, 300));
@@ -158,9 +198,9 @@ function AskDemo() {
   return (
     <div className="lp-glass rounded-2xl p-4 sm:p-5 font-mono text-[13.5px]">
       <div className="flex items-center gap-1.5 mb-3">
-        <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
-        <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
-        <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#ff5f57" }} />
+        <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#febc2e" }} />
+        <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#28c840" }} />
         <span className="ml-2 text-[11px]" style={{ color: "var(--lp-faint)" }}>
           Ask my notes
         </span>
@@ -174,8 +214,8 @@ function AskDemo() {
             <div
               className="mt-2.5 inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5"
               style={{
-                background: "rgba(86,182,232,0.1)",
-                border: "1px solid rgba(86,182,232,0.25)",
+                background: "color-mix(in oklch, var(--lp-sky) 14%, transparent)",
+                border: "1px solid color-mix(in oklch, var(--lp-sky) 30%, transparent)",
                 animation: "lp-rise 0.4s ease both",
               }}
             >
@@ -188,6 +228,9 @@ function AskDemo() {
     </div>
   );
 }
+
+// soft tinted surface used inside mockups (theme-aware)
+const TINT = "color-mix(in oklch, var(--lp-line) 60%, transparent)";
 
 // ───────────────────────────────────────────────────────────────────────────
 // Data
@@ -203,7 +246,7 @@ const PILLARS = [
   {
     icon: Layers,
     title: "Your whole life, in one place",
-    body: "Tasks, habits, health, goals, money, notes, people, an encrypted vault — 30+ tools that finally talk to each other, instead of ten scattered apps.",
+    body: "Notes, a whiteboard, tasks, habits, goals, money, people, your inbox, an encrypted vault — tools that finally talk to each other instead of ten scattered apps.",
     color: "var(--lp-gold)",
   },
   {
@@ -213,9 +256,9 @@ const PILLARS = [
     color: "var(--lp-violet)",
   },
   {
-    icon: Zap,
-    title: "Fast & beautiful",
-    body: "Local-first means instant. Every page is hand-crafted, animated, and a genuine pleasure to live in — light or dark.",
+    icon: Palette,
+    title: "Beautiful & themeable",
+    body: "Local-first means instant. Every page is hand-crafted and a pleasure to live in — in warm light, frosted cloudy glass, or dark.",
     color: "var(--lp-sky)",
   },
 ];
@@ -236,15 +279,26 @@ const EVERYTHING: { cat: string; icon: typeof Wallet; items: string[] }[] = [
     ],
   },
   {
-    cat: "Mind & body",
-    icon: HeartPulse,
+    cat: "Capture",
+    icon: NotebookPen,
     items: [
-      "Daily health check-ins — mood, energy, sleep, weight, water, activity",
-      "Auto-charted health trends",
-      "Identity-first Goals (Compass)",
-      "Auto-rolling progress & milestones",
+      "Notes — markdown, [[wiki-links]] & paste-to-attach images",
+      "Whiteboard — a single infinite Excalidraw canvas",
+      "Bookmarks / reading list",
+      "Files — PDFs, docs, images",
+      "Inbox & quick capture",
+      "Tags",
+    ],
+  },
+  {
+    cat: "Reflect & grow",
+    icon: Target,
+    items: [
+      "Identity-first Goals with auto-rolling progress",
+      "Milestones & metrics",
       "Weekly reviews",
       "Highlights that resurface",
+      "Projects with GitHub links & KPIs",
     ],
   },
   {
@@ -253,34 +307,21 @@ const EVERYTHING: { cat: string; icon: typeof Wallet; items: string[] }[] = [
     items: [
       "Net worth across all accounts",
       "Live-valued crypto & stock holdings",
+      "On-chain wallet balances",
       "Asset-allocation donut",
       "True multi-currency with live FX",
       "Net-worth trend over time",
       "Subscriptions & renewal reminders",
-      "Live market prices",
     ],
   },
   {
-    cat: "Knowledge & people",
-    icon: NotebookPen,
-    items: [
-      "Notes with formatting",
-      "Bookmarks / reading list",
-      "Files",
-      "Inbox & quick capture",
-      "People CRM",
-      "Projects with GitHub links",
-      "Tags & templates",
-    ],
-  },
-  {
-    cat: "Intelligence",
+    cat: "Connect & ask",
     icon: Sparkles,
     items: [
+      "People CRM with a backlinks timeline",
+      "Messages — your Gmail inbox, unified",
       "Ask your notes — agentic AI",
       "Voice capture — speak to add anything",
-      "Adds reminders, tasks, people, accounts & holdings for you",
-      "[[Wiki-links]] & a Connections graph",
       "Command palette (⌘K)",
       "YouTube Music with a persistent mini-player",
     ],
@@ -298,11 +339,15 @@ const EVERYTHING: { cat: string; icon: typeof Wallet; items: string[] }[] = [
       "Full backup & restore (incl. vault)",
       "Trash & restore",
       "Optional cross-device sync",
-      "Light & dark themes",
+      "Light · cloudy · dark themes",
       "Installable as a PWA",
     ],
   },
 ];
+
+// ───────────────────────────────────────────────────────────────────────────
+// Bento mockups (all theme-aware via --lp-* tokens)
+// ───────────────────────────────────────────────────────────────────────────
 
 function BentoCard({
   icon: Icon,
@@ -324,7 +369,7 @@ function BentoCard({
       <span
         className="grid place-items-center w-11 h-11 rounded-xl mb-4 text-white"
         style={{
-          background: `linear-gradient(135deg, ${color}, color-mix(in oklch, ${color} 50%, #15131f))`,
+          background: `linear-gradient(135deg, ${color}, color-mix(in oklch, ${color} 55%, #15131f))`,
           boxShadow: `0 12px 28px -12px ${color}`,
         }}
       >
@@ -341,7 +386,7 @@ function BentoCard({
       <span
         aria-hidden
         className="absolute -right-10 -top-10 w-36 h-36 rounded-full pointer-events-none"
-        style={{ background: `radial-gradient(circle, color-mix(in oklch, ${color} 32%, transparent), transparent 70%)` }}
+        style={{ background: `radial-gradient(circle, color-mix(in oklch, ${color} 28%, transparent), transparent 70%)` }}
       />
       {wide ? (
         <div className="relative grid sm:grid-cols-[1.05fr_1fr] gap-6 items-center h-full">
@@ -358,6 +403,21 @@ function BentoCard({
   );
 }
 
+function Spark() {
+  return (
+    <svg viewBox="0 0 120 32" className="w-full h-8 mt-2" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="lpspk" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--lp-gold)" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="var(--lp-gold)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d="M0,26 L18,22 L34,24 L52,14 L70,17 L88,8 L106,11 L120,4 L120,32 L0,32 Z" fill="url(#lpspk)" />
+      <path d="M0,26 L18,22 L34,24 L52,14 L70,17 L88,8 L106,11 L120,4" fill="none" stroke="var(--lp-gold)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 function BentoFinance() {
   return (
     <div className="lp-glass rounded-xl p-4">
@@ -366,7 +426,7 @@ function BentoFinance() {
           <div className="text-[9.5px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-faint)" }}>Net worth</div>
           <div className="text-[21px] font-semibold tabular-nums">$182,540</div>
         </div>
-        <span className="inline-flex items-center gap-1 text-[12px] font-semibold" style={{ color: "#7fd0a6" }}>
+        <span className="inline-flex items-center gap-1 text-[12px] font-semibold" style={{ color: "var(--lp-sage)" }}>
           <TrendingUp size={13} /> +2.4%
         </span>
       </div>
@@ -376,7 +436,7 @@ function BentoFinance() {
           { i: Coins, n: "BTC", v: "+4.2%", c: "var(--lp-gold)" },
           { i: LineChart, n: "AAPL", v: "+0.8%", c: "var(--lp-sky)" },
         ].map((x) => (
-          <div key={x.n} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5" style={{ background: "rgba(255,255,255,0.04)" }}>
+          <div key={x.n} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5" style={{ background: TINT }}>
             <x.i size={13} style={{ color: x.c }} />
             <span className="text-[11.5px]">{x.n}</span>
             <span className="ml-auto text-[11px] tabular-nums" style={{ color: "var(--lp-muted)" }}>{x.v}</span>
@@ -405,19 +465,61 @@ function BentoVault() {
   );
 }
 
-function BentoMood() {
+function BentoNotes() {
+  const notes = [
+    { t: "Trip to Japan", c: "var(--lp-terra)" },
+    { t: "Book notes", c: "var(--lp-gold)" },
+    { t: "Recipes", c: "var(--lp-sage)" },
+    { t: "Project ideas", c: "var(--lp-sky)" },
+  ];
   return (
-    <div className="flex items-end justify-between gap-1.5 h-16">
-      {[3, 4, 2, 4, 5, 4, 5].map((v, i) => (
-        <span
-          key={i}
-          className="flex-1 rounded-full"
-          style={{
-            height: `${v * 18}%`,
-            background: "linear-gradient(to top, var(--lp-sky), color-mix(in oklch, var(--lp-violet) 60%, var(--lp-sky)))",
-            opacity: 0.55 + v * 0.09,
-          }}
-        />
+    <div className="grid grid-cols-2 gap-2">
+      {notes.map((n) => (
+        <div key={n.t} className="lp-glass rounded-lg p-2.5">
+          <span className="block w-6 h-1.5 rounded-full mb-2" style={{ background: n.c }} />
+          <div className="text-[12px] font-medium truncate">{n.t}</div>
+          <div className="mt-1 space-y-1">
+            <span className="block h-1 rounded-full" style={{ background: TINT, width: "90%" }} />
+            <span className="block h-1 rounded-full" style={{ background: TINT, width: "60%" }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BentoWhiteboard() {
+  return (
+    <div className="lp-glass rounded-xl p-3 relative overflow-hidden" style={{ height: 116 }}>
+      <span className="absolute rounded-md" style={{ left: 14, top: 16, width: 56, height: 38, background: "color-mix(in oklch, var(--lp-sky) 30%, transparent)", border: "1.5px solid var(--lp-sky)" }} />
+      <span className="absolute rounded-full" style={{ right: 18, top: 22, width: 46, height: 46, background: "color-mix(in oklch, var(--lp-sage) 30%, transparent)", border: "1.5px solid var(--lp-sage)" }} />
+      <span className="absolute" style={{ left: 40, bottom: 16, width: 44, height: 30, background: "color-mix(in oklch, var(--lp-gold) 30%, transparent)", border: "1.5px solid var(--lp-gold)", transform: "rotate(45deg)" }} />
+      <svg className="absolute" style={{ left: 64, top: 34 }} width="60" height="40">
+        <path d="M2 30 C 20 4, 40 4, 56 22" fill="none" stroke="var(--lp-terra)" strokeWidth="1.8" />
+        <path d="M50 16 L57 23 L48 25 Z" fill="var(--lp-terra)" />
+      </svg>
+    </div>
+  );
+}
+
+function BentoMessages() {
+  const msgs = [
+    { n: "Maya", s: "Lunch on Friday?", c: "var(--lp-terra)" },
+    { n: "Acme Bank", s: "Your statement is ready", c: "var(--lp-violet)" },
+    { n: "Design Team", s: "Standup at 10", c: "var(--lp-sky)" },
+  ];
+  return (
+    <div className="space-y-2">
+      {msgs.map((m) => (
+        <div key={m.n} className="lp-glass rounded-lg px-2.5 py-2 flex items-center gap-2.5">
+          <span className="grid place-items-center w-7 h-7 rounded-full text-[11px] font-semibold text-white shrink-0" style={{ background: m.c }}>
+            {m.n[0]}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[12px] font-medium truncate">{m.n}</div>
+            <div className="text-[11px] truncate" style={{ color: "var(--lp-muted)" }}>{m.s}</div>
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -429,7 +531,7 @@ function BentoRing({ pct, color, size = 86, stroke = 8 }: { pct: number; color: 
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={TINT} strokeWidth={stroke} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} />
       </svg>
       <div className="absolute inset-0 grid place-items-center text-[17px] font-semibold tabular-nums">{pct}%</div>
@@ -459,17 +561,13 @@ function BentoHabits() {
           <span
             key={i}
             className="aspect-square rounded-[3px]"
-            style={{
-              background: lit.includes(i)
-                ? `color-mix(in oklch, var(--lp-terra) ${42 + (i % 4) * 16}%, transparent)`
-                : "rgba(255,255,255,0.05)",
-            }}
+            style={{ background: lit.includes(i) ? `color-mix(in oklch, var(--lp-terra) ${42 + (i % 4) * 16}%, transparent)` : TINT }}
           />
         ))}
       </div>
       <div className="relative grid place-items-center shrink-0" style={{ width: 74, height: 74 }}>
         <svg width={74} height={74} className="-rotate-90">
-          <circle cx={37} cy={37} r={32} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={5} />
+          <circle cx={37} cy={37} r={32} fill="none" stroke={TINT} strokeWidth={5} />
           <circle cx={37} cy={37} r={32} fill="none" stroke="var(--lp-terra)" strokeWidth={5} strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * 0.4} />
         </svg>
         <div className="absolute inset-0 grid place-items-center font-mono text-[13px] tabular-nums">25:00</div>
@@ -485,7 +583,7 @@ function BentoAsk() {
         <Sparkles size={13} style={{ color: "var(--lp-terra)" }} />
         Add 0.5 BTC to holdings
       </div>
-      <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1" style={{ background: "rgba(86,182,232,0.1)", border: "1px solid rgba(86,182,232,0.25)" }}>
+      <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1" style={{ background: "color-mix(in oklch, var(--lp-sky) 14%, transparent)", border: "1px solid color-mix(in oklch, var(--lp-sky) 30%, transparent)" }}>
         <Check size={12} style={{ color: "var(--lp-sky)" }} />
         <span style={{ color: "var(--lp-sky)" }}>Holding added</span>
       </div>
@@ -524,6 +622,7 @@ export default function Landing() {
       <Pillars />
       <Bento />
       <DeepDives />
+      <ThemeShowcase />
       <Everything />
       <FinalCTA />
       <Footer />
@@ -531,28 +630,16 @@ export default function Landing() {
   );
 }
 
-function Logo() {
+function Logo({ size = 30 }: { size?: number }) {
   return (
     <span className="inline-flex items-center gap-2.5">
       <span
         className="grid place-items-center shrink-0 overflow-hidden"
-        style={{
-          width: 30,
-          height: 30,
-          borderRadius: 8.4,
-          boxShadow:
-            "0 1px 2px rgba(20,12,0,0.28), 0 6px 16px -8px rgba(212,90,63,0.55)",
-        }}
+        style={{ width: size, height: size, borderRadius: size * 0.28, boxShadow: "0 1px 2px rgba(20,12,0,0.28), 0 6px 16px -8px rgba(212,90,63,0.55)" }}
       >
-        <svg width={30} height={30} viewBox="0 0 32 32" aria-hidden>
+        <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
           <rect width="32" height="32" fill="#D45A3F" />
-          <g
-            fill="none"
-            stroke="#FBF7EE"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <g fill="none" stroke="#FBF7EE" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M16 12.5 V25" />
             <path d="M15.4 19 Q13.75 13.45 8 12.8 Q9.65 18.35 15.4 19 Z" />
             <path d="M16.6 19 Q18.25 13.45 24 12.8 Q22.35 18.35 16.6 19 Z" />
@@ -574,16 +661,19 @@ function Nav() {
         <div className="max-w-6xl mx-auto px-5 sm:px-6 h-16 flex items-center justify-between">
           <Logo />
           <div className="hidden md:flex items-center gap-7 text-[14px]" style={{ color: "var(--lp-muted)" }}>
-            <a href="#video" className="hover:text-white transition-colors">Demo</a>
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#ai" className="hover:text-white transition-colors">AI</a>
-            <a href="#private" className="hover:text-white transition-colors">Private</a>
-            <a href="#everything" className="hover:text-white transition-colors">Everything</a>
+            <a href="#video" className="hover:opacity-70 transition-opacity">Demo</a>
+            <a href="#features" className="hover:opacity-70 transition-opacity">Features</a>
+            <a href="#ai" className="hover:opacity-70 transition-opacity">AI</a>
+            <a href="#themes" className="hover:opacity-70 transition-opacity">Themes</a>
+            <a href="#everything" className="hover:opacity-70 transition-opacity">Everything</a>
           </div>
-          <Link href={GITHUB} target="_blank" rel="noreferrer" className="lp-btn lp-btn-primary !px-4 !py-2 !text-[13.5px]">
-            Get it on GitHub
-            <ArrowRight size={15} />
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <ThemeToggle />
+            <Link href={GITHUB} target="_blank" rel="noreferrer" className="lp-btn lp-btn-primary !px-4 !py-2 !text-[13.5px]">
+              Get it on GitHub
+              <ArrowRight size={15} />
+            </Link>
+          </div>
         </div>
       </div>
     </nav>
@@ -601,21 +691,11 @@ function Hero() {
   }
   return (
     <section ref={ref} onMouseMove={onMove} className="relative overflow-hidden">
-      {/* ambient */}
       <div className="lp-grid" />
       <div className="lp-floor" />
-      <div
-        className="lp-blob lp-anim-drift"
-        style={{ top: -120, left: -80, width: 460, height: 460, background: "var(--lp-terra)" }}
-      />
-      <div
-        className="lp-blob lp-anim-drift"
-        style={{ top: 40, right: -120, width: 420, height: 420, background: "var(--lp-violet)", animationDelay: "-6s" }}
-      />
-      <div
-        className="lp-blob lp-anim-drift"
-        style={{ bottom: -160, left: "40%", width: 380, height: 380, background: "var(--lp-sky)", opacity: 0.35, animationDelay: "-11s" }}
-      />
+      <div className="lp-blob lp-anim-drift" style={{ top: -120, left: -80, width: 460, height: 460, background: "var(--lp-terra)" }} />
+      <div className="lp-blob lp-anim-drift" style={{ top: 40, right: -120, width: 420, height: 420, background: "var(--lp-gold)", animationDelay: "-6s" }} />
+      <div className="lp-blob lp-anim-drift" style={{ bottom: -160, left: "40%", width: 380, height: 380, background: "var(--lp-sky)", opacity: 0.3, animationDelay: "-11s" }} />
       <div className="lp-spotlight" />
       <div className="lp-noise" />
 
@@ -631,28 +711,25 @@ function Hero() {
             for <span className="lp-grad">your entire life.</span>
           </h1>
           <p className="mt-6 text-[17px] sm:text-[19px] leading-relaxed max-w-2xl" style={{ color: "var(--lp-muted)" }}>
-            Plan your day, build habits, track your health, manage your money, lock away your
-            secrets, and ask an AI that actually does the work — all in one beautiful app that
-            runs on <span style={{ color: "var(--lp-ink)" }}>your device</span>, not someone&apos;s cloud.
+            Capture notes, think on an infinite whiteboard, plan your day, build habits, track your money,
+            read your inbox, and ask an AI that actually does the work — all in one beautiful app that runs on{" "}
+            <span style={{ color: "var(--lp-ink)" }}>your device</span>, not someone&apos;s cloud.
           </p>
           <div className="mt-9 flex items-center gap-3 flex-wrap">
             <Link href={GITHUB} target="_blank" rel="noreferrer" className="lp-btn lp-btn-primary">
               Get Life OS
               <ArrowRight size={17} />
             </Link>
-            <a href="#features" className="lp-btn lp-btn-ghost">
-              Explore features
-            </a>
+            <a href="#features" className="lp-btn lp-btn-ghost">Explore features</a>
           </div>
           <div className="mt-10 flex items-center gap-6 sm:gap-9 flex-wrap text-[13px]" style={{ color: "var(--lp-faint)" }}>
             <Stat value={<Counter to={30} suffix="+" />} label="tools, one app" />
             <Stat value={<Counter to={100} suffix="%" />} label="on your device" />
-            <Stat value="0" label="servers · trackers" />
+            <Stat value="3" label="themes · 1 toggle" />
             <Stat value="AES-256" label="encrypted vault" />
           </div>
         </div>
 
-        {/* Floating preview */}
         <div className="mt-14 sm:mt-20 relative">
           <HeroPreview />
         </div>
@@ -664,78 +741,123 @@ function Hero() {
 function Stat({ value, label }: { value: ReactNode; label: string }) {
   return (
     <div>
-      <div className="text-[22px] font-semibold tabular-nums" style={{ color: "var(--lp-ink)" }}>
-        {value}
-      </div>
+      <div className="text-[22px] font-semibold tabular-nums" style={{ color: "var(--lp-ink)" }}>{value}</div>
       <div className="uppercase tracking-[0.12em] text-[10.5px] mt-0.5">{label}</div>
+    </div>
+  );
+}
+
+// ── Faithful app-window mockup ───────────────────────────────────────────────
+
+const RAIL_ITEMS: { icon: typeof Sun; label: string; active?: boolean }[] = [
+  { icon: CalendarDays, label: "Today", active: true },
+  { icon: Inbox, label: "Inbox" },
+  { icon: MessagesSquare, label: "Messages" },
+  { icon: NotebookPen, label: "Notes" },
+  { icon: PenTool, label: "Whiteboard" },
+  { icon: ListTodo, label: "Tasks" },
+  { icon: Wallet, label: "Finance" },
+  { icon: Shield, label: "Vault" },
+];
+
+function AppWindow() {
+  return (
+    <div className="lp-card overflow-hidden" style={{ boxShadow: "var(--lp-shadow-lg)" }}>
+      {/* top bar */}
+      <div className="flex items-center gap-2 px-3 sm:px-4 h-12 border-b" style={{ borderColor: "var(--lp-line)" }}>
+        <span className="flex gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--lp-line-2)" }} />
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--lp-line-2)" }} />
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--lp-line-2)" }} />
+        </span>
+        <div className="ml-2 flex-1 max-w-sm hidden sm:flex items-center gap-2 rounded-[9px] px-2.5 h-7" style={{ background: TINT }}>
+          <Search size={12} style={{ color: "var(--lp-faint)" }} />
+          <span className="text-[11.5px]" style={{ color: "var(--lp-faint)" }}>Search everything…</span>
+          <span className="ml-auto text-[10px] font-mono px-1 rounded" style={{ color: "var(--lp-faint)", border: "1px solid var(--lp-line)" }}>⌘K</span>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 h-7 rounded-[9px]" style={{ color: "var(--lp-terra)", border: "1px solid var(--lp-line-2)" }}>
+            <Sparkles size={11} /> Ask
+          </span>
+          <span className="hidden sm:grid place-items-center w-7 h-7 rounded-[9px]" style={{ border: "1px solid var(--lp-line)", color: "var(--lp-gold)" }}>
+            <Sun size={13} />
+          </span>
+        </div>
+      </div>
+      {/* body */}
+      <div className="flex">
+        {/* rail */}
+        <aside className="hidden sm:flex flex-col gap-0.5 w-[176px] shrink-0 p-3 border-r" style={{ borderColor: "var(--lp-line)" }}>
+          <div className="px-1.5 pb-3"><Logo size={24} /></div>
+          {RAIL_ITEMS.map((it) => (
+            <span
+              key={it.label}
+              className="flex items-center gap-2.5 px-2.5 py-[7px] rounded-[9px] text-[13px]"
+              style={it.active ? { background: "var(--lp-paper2)", color: "var(--lp-ink)", fontWeight: 500 } : { color: "var(--lp-muted)" }}
+            >
+              <it.icon size={15} style={{ color: it.active ? "var(--lp-terra)" : "var(--lp-faint)" }} />
+              {it.label}
+            </span>
+          ))}
+        </aside>
+        {/* main */}
+        <div className="flex-1 min-w-0 p-4 sm:p-5">
+          <div className="text-[19px] sm:text-[22px] font-semibold tracking-[-0.02em]">Good morning, Alex</div>
+          <div className="text-[12px] mt-0.5" style={{ color: "var(--lp-muted)" }}>Monday · 4 things today</div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="lp-glass rounded-xl p-3.5 col-span-2 sm:col-span-1">
+              <div className="text-[9.5px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-faint)" }}>Net worth</div>
+              <div className="text-[22px] font-semibold tabular-nums">$182,540</div>
+              <Spark />
+            </div>
+            <div className="lp-glass rounded-xl p-3.5">
+              <div className="text-[9.5px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-faint)" }}>Habits</div>
+              <div className="mt-2 grid grid-cols-7 gap-1">
+                {Array.from({ length: 21 }).map((_, i) => (
+                  <span key={i} className="aspect-square rounded-[3px]" style={{ background: [2, 3, 5, 8, 9, 11, 12, 15, 16, 17, 19].includes(i) ? `color-mix(in oklch, var(--lp-terra) ${44 + (i % 3) * 18}%, transparent)` : TINT }} />
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[
+              { t: "Trip to Japan", c: "var(--lp-terra)" },
+              { t: "Book notes", c: "var(--lp-gold)" },
+              { t: "Recipes", c: "var(--lp-sage)" },
+            ].map((n) => (
+              <div key={n.t} className="lp-glass rounded-lg p-2.5">
+                <span className="block w-5 h-1.5 rounded-full mb-1.5" style={{ background: n.c }} />
+                <div className="text-[11px] font-medium truncate">{n.t}</div>
+                <span className="block h-1 rounded-full mt-1.5" style={{ background: TINT, width: "70%" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 function HeroPreview() {
   return (
-    <div className="relative">
-      {/* main glass panel */}
-      <div className="lp-card lp-anim-float-slow max-w-3xl mx-auto p-5 sm:p-6" style={{ boxShadow: "0 40px 120px -40px rgba(139,124,240,0.5)" }}>
-        <div className="flex items-center gap-1.5 mb-5">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--lp-line-2)" }} />
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--lp-line-2)" }} />
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--lp-line-2)" }} />
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {/* net worth */}
-          <div className="lp-glass rounded-xl p-4 col-span-2 sm:col-span-1">
-            <div className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-faint)" }}>Net worth</div>
-            <div className="mt-1 text-[24px] font-semibold tabular-nums">$182,540</div>
-            <Spark />
-          </div>
-          {/* habits */}
-          <div className="lp-glass rounded-xl p-4">
-            <div className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-faint)" }}>Habits</div>
-            <div className="mt-2 grid grid-cols-7 gap-1">
-              {Array.from({ length: 28 }).map((_, i) => (
-                <span
-                  key={i}
-                  className="aspect-square rounded-[3px]"
-                  style={{
-                    background: [3, 4, 5, 8, 9, 11, 12, 15, 16, 17, 18, 22, 23, 25, 26, 27].includes(i)
-                      ? `color-mix(in oklch, var(--lp-terra) ${40 + (i % 4) * 18}%, transparent)`
-                      : "rgba(255,255,255,0.06)",
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-          {/* mood */}
-          <div className="lp-glass rounded-xl p-4">
-            <div className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-faint)" }}>Mood · 7d</div>
-            <div className="mt-3 flex items-end justify-between h-9 gap-1">
-              {[3, 4, 2, 4, 5, 4, 5].map((v, i) => (
-                <span key={i} className="flex-1 rounded-full" style={{ height: `${v * 18}%`, background: "var(--lp-sky)", opacity: 0.5 + v * 0.1 }} />
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="mt-3">
-          <AskDemo />
-        </div>
+    <div className="relative max-w-3xl mx-auto">
+      <div className="lp-anim-float-slow">
+        <AppWindow />
       </div>
-
-      {/* floating accent chips */}
-      <div className="hidden sm:block absolute -left-2 sm:left-6 top-10 lp-anim-float" style={{ animationDelay: "-1.5s" }}>
-        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2">
+      <div className="hidden sm:block absolute -left-2 sm:-left-6 top-12 lp-anim-float" style={{ animationDelay: "-1.5s" }}>
+        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2" style={{ boxShadow: "var(--lp-shadow)" }}>
           <Coins size={15} style={{ color: "var(--lp-gold)" }} />
           <span className="text-[12.5px]">BTC <b style={{ color: "var(--lp-ink)" }}>+4.2%</b></span>
         </div>
       </div>
-      <div className="hidden sm:block absolute right-2 sm:right-8 top-24 lp-anim-float" style={{ animationDelay: "-3s" }}>
-        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2">
+      <div className="hidden sm:block absolute -right-2 sm:-right-6 top-28 lp-anim-float" style={{ animationDelay: "-3s" }}>
+        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2" style={{ boxShadow: "var(--lp-shadow)" }}>
           <Lock size={14} style={{ color: "var(--lp-terra)" }} />
           <span className="text-[12.5px]">Vault locked</span>
         </div>
       </div>
       <div className="hidden sm:block absolute right-10 -bottom-3 lp-anim-float" style={{ animationDelay: "-4.5s" }}>
-        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2">
+        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2" style={{ boxShadow: "var(--lp-shadow)" }}>
           <Flame size={15} style={{ color: "var(--lp-terra)" }} fill="var(--lp-terra)" />
           <span className="text-[12.5px]">14-day streak</span>
         </div>
@@ -744,28 +866,13 @@ function HeroPreview() {
   );
 }
 
-function Spark() {
-  return (
-    <svg viewBox="0 0 120 32" className="w-full h-8 mt-2" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="lpspk" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--lp-gold)" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="var(--lp-gold)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d="M0,26 L18,22 L34,24 L52,14 L70,17 L88,8 L106,11 L120,4 L120,32 L0,32 Z" fill="url(#lpspk)" />
-      <path d="M0,26 L18,22 L34,24 L52,14 L70,17 L88,8 L106,11 L120,4" fill="none" stroke="var(--lp-gold)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
-    </svg>
-  );
-}
-
 const MARQUEE_TAGS = [
   "Today dashboard", "Calendar", "Tasks", "Reminders", "Habits", "Focus timer",
-  "Health", "Goals", "Reviews", "Highlights", "Net worth", "Holdings", "Markets",
-  "Subscriptions", "Notes", "Bookmarks", "Files", "Inbox", "People", "Projects",
-  "Tags", "Templates", "Ask AI", "Voice capture", "Connections graph", "Command palette",
-  "Music", "Encrypted vault", "App lock", "Notifications", "Offline", "Sync",
-  "Folder backups",
+  "Goals", "Reviews", "Highlights", "Net worth", "Holdings", "Markets",
+  "Subscriptions", "Notes", "Whiteboard", "Messages", "Bookmarks", "Files",
+  "Inbox", "People", "Projects", "Tags", "Ask AI", "Voice capture",
+  "Command palette", "Music", "Encrypted vault", "App lock", "Notifications",
+  "Offline", "Sync", "Folder backups", "Light · Cloudy · Dark",
 ];
 
 function Marquee() {
@@ -789,39 +896,13 @@ function VideoSection() {
   return (
     <section id="video" className="max-w-6xl mx-auto px-5 sm:px-6 py-20 sm:py-24">
       <Reveal>
-        <SectionHead
-          kicker="See it in motion"
-          title={<>A minute inside <span className="lp-grad">Life OS.</span></>}
-          sub="Every tool, one private app — the whole thing in motion."
-        />
+        <SectionHead kicker="See it in motion" title={<>A minute inside <span className="lp-grad">Life OS.</span></>} sub="Every tool, one private app — the whole thing in motion." />
       </Reveal>
       <Reveal delay={90}>
         <div className="mt-12 relative">
-          {/* ambient glow */}
-          <div
-            aria-hidden
-            className="absolute -inset-x-10 -top-10 -bottom-10 pointer-events-none"
-            style={{
-              background:
-                "radial-gradient(60% 60% at 50% 40%, rgba(139,124,240,0.22), transparent 70%)",
-              filter: "blur(20px)",
-            }}
-          />
-          <div
-            className="relative lp-card p-2 sm:p-2.5 overflow-hidden"
-            style={{ boxShadow: "0 50px 140px -50px rgba(139,124,240,0.6)" }}
-          >
-            <video
-              src="/life-os.mp4"
-              poster="/life-os-poster.jpg"
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls
-              preload="metadata"
-              className="w-full rounded-[14px] block aspect-video bg-black"
-            />
+          <div aria-hidden className="absolute -inset-x-10 -top-10 -bottom-10 pointer-events-none" style={{ background: "radial-gradient(60% 60% at 50% 40%, var(--lp-glow), transparent 70%)", filter: "blur(20px)" }} />
+          <div className="relative lp-card p-2 sm:p-2.5 overflow-hidden" style={{ boxShadow: "var(--lp-shadow-lg)" }}>
+            <video src="/life-os.mp4" poster="/life-os-poster.jpg" autoPlay muted loop playsInline controls preload="metadata" className="w-full rounded-[14px] block aspect-video" style={{ background: "#000" }} />
           </div>
         </div>
       </Reveal>
@@ -829,21 +910,11 @@ function VideoSection() {
   );
 }
 
-function SectionHead({
-  kicker,
-  title,
-  sub,
-}: {
-  kicker: string;
-  title: ReactNode;
-  sub?: string;
-}) {
+function SectionHead({ kicker, title, sub }: { kicker: string; title: ReactNode; sub?: string }) {
   return (
     <div className="max-w-2xl">
       <div className="lp-chip" style={{ color: "var(--lp-terra)" }}>{kicker}</div>
-      <h2 className="mt-4 text-[32px] sm:text-[44px] font-semibold tracking-[-0.025em] leading-[1.05]">
-        {title}
-      </h2>
+      <h2 className="mt-4 text-[32px] sm:text-[44px] font-semibold tracking-[-0.025em] leading-[1.05]">{title}</h2>
       {sub && <p className="mt-4 text-[16px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>{sub}</p>}
     </div>
   );
@@ -853,26 +924,17 @@ function Pillars() {
   return (
     <section className="max-w-6xl mx-auto px-5 sm:px-6 py-24">
       <Reveal>
-        <SectionHead
-          kicker="Why Life OS"
-          title={<>Ten apps&apos; worth of life, <span className="lp-grad-cool">finally together.</span></>}
-          sub="Most tools own one slice of your life and a piece of your data. Life OS owns none of it — and connects all of it."
-        />
+        <SectionHead kicker="Why Life OS" title={<>Ten apps&apos; worth of life, <span className="lp-grad-cool">finally together.</span></>} sub="Most tools own one slice of your life and a piece of your data. Life OS owns none of it — and connects all of it." />
       </Reveal>
       <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {PILLARS.map((p, i) => (
           <Reveal key={p.title} delay={i * 80}>
             <div className="lp-card lp-card-glow h-full p-6">
-              <span
-                className="grid place-items-center w-11 h-11 rounded-xl mb-4"
-                style={{ background: `color-mix(in oklch, ${p.color} 18%, transparent)`, color: p.color }}
-              >
+              <span className="grid place-items-center w-11 h-11 rounded-xl mb-4" style={{ background: `color-mix(in oklch, ${p.color} 18%, transparent)`, color: p.color }}>
                 <p.icon size={20} />
               </span>
               <h3 className="text-[17px] font-semibold">{p.title}</h3>
-              <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>
-                {p.body}
-              </p>
+              <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>{p.body}</p>
             </div>
           </Reveal>
         ))}
@@ -885,15 +947,11 @@ function Bento() {
   return (
     <section id="features" className="max-w-6xl mx-auto px-5 sm:px-6 py-20">
       <Reveal>
-        <SectionHead
-          kicker="The toolkit"
-          title={<>Everything you run your life with, <span className="lp-grad">crafted to perfection.</span></>}
-          sub="Not a wall of features — a set of tools that each feel hand-built, and quietly work together."
-        />
+        <SectionHead kicker="The toolkit" title={<>Everything you run your life with, <span className="lp-grad">crafted to perfection.</span></>} sub="Not a wall of features — a set of tools that each feel hand-built, and quietly work together." />
       </Reveal>
       <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Reveal className="sm:col-span-2">
-          <BentoCard wide icon={Wallet} color="var(--lp-gold)" title="Finance that's alive" body="Net worth, live-valued crypto & stocks, allocation, and a trend that draws itself — all in your base currency." visual={<BentoFinance />} />
+          <BentoCard wide icon={Wallet} color="var(--lp-gold)" title="Finance that's alive" body="Net worth, live-valued crypto & stocks, on-chain wallet balances, and a trend that draws itself — all in your base currency." visual={<BentoFinance />} />
         </Reveal>
         <Reveal delay={70}>
           <BentoCard icon={Shield} color="var(--lp-terra)" title="An encrypted vault" body="Logins, cards, recovery codes — sealed with a passcode only you hold." visual={<BentoVault />} />
@@ -905,12 +963,18 @@ function Bento() {
           <BentoCard icon={Target} color="var(--lp-violet)" title="Goals that track themselves" body="Tie a goal to who you're becoming; progress rolls up on its own." visual={<BentoGoal />} />
         </Reveal>
         <Reveal delay={70}>
-          <BentoCard icon={HeartPulse} color="var(--lp-sky)" title="Body & mind" body="Mood, energy, sleep, weight — charted into patterns you can act on." visual={<BentoMood />} />
+          <BentoCard icon={NotebookPen} color="var(--lp-sky)" title="Notes, in one wall" body="Markdown, wiki-links and images — every note in sight, instantly searchable." visual={<BentoNotes />} />
         </Reveal>
         <Reveal delay={140}>
-          <BentoCard icon={Sparkles} color="var(--lp-violet)" title="AI that acts" body="Ask in plain words — it does the work and confirms, instead of just chatting." visual={<BentoAsk />} />
+          <BentoCard icon={PenTool} color="var(--lp-gold)" title="An infinite whiteboard" body="Think visually on an endless Excalidraw canvas — autosaved, theme-synced." visual={<BentoWhiteboard />} />
         </Reveal>
         <Reveal delay={210}>
+          <BentoCard icon={MessagesSquare} color="var(--lp-sky)" title="Your inbox, unified" body="Read and triage your Gmail threads without leaving your second brain." visual={<BentoMessages />} />
+        </Reveal>
+        <Reveal delay={70} className="sm:col-span-2">
+          <BentoCard wide icon={Sparkles} color="var(--lp-violet)" title="AI that acts" body="Ask in plain words — it does the work and confirms, instead of just chatting." visual={<BentoAsk />} />
+        </Reveal>
+        <Reveal delay={140}>
           <BentoCard icon={Music} color="var(--lp-terra)" title="Music, built in" body="Your YouTube Music, with a player that follows you across the app." visual={<BentoMusic />} />
         </Reveal>
       </div>
@@ -931,13 +995,22 @@ function DeepDives() {
         flip={false}
       />
       <DeepDive
+        id="canvas"
+        kicker="Think & connect"
+        title={<>An infinite canvas. <span className="lp-grad-cool">A unified inbox.</span></>}
+        body="Sketch, diagram, and brainstorm on a single infinite Excalidraw whiteboard that autosaves and follows your theme. And read your Gmail right inside Life OS — your messages next to the notes and tasks they're about."
+        points={["Infinite Excalidraw whiteboard, autosaved locally", "Unified Messages — your Gmail threads", "Everything in one private place"]}
+        visual={<CanvasVisual />}
+        flip
+      />
+      <DeepDive
         id="money"
         kicker="Finance, alive"
-        title={<>Your whole net worth, <span className="lp-grad-cool">valued live.</span></>}
-        body="Accounts, crypto and stocks valued by the minute, an allocation donut, and a net-worth trend that draws itself — all converted into your base currency with real exchange rates. Read-only, nothing leaves your machine."
-        points={["Live crypto & stock holdings", "Multi-currency with real FX", "Net-worth trend & allocation"]}
+        title={<>Your whole net worth, <span className="lp-grad">valued live.</span></>}
+        body="Accounts, crypto and stocks valued by the minute, on-chain wallet balances, an allocation donut, and a net-worth trend that draws itself — all converted into your base currency with real exchange rates. Read-only, nothing leaves your machine."
+        points={["Live crypto & stock holdings + on-chain balances", "Multi-currency with real FX", "Net-worth trend & allocation"]}
         visual={<FinanceVisual />}
-        flip
+        flip={false}
       />
       <DeepDive
         id="private"
@@ -946,37 +1019,19 @@ function DeepDives() {
         body="Passwords, cards, recovery codes — encrypted on your device with a key derived from your passcode (PBKDF2 + AES-GCM). Reading the database directly reveals only ciphertext. Lock the whole app behind it, too."
         points={["AES-GCM encryption at rest", "Passcode never stored — only verified", "Optional whole-app lock"]}
         visual={<VaultVisual />}
-        flip={false}
+        flip
       />
     </div>
   );
 }
 
-function DeepDive({
-  id,
-  kicker,
-  title,
-  body,
-  points,
-  visual,
-  flip,
-}: {
-  id: string;
-  kicker: string;
-  title: ReactNode;
-  body: string;
-  points: string[];
-  visual: ReactNode;
-  flip: boolean;
-}) {
+function DeepDive({ id, kicker, title, body, points, visual, flip }: { id: string; kicker: string; title: ReactNode; body: string; points: string[]; visual: ReactNode; flip: boolean }) {
   return (
     <section id={id} className="max-w-6xl mx-auto px-5 sm:px-6 py-16">
-      <div className={`grid lg:grid-cols-2 gap-10 lg:gap-16 items-center`}>
+      <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
         <Reveal className={flip ? "lg:order-2" : ""}>
           <div className="lp-chip" style={{ color: "var(--lp-terra)" }}>{kicker}</div>
-          <h2 className="mt-4 text-[30px] sm:text-[40px] font-semibold tracking-[-0.025em] leading-[1.08]">
-            {title}
-          </h2>
+          <h2 className="mt-4 text-[30px] sm:text-[40px] font-semibold tracking-[-0.025em] leading-[1.08]">{title}</h2>
           <p className="mt-4 text-[16px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>{body}</p>
           <ul className="mt-6 space-y-2.5">
             {points.map((p) => (
@@ -989,9 +1044,7 @@ function DeepDive({
             ))}
           </ul>
         </Reveal>
-        <Reveal delay={120} className={flip ? "lg:order-1" : ""}>
-          {visual}
-        </Reveal>
+        <Reveal delay={120} className={flip ? "lg:order-1" : ""}>{visual}</Reveal>
       </div>
     </section>
   );
@@ -1005,7 +1058,7 @@ function FinanceVisual() {
           <div className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-faint)" }}>Net worth · USD</div>
           <div className="mt-1 text-[34px] font-semibold tabular-nums">$182,540</div>
         </div>
-        <span className="inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: "#7fd0a6" }}>
+        <span className="inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: "var(--lp-sage)" }}>
           <TrendingUp size={14} /> +2.4%
         </span>
       </div>
@@ -1028,13 +1081,41 @@ function FinanceVisual() {
   );
 }
 
+function CanvasVisual() {
+  return (
+    <div className="lp-card p-5 lp-anim-float-slow">
+      <div className="lp-glass rounded-xl relative overflow-hidden" style={{ height: 190 }}>
+        <span className="absolute rounded-lg" style={{ left: 26, top: 28, width: 96, height: 60, background: "color-mix(in oklch, var(--lp-sky) 26%, transparent)", border: "2px solid var(--lp-sky)" }} />
+        <span className="absolute rounded-full" style={{ right: 34, top: 36, width: 76, height: 76, background: "color-mix(in oklch, var(--lp-sage) 26%, transparent)", border: "2px solid var(--lp-sage)" }} />
+        <span className="absolute" style={{ left: 70, bottom: 22, width: 70, height: 46, background: "color-mix(in oklch, var(--lp-gold) 26%, transparent)", border: "2px solid var(--lp-gold)", transform: "rotate(45deg)" }} />
+        <svg className="absolute" style={{ left: 110, top: 60 }} width="96" height="60">
+          <path d="M4 50 C 30 6, 60 6, 90 34" fill="none" stroke="var(--lp-terra)" strokeWidth="2.4" />
+          <path d="M80 24 L91 35 L76 39 Z" fill="var(--lp-terra)" />
+        </svg>
+      </div>
+      <div className="mt-4 space-y-2">
+        {[
+          { n: "Maya", s: "Lunch on Friday?", c: "var(--lp-terra)" },
+          { n: "Newsletter", s: "This week's digest", c: "var(--lp-sky)" },
+        ].map((m) => (
+          <div key={m.n} className="lp-glass rounded-lg px-3 py-2 flex items-center gap-2.5">
+            <span className="grid place-items-center w-7 h-7 rounded-full text-[11px] font-semibold text-white shrink-0" style={{ background: m.c }}>{m.n[0]}</span>
+            <div className="min-w-0">
+              <div className="text-[12.5px] font-medium truncate">{m.n}</div>
+              <div className="text-[11px] truncate" style={{ color: "var(--lp-muted)" }}>{m.s}</div>
+            </div>
+            <MessagesSquare size={13} className="ml-auto" style={{ color: "var(--lp-faint)" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function VaultVisual() {
   return (
     <div className="lp-card p-8 lp-anim-float-slow text-center">
-      <div
-        className="mx-auto grid place-items-center w-16 h-16 rounded-2xl mb-5"
-        style={{ background: "color-mix(in oklch, var(--lp-terra) 16%, transparent)", color: "var(--lp-terra)", boxShadow: "0 0 40px -8px rgba(226,103,74,0.6)" }}
-      >
+      <div className="mx-auto grid place-items-center w-16 h-16 rounded-2xl mb-5" style={{ background: "color-mix(in oklch, var(--lp-terra) 16%, transparent)", color: "var(--lp-terra)", boxShadow: "0 0 40px -8px var(--lp-glow)" }}>
         <KeyRound size={28} />
       </div>
       <div className="space-y-2.5 max-w-[260px] mx-auto text-left">
@@ -1051,9 +1132,73 @@ function VaultVisual() {
         ))}
       </div>
       <div className="mt-5 inline-flex items-center gap-1.5 text-[12px]" style={{ color: "var(--lp-muted)" }}>
-        <Shield size={13} style={{ color: "#7fd0a6" }} /> Encrypted on this device · never synced
+        <Shield size={13} style={{ color: "var(--lp-sage)" }} /> Encrypted on this device · never synced
       </div>
     </div>
+  );
+}
+
+// ── Theme showcase — the same surface in all three themes ────────────────────
+
+const SHOWCASE_THEMES: { key: LpTheme; name: string; icon: typeof Sun; vars: Record<string, string> }[] = [
+  {
+    key: "light",
+    name: "Light",
+    icon: Sun,
+    vars: { "--lp-bg": "#f6f1e8", "--lp-paper": "#fbf7ee", "--lp-paper2": "#f2ebda", "--lp-ink": "#1a1a1a", "--lp-muted": "#8a7f6b", "--lp-line": "rgba(26,26,26,0.08)", "--lp-terra": "#d45a3f", "--lp-sage": "#7a8b6f", "--lp-gold": "#c8995a" },
+  },
+  {
+    key: "cloudy",
+    name: "Cloudy",
+    icon: Cloud,
+    vars: { "--lp-bg": "#0b1024", "--lp-paper": "rgba(255,255,255,0.08)", "--lp-paper2": "rgba(255,255,255,0.12)", "--lp-ink": "#f3f6ff", "--lp-muted": "#aeb9d8", "--lp-line": "rgba(255,255,255,0.18)", "--lp-terra": "#6aa6ff", "--lp-sage": "#54e6b0", "--lp-gold": "#ffce73" },
+  },
+  {
+    key: "dark",
+    name: "Dark",
+    icon: Moon,
+    vars: { "--lp-bg": "#1a1612", "--lp-paper": "#221d17", "--lp-paper2": "#1e1a14", "--lp-ink": "#f2eadb", "--lp-muted": "#a7977c", "--lp-line": "rgba(242,234,219,0.1)", "--lp-terra": "#e7775d", "--lp-sage": "#9cb089", "--lp-gold": "#e4b871" },
+  },
+];
+
+function ThemeShowcase() {
+  return (
+    <section id="themes" className="max-w-6xl mx-auto px-5 sm:px-6 py-24">
+      <Reveal>
+        <SectionHead kicker="Three moods, one OS" title={<>Light, cloudy, or dark — <span className="lp-grad">your call.</span></>} sub="A single toggle re-skins the entire app. Warm paper by day, frosted-glass cloudy in between, deep warm dark at night." />
+      </Reveal>
+      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {SHOWCASE_THEMES.map((t, i) => (
+          <Reveal key={t.key} delay={i * 90}>
+            <div
+              className="rounded-[18px] p-4 h-full"
+              style={{ ...(t.vars as React.CSSProperties), background: "var(--lp-bg)", border: "1px solid var(--lp-line)", color: "var(--lp-ink)" }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <span className="grid place-items-center w-7 h-7 rounded-lg" style={{ background: "color-mix(in oklch, var(--lp-terra) 18%, transparent)", color: "var(--lp-terra)" }}>
+                  <t.icon size={14} />
+                </span>
+                <span className="text-[13px] font-semibold">{t.name}</span>
+              </div>
+              {/* mini app card */}
+              <div className="rounded-xl p-3" style={{ background: "var(--lp-paper)", border: "1px solid var(--lp-line)" }}>
+                <div className="text-[9px] uppercase tracking-[0.14em]" style={{ color: "var(--lp-muted)" }}>Net worth</div>
+                <div className="text-[18px] font-semibold tabular-nums">$182,540</div>
+                <div className="mt-2 grid grid-cols-7 gap-1">
+                  {Array.from({ length: 14 }).map((_, k) => (
+                    <span key={k} className="aspect-square rounded-[2px]" style={{ background: [1, 2, 4, 6, 7, 9, 11, 12].includes(k) ? "var(--lp-terra)" : "color-mix(in oklch, var(--lp-line) 80%, transparent)" }} />
+                  ))}
+                </div>
+                <div className="mt-3 flex gap-1.5">
+                  <span className="text-[10px] px-2 py-1 rounded-md font-medium" style={{ background: "var(--lp-terra)", color: "#fff" }}>Add</span>
+                  <span className="text-[10px] px-2 py-1 rounded-md" style={{ background: "var(--lp-paper2)", color: "var(--lp-muted)" }}>Today</span>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -1061,18 +1206,14 @@ function Everything() {
   return (
     <section id="everything" className="max-w-6xl mx-auto px-5 sm:px-6 py-24">
       <Reveal>
-        <SectionHead
-          kicker="Everything included"
-          title={<>One purchase of your attention. <span className="lp-grad">Every tool below.</span></>}
-          sub="No add-ons, no upsells, no per-feature paywall. It's all here, and it's all yours."
-        />
+        <SectionHead kicker="Everything included" title={<>One purchase of your attention. <span className="lp-grad">Every tool below.</span></>} sub="No add-ons, no upsells, no per-feature paywall. It's all here, and it's all yours." />
       </Reveal>
       <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {EVERYTHING.map((g, i) => (
           <Reveal key={g.cat} delay={i * 60}>
             <div className="lp-card h-full p-6">
               <div className="flex items-center gap-2.5 mb-4">
-                <span className="grid place-items-center w-9 h-9 rounded-[10px]" style={{ background: "rgba(255,255,255,0.05)", color: "var(--lp-terra)" }}>
+                <span className="grid place-items-center w-9 h-9 rounded-[10px]" style={{ background: TINT, color: "var(--lp-terra)" }}>
                   <g.icon size={17} />
                 </span>
                 <h3 className="text-[15px] font-semibold uppercase tracking-[0.08em]">{g.cat}</h3>
@@ -1090,10 +1231,9 @@ function Everything() {
         ))}
       </div>
 
-      {/* tiny feature ribbon */}
       <Reveal>
         <div className="mt-10 flex flex-wrap justify-center gap-2.5">
-          {[Bell, Mic, Waypoints, FolderDown, Command, Timer, Music, RefreshCw, WifiOff, Download, Highlighter, FolderKanban, Bookmark, Users, ListTodo, Flame].map((I, i) => (
+          {[Bell, Mic, PenTool, FolderDown, Command, Timer, Music, RefreshCw, WifiOff, Download, Highlighter, FolderKanban, Bookmark, Users, ListTodo, Flame].map((I, i) => (
             <span key={i} className="grid place-items-center w-10 h-10 rounded-xl lp-glass" style={{ color: "var(--lp-muted)" }}>
               <I size={17} />
             </span>
@@ -1109,8 +1249,8 @@ function FinalCTA() {
     <section className="max-w-6xl mx-auto px-5 sm:px-6 pb-28">
       <Reveal>
         <div className="lp-card relative overflow-hidden text-center px-6 py-16 sm:py-20">
-          <div className="lp-blob lp-anim-drift" style={{ top: -100, left: "20%", width: 360, height: 360, background: "var(--lp-terra)", opacity: 0.4 }} />
-          <div className="lp-blob lp-anim-drift" style={{ bottom: -120, right: "15%", width: 340, height: 340, background: "var(--lp-violet)", opacity: 0.4, animationDelay: "-7s" }} />
+          <div className="lp-blob lp-anim-drift" style={{ top: -100, left: "20%", width: 360, height: 360, background: "var(--lp-terra)", opacity: 0.35 }} />
+          <div className="lp-blob lp-anim-drift" style={{ bottom: -120, right: "15%", width: 340, height: 340, background: "var(--lp-gold)", opacity: 0.35, animationDelay: "-7s" }} />
           <div className="lp-grid" />
           <div className="relative">
             <h2 className="text-[34px] sm:text-[52px] font-semibold tracking-[-0.03em] leading-[1.04] max-w-3xl mx-auto">
@@ -1124,9 +1264,7 @@ function FinalCTA() {
                 Get Life OS
                 <ChevronRight size={18} />
               </Link>
-              <a href="#everything" className="lp-btn lp-btn-ghost !px-6 !py-4">
-                See everything
-              </a>
+              <a href="#everything" className="lp-btn lp-btn-ghost !px-6 !py-4">See everything</a>
             </div>
             <div className="mt-8 flex items-center justify-center gap-5 flex-wrap text-[12.5px]" style={{ color: "var(--lp-faint)" }}>
               <span className="inline-flex items-center gap-1.5"><WifiOff size={13} /> Works offline</span>
@@ -1145,10 +1283,8 @@ function Footer() {
     <footer className="border-t" style={{ borderColor: "var(--lp-line)" }}>
       <div className="max-w-6xl mx-auto px-5 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
         <Logo />
-        <div className="text-[13px]" style={{ color: "var(--lp-faint)" }}>
-          Local-first · built with care · v1.0
-        </div>
-        <Link href={GITHUB} target="_blank" rel="noreferrer" className="text-[13.5px] inline-flex items-center gap-1.5 hover:text-white transition-colors" style={{ color: "var(--lp-muted)" }}>
+        <div className="text-[13px]" style={{ color: "var(--lp-faint)" }}>Local-first · built with care · v1.0</div>
+        <Link href={GITHUB} target="_blank" rel="noreferrer" className="text-[13.5px] inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity" style={{ color: "var(--lp-muted)" }}>
           View on GitHub <ArrowRight size={14} />
         </Link>
       </div>

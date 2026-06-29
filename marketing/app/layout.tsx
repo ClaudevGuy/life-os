@@ -33,8 +33,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
-      <body style={{ margin: 0, background: "#070710" }}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${sans.variable} ${mono.variable}`}
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('lifeos.landing.theme')||'light';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='light';}})();",
+          }}
+        />
+      </head>
+      <body style={{ margin: 0, background: "var(--lp-bg)", color: "var(--lp-ink)" }}>
         <div className="lp-root">{children}</div>
       </body>
     </html>

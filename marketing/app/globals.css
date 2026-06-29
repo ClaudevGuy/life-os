@@ -1,25 +1,89 @@
 /* ───────────────────────────────────────────────────────────────────────────
-   Life OS — marketing landing. Self-contained, futuristic, dark. Everything is
-   scoped under .lp-root so it never touches the app's Studio theme.
+   Life OS — marketing landing. Product-true: built on the app's Studio design
+   language, theme-aware (light / cloudy / dark) via html[data-theme]. The
+   --lp-* variables are the single source of truth; classes never hardcode
+   colors, so the live theme toggle re-skins the whole page.
    ─────────────────────────────────────────────────────────────────────────── */
 
-.lp-root {
-  --lp-bg: #070710;
-  --lp-bg2: #0b0b18;
-  --lp-ink: #edecf5;
-  --lp-muted: #a6a4ba;
-  --lp-faint: #6f6d86;
-  --lp-line: rgba(255, 255, 255, 0.1);
-  --lp-line-2: rgba(255, 255, 255, 0.16);
-  --lp-terra: #e2674a;
-  --lp-gold: #e8c07a;
-  --lp-violet: #8b7cf0;
-  --lp-sky: #56b6e8;
-  --lp-card: rgba(255, 255, 255, 0.035);
+/* ── Light (default) — Studio paper ───────────────────────────────────────── */
+:root,
+html[data-theme="light"] {
+  --lp-bg: #f6f1e8;
+  --lp-bg2: #efe7d7;
+  --lp-paper: #fbf7ee;
+  --lp-paper2: #f2ebda;
+  --lp-ink: #1a1a1a;
+  --lp-muted: #8a7f6b;
+  --lp-faint: #b5a98f;
+  --lp-line: rgba(26, 26, 26, 0.08);
+  --lp-line-2: rgba(26, 26, 26, 0.14);
+  --lp-terra: #d45a3f;
+  --lp-gold: #c8995a;
+  --lp-violet: #6b4e5c;
+  --lp-sky: #6b89a8;
+  --lp-sage: #7a8b6f;
+  --lp-card: var(--lp-paper);
+  --lp-card-grad: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1));
+  --lp-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 6px 22px -10px rgba(26, 26, 26, 0.18);
+  --lp-shadow-lg: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 30px 80px -28px rgba(26, 26, 26, 0.3);
+  --lp-nav-bg: rgba(251, 247, 238, 0.82);
+  --lp-glow: rgba(212, 90, 63, 0.16);
+}
 
+/* ── Dark — Studio dark ───────────────────────────────────────────────────── */
+html[data-theme="dark"] {
+  --lp-bg: #1a1612;
+  --lp-bg2: #221c16;
+  --lp-paper: #221d17;
+  --lp-paper2: #1e1a14;
+  --lp-ink: #f2eadb;
+  --lp-muted: #a7977c;
+  --lp-faint: #73685a;
+  --lp-line: rgba(242, 234, 219, 0.08);
+  --lp-line-2: rgba(242, 234, 219, 0.14);
+  --lp-terra: #e7775d;
+  --lp-gold: #e4b871;
+  --lp-violet: #9c7a8a;
+  --lp-sky: #8fb0ce;
+  --lp-sage: #9cb089;
+  --lp-card: var(--lp-paper);
+  --lp-card-grad: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  --lp-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 28px -10px rgba(0, 0, 0, 0.55);
+  --lp-shadow-lg: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 32px 90px -30px rgba(0, 0, 0, 0.75);
+  --lp-nav-bg: rgba(34, 29, 23, 0.82);
+  --lp-glow: rgba(231, 119, 93, 0.32);
+}
+
+/* ── Cloudy — frosted-glass mirror ────────────────────────────────────────── */
+html[data-theme="cloudy"] {
+  --lp-bg: #0b1024;
+  --lp-bg2: rgba(255, 255, 255, 0.08);
+  --lp-paper: #141b38;
+  --lp-paper2: #1c2550;
+  --lp-glass: rgba(18, 25, 54, 0.45);
+  --lp-glass-strong: rgba(26, 34, 70, 0.55);
+  --lp-ink: #f3f6ff;
+  --lp-muted: #aeb9d8;
+  --lp-faint: #828fb6;
+  --lp-line: rgba(255, 255, 255, 0.14);
+  --lp-line-2: rgba(255, 255, 255, 0.26);
+  --lp-terra: #6aa6ff;
+  --lp-gold: #ffce73;
+  --lp-violet: #c79bff;
+  --lp-sky: #5bc8ff;
+  --lp-sage: #54e6b0;
+  --lp-card: var(--lp-glass);
+  --lp-card-grad: none;
+  --lp-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 14px 40px -12px rgba(4, 8, 24, 0.6);
+  --lp-shadow-lg: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 26px 70px -16px rgba(4, 8, 24, 0.72);
+  --lp-nav-bg: rgba(12, 18, 44, 0.55);
+  --lp-glow: rgba(106, 166, 255, 0.4);
+}
+
+.lp-root {
   position: relative;
   min-height: 100vh;
-  background: var(--lp-bg);
+  background: transparent;
   color: var(--lp-ink);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   overflow-x: clip;
@@ -32,22 +96,44 @@
   box-sizing: border-box;
 }
 
-/* ── ambient background ─────────────────────────────────────────────────── */
+/* ── cloudy aurora — a vibrant drifting field the glass refracts ───────────── */
+html[data-theme="cloudy"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 38% at 16% 20%, rgba(96, 150, 255, 0.55) 0%, transparent 60%),
+    radial-gradient(38% 34% at 84% 14%, rgba(80, 200, 255, 0.5) 0%, transparent 60%),
+    radial-gradient(48% 44% at 80% 82%, rgba(74, 232, 178, 0.46) 0%, transparent 62%),
+    radial-gradient(46% 46% at 18% 88%, rgba(168, 120, 255, 0.5) 0%, transparent 60%),
+    radial-gradient(70% 70% at 50% 45%, rgba(40, 64, 150, 0.35) 0%, transparent 72%),
+    linear-gradient(160deg, #0e1640 0%, #0a0f2c 55%, #0c1030 100%);
+  animation: cloudy-aurora 28s ease-in-out infinite;
+}
+@keyframes cloudy-aurora {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.04); }
+  50% { transform: translate3d(0, -2.5%, 0) scale(1.12); }
+}
+
+/* ── ambient background (hero) ────────────────────────────────────────────── */
 
 .lp-blob {
   position: absolute;
   border-radius: 999px;
   filter: blur(70px);
-  opacity: 0.55;
+  opacity: 0.5;
   pointer-events: none;
   will-change: transform;
 }
+html[data-theme="light"] .lp-blob { opacity: 0.3; }
 .lp-grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, var(--lp-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--lp-line) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
   -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
@@ -57,7 +143,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.04;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -86,10 +172,6 @@
 @keyframes lp-spin-slow {
   to { transform: rotate(360deg); }
 }
-@keyframes lp-pulse-glow {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
 @keyframes lp-gradient-x {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -102,15 +184,15 @@
   from { opacity: 0; transform: translateY(26px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes lp-eq {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
 
 .lp-anim-drift { animation: lp-drift 18s ease-in-out infinite; }
 .lp-anim-float { animation: lp-float 6s ease-in-out infinite; }
 .lp-anim-float-slow { animation: lp-float-slow 9s ease-in-out infinite; }
 .lp-anim-spin { animation: lp-spin-slow 32s linear infinite; }
-@keyframes lp-eq {
-  0%, 100% { transform: scaleY(0.3); }
-  50% { transform: scaleY(1); }
-}
 .lp-eq { transform-origin: bottom; animation: lp-eq 0.9s ease-in-out infinite; }
 .lp-hero-in > * { animation: lp-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .lp-hero-in > *:nth-child(1) { animation-delay: 0.05s; }
@@ -135,12 +217,18 @@
 /* ── type / text ────────────────────────────────────────────────────────── */
 
 .lp-grad {
-  background: linear-gradient(110deg, #fff 0%, var(--lp-gold) 42%, var(--lp-terra) 70%, var(--lp-violet) 100%);
-  background-size: 220% auto;
+  background: linear-gradient(120deg, var(--lp-ink) 0%, var(--lp-terra) 60%, var(--lp-gold) 100%);
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: lp-gradient-x 8s ease infinite;
+}
+html[data-theme="cloudy"] .lp-grad {
+  background: linear-gradient(135deg, #ffffff 0%, var(--lp-terra) 52%, var(--lp-sage) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 .lp-grad-cool {
   background: linear-gradient(110deg, var(--lp-sky), var(--lp-violet));
@@ -154,28 +242,32 @@
 .lp-glass {
   background: var(--lp-card);
   border: 1px solid var(--lp-line);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
-/* sticky nav — opaque enough that scrolling content never bleeds through */
+html[data-theme="cloudy"] .lp-glass,
+html[data-theme="cloudy"] .lp-card {
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+}
+/* sticky nav — translucent paper that content can't bleed through */
 .lp-nav {
-  background: rgba(8, 8, 16, 0.85);
+  background: var(--lp-nav-bg);
   border-bottom: 1px solid var(--lp-line);
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 .lp-card {
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  background: var(--lp-card);
+  background-image: var(--lp-card-grad);
   border: 1px solid var(--lp-line);
   border-radius: 18px;
+  box-shadow: var(--lp-shadow);
   transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.35s, box-shadow 0.35s;
 }
 .lp-card:hover {
   transform: translateY(-4px);
   border-color: var(--lp-line-2);
-  box-shadow: 0 18px 50px -20px rgba(226, 103, 74, 0.4);
+  box-shadow: var(--lp-shadow-lg);
 }
 .lp-card-glow::before {
   content: "";
@@ -202,29 +294,29 @@
   font-size: 15px;
   border-radius: 12px;
   padding: 13px 22px;
-  transition: transform 0.2s, box-shadow 0.3s, background 0.3s;
+  transition: transform 0.2s, box-shadow 0.3s, background 0.3s, filter 0.2s;
   cursor: pointer;
   white-space: nowrap;
 }
 .lp-btn-primary {
   color: #fff;
-  background: linear-gradient(100deg, var(--lp-terra), #d4823f);
+  background: linear-gradient(100deg, var(--lp-terra), color-mix(in oklch, var(--lp-terra) 70%, var(--lp-gold)));
   background-size: 200% auto;
-  box-shadow: 0 10px 34px -10px rgba(226, 103, 74, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 34px -10px var(--lp-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 .lp-btn-primary:hover {
   transform: translateY(-2px);
-  animation: lp-shimmer 1.4s linear infinite;
-  background-image: linear-gradient(100deg, var(--lp-terra), var(--lp-gold), var(--lp-terra));
+  filter: brightness(1.05);
 }
 .lp-btn-ghost {
   color: var(--lp-ink);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lp-card);
   border: 1px solid var(--lp-line-2);
 }
 .lp-btn-ghost:hover {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--lp-terra);
+  color: var(--lp-terra);
 }
 
 /* chips / pills */
@@ -236,7 +328,7 @@
   border-radius: 999px;
   font-size: 13px;
   color: var(--lp-muted);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lp-card);
   border: 1px solid var(--lp-line);
   white-space: nowrap;
 }
@@ -248,7 +340,7 @@
   pointer-events: none;
   background: radial-gradient(
     340px circle at var(--lp-mx, 50%) var(--lp-my, 30%),
-    rgba(226, 103, 74, 0.16),
+    var(--lp-glow),
     transparent 70%
   );
   transition: background 0.1s;
@@ -274,12 +366,13 @@
   height: 60%;
   transform: translateX(-50%) perspective(420px) rotateX(62deg);
   background-image:
-    linear-gradient(to right, rgba(139, 124, 240, 0.18) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(226, 103, 74, 0.16) 1px, transparent 1px);
+    linear-gradient(to right, var(--lp-line-2) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--lp-line) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 50% 70% at 50% 100%, #000, transparent 72%);
   -webkit-mask-image: radial-gradient(ellipse 50% 70% at 50% 100%, #000, transparent 72%);
   pointer-events: none;
+  opacity: 0.6;
 }
 
 .lp-caret {
@@ -298,7 +391,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-root * {
+  .lp-root *,
+  html[data-theme="cloudy"] body::before {
     animation: none !important;
     transition: none !important;
   }
