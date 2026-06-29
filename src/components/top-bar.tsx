@@ -52,7 +52,7 @@ export function TopBar() {
 
   return (
     <div
-      className="sticky top-0 z-10 pl-3 sm:pl-[22px] pr-[14px] py-[14px] border-b border-[var(--line)] backdrop-blur flex items-center gap-2 sm:gap-[10px]"
+      className="sticky top-0 z-30 pl-3 sm:pl-[22px] pr-[14px] py-[14px] border-b border-[var(--line)] backdrop-blur flex items-center gap-2 sm:gap-[10px]"
       style={{
         background:
           "linear-gradient(100deg, color-mix(in oklch, var(--terra) 7%, transparent) 0%, transparent 26%, transparent 74%, color-mix(in oklch, var(--gold) 6%, transparent) 100%), color-mix(in oklch, var(--paper) 86%, transparent)",
