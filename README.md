@@ -1,6 +1,6 @@
 # Life OS
 
-> The operating system for your whole life — tasks, habits, health, goals, money, people, knowledge, an encrypted vault, and an AI that actually does things — in one app. **Local-first**: every byte lives in your browser, never on someone else's server.
+> The operating system for your whole life — tasks, habits, notes, a whiteboard, goals, money, people, messages, knowledge, an encrypted vault, and an AI that actually does things — in one app. **Local-first**: every byte lives in your browser, never on someone else's server.
 
 [![Live Demo](https://img.shields.io/badge/live%20demo-Vercel-000?logo=vercel)](https://life-os-tan-tau.vercel.app/) ![Next.js](https://img.shields.io/badge/Next.js-16-black) ![React](https://img.shields.io/badge/React-19-149eca) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6) ![IndexedDB](https://img.shields.io/badge/storage-IndexedDB-f0a868)
 
@@ -10,41 +10,41 @@
 
 ## What this is
 
-Life OS is a personal "second brain" built around one idea: **your data should belong to you, fully.** No signup, no database to provision, no SaaS subscription. You open the app and start capturing. Everything — notes, tasks, habits, health check-ins, goals, finances, people, files, and an encrypted secrets vault — lives inside your browser's **IndexedDB**.
+Life OS is a personal "second brain" built around one idea: **your data should belong to you, fully.** No signup, no database to provision, no SaaS subscription. You open the app and start capturing. Everything — notes, a whiteboard, tasks, habits, goals, finances, people, files, your messages, and an encrypted secrets vault — lives inside your browser's **IndexedDB**.
 
-The only things that ever leave your machine are explicit, read-only lookups: an AI call when you use *Ask* or voice, and anonymous market/FX/favicon requests on the Finance and Subscriptions pages. None of it persists server-side, and your actual data never goes anywhere — notifications and backups are entirely local.
+The only things that ever leave your machine are explicit, read-only lookups: an AI call when you use *Ask* or voice, your own connected mailbox for *Messages*, and anonymous market/FX/wallet/favicon requests on the Finance and Subscriptions pages. None of it persists server-side, and your actual data never goes anywhere — notifications and backups are entirely local.
 
 ### The pages
 
 | Area | Route | What it's for |
 | --- | --- | --- |
 | **Capture** | `/inbox` | Triage queue for everything you capture |
-| | `/notes` | Notes with markdown, `[[wiki-link]]` autocomplete, and paste-to-attach images |
+| | `/messages` | Unified inbox — your **Gmail** threads in a two-pane reader |
+| | `/notes` | A card-wall of every note: markdown, `[[wiki-link]]` autocomplete, paste-to-attach images, backlinks |
+| | `/whiteboard` | A single infinite **Excalidraw** canvas — sketch, diagram, sticky-notes; autosaves locally and follows your theme |
 | | `/bookmarks` | Reading list / saved links |
 | | `/files` | PDFs, docs, images — stored locally |
 | **Daily** | `/today` | Customizable drag-and-drop dashboard: time-of-day hero, week pulse, agenda, habits, music, markets, and more |
 | | `/calendar` | Month / week / agenda over every dated item, plus a per-day notes scratchpad |
 | | `/tasks` | Quick-add with priorities, board/list views, due dates & reminders |
 | | `/habits` | Streaks, a GitHub-style heatmap, cadence-aware (daily/weekdays/weekly) |
-| | `/health` | Daily check-in — mood, energy, sleep, weight, water, activity — charted into trends |
 | **Reflect** | `/goals` | Identity-first goals with auto-rolling progress (slider / number / milestones) |
 | | `/projects` | Projects with GitHub links, KPIs, milestones, and linked tasks |
 | | `/people` | Lightweight CRM with a backlinks-driven conversation timeline |
-| | `/finance` | Net worth across accounts + live-valued crypto/stock holdings, allocation donut, multi-currency FX, a trend, and a USD (DXY / pairs) chart |
+| | `/finance` | Net worth across accounts + live-valued crypto/stock holdings (incl. on-chain wallet balances), allocation donut, multi-currency FX, a trend, and a USD (DXY / pairs) chart |
 | | `/subscriptions` | Recurring spend with service logos, a donut breakdown, upcoming renewals, cycle progress, and pause/cancel |
 | **Explore** | `/ask` | Agentic AI over your notes — answers *and* takes actions (add reminders, holdings, people…) |
-| | `/graph` | Force-directed **Connections** web of everything linked via `[[…]]` |
 | | `/music` | Your YouTube Music, with a persistent mini-player |
 | | `/vault` | Encrypted (AES-GCM) store for passwords, cards, codes — behind a passcode, with an optional whole-app lock |
-| **More** | `/highlights` `/reviews` `/tags` `/templates` `/settings` | Resurfacing highlights, weekly review, tag cloud, templates, preferences |
+| **More** | `/highlights` `/reviews` `/tags` `/settings` | Resurfacing highlights, weekly review, tag cloud, preferences |
 
-Press `c` to quick-capture · `⌘K` / `Ctrl+K` to search · the **mic** in the top bar for voice capture · the **timer** for focus sessions.
+Press `c` to quick-capture · `⌘K` / `Ctrl+K` to search · the **mic** in the top bar for voice capture · the **timer** for focus sessions · the **theme toggle** cycles light → cloudy → dark.
 
 ---
 
 ## Architecture in one paragraph
 
-A Next.js 16 app (App Router, React 19, Turbopack). Every page is a client component reading from **IndexedDB** via [Dexie](https://dexie.org)'s `useLiveQuery` — capture an item in one tab and every open view re-renders instantly. There is no server database, no auth, no session. A few thin serverless routes act as read-only proxies — AI (`/api/ai/*`), live markets (`/api/markets/*`), and YouTube OAuth (`/api/youtube/*`) — and none of them touch your IndexedDB. Photos are `Blob`s stored alongside the items that reference them. The encrypted vault is its own table and is **never synced**.
+A Next.js 16 app (App Router, React 19, Turbopack). Every page is a client component reading from **IndexedDB** via [Dexie](https://dexie.org)'s `useLiveQuery` — capture an item in one tab and every open view re-renders instantly. There is no server database, no auth, no session. A few thin serverless routes act as read-only proxies — AI (`/api/ai/*`), voice transcription (`/api/voice/transcribe`), live markets (`/api/markets/*`), on-chain wallet balances (`/api/wallet/*`), and YouTube OAuth (`/api/youtube/*`) — and none of them touch your IndexedDB. The Messages inbox talks to your own connected Gmail account and caches threads locally. Photos are `Blob`s stored alongside the items that reference them. The encrypted vault is its own table and is **never synced**.
 
 ---
 
@@ -66,6 +66,7 @@ To enable the AI features, go to `/settings → AI credentials`, pick a provider
 ### Optional integrations
 
 - **YouTube Music** (`/music`) — needs your own free Google Cloud OAuth credentials in `.env.local` (`YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET`). The `/music` page walks you through the one-time setup.
+- **Gmail** (`/messages`) — connect your own Google account to read your inbox; threads and messages are cached locally and never leave your machine beyond the Gmail API itself.
 - **Server-wide default AI key** — copy `.env.example → .env.local` and set `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for the fallback path.
 
 ---
@@ -92,18 +93,19 @@ type StoredItem = {
 };
 ```
 
-Kind-specific fields live under `metadata` — e.g. **task** (`priority`, `dueDate`, `completedAt`, `reminder`, `projectId`), **habit** (`cadence`, `checkins[]`), **goal** (`timeframe`, `metric`, `milestones[]`, `identity`), **subscription** (`amount`, `currency`, `cycle`, `nextChargeAt`, `website`, `paused`), **account** (`accountType`, `category`, `balance`, `currency`), **holding** (`assetClass`, `symbol`, `coinId`, `quantity`, `costBasis`). Reminders are tasks with `metadata.reminder = true` + a `dueDate`. This flat shape lets new kinds/fields land without a schema migration.
+Kind-specific fields live under `metadata` — e.g. **task** (`priority`, `dueDate`, `completedAt`, `reminder`, `projectId`), **habit** (`cadence`, `checkins[]`), **goal** (`timeframe`, `metric`, `milestones[]`, `identity`), **subscription** (`amount`, `currency`, `cycle`, `nextChargeAt`, `website`, `paused`), **account** (`accountType`, `category`, `balance`, `currency`), **holding** (`assetClass`, `symbol`, `coinId`, `quantity`, `costBasis`). Reminders are tasks with `metadata.reminder = true` + a `dueDate`. This flat shape lets new kinds/fields land without a schema migration. (The whiteboard and your messages are *not* items — they each get their own table; see below.)
 
-### Other tables (Dexie v8)
+### Other tables (Dexie v12)
 
 | Table | Purpose | Synced? |
 | --- | --- | --- |
-| `items` | the polymorphic store above | yes (opt-in) |
+| `items` | the polymorphic store above | yes (opt-in Gist) |
 | `blobs` | photo/file `Blob`s | — |
 | `trash` + `tombstones` | soft-delete & restore | — |
 | `dayNotes` | per-calendar-day scratchpad | — |
 | `netWorthSnapshots` | daily net-worth points for the Finance trend | — |
-| `healthLogs` | daily health check-ins | — |
+| `whiteboard` | the single infinite-canvas scene | local (in JSON backup) |
+| `msgAccounts` · `msgThreads` · `msgMessages` | connected mailboxes + cached threads/messages | — (local; volume + credentials) |
 | `appKV` | small app settings (e.g. the connected backup folder handle) | — |
 | `vault` | **AES-GCM encrypted** secrets (PBKDF2-derived key) | **never** |
 
@@ -124,7 +126,8 @@ await deleteItem(id);                           // soft-delete → trash
 
 The AI is **agentic** and brings your own key — it talks to providers directly (no gateway).
 
-- **`POST /api/ai/ask`** — the browser sends a question + relevant items; the model streams an answer *and* can call tools the browser then executes locally: `addReminder`, `addTask`, `addPerson`, `addNote`, `addBookmark`, `addAccount`, `addHolding`. So "remind me to call Henry tomorrow at 2" or "add 0.5 BTC to my holdings" just works. The same pipeline backs **voice capture**.
+- **`POST /api/ai/ask`** — the browser sends a question + relevant items; the model streams an answer *and* can call tools the browser then executes locally: `addReminder`, `addTask`, `addPerson`, `addNote`, `addBookmark`, `addAccount`, `addHolding`. So "remind me to call Henry tomorrow at 2" or "add 0.5 BTC to my holdings" just works.
+- **`POST /api/ai/command`** — the natural-language command router behind **voice capture** and quick actions (create things, switch theme, start a focus timer…); paired with **`POST /api/voice/transcribe`** for speech-to-text.
 - **`POST /api/ai/brief`** — a generated summary of recent activity (the *Brief* card on the Today dashboard).
 
 | Provider | Direct via | Default model |
@@ -136,17 +139,20 @@ The AI is **agentic** and brings your own key — it talks to providers directly
 
 ### Live data (read-only proxies)
 
-`/api/markets/*` proxies public price data so it never hits the browser's CORS or needs a key: **crypto** (CoinGecko), **stocks** + **USD/DXY/FX pairs** (Yahoo), and FX rates (frankfurter.app) for true multi-currency net worth. Cached server-side; nothing personal is sent.
+- **`/api/markets/*`** proxies public price data so it never hits the browser's CORS or needs a key: **crypto** (CoinGecko), **stocks** + **USD/DXY/FX pairs** (Yahoo), and FX rates (frankfurter.app) for true multi-currency net worth.
+- **`/api/wallet/{evm,solana}`** reads on-chain balances for a wallet address you add, so holdings can value themselves live.
+
+All cached server-side; nothing personal is sent.
 
 ---
 
 ## Backup & portability
 
-- **Full snapshot** — `/settings → Backups`: download a complete backup (every table **including the encrypted vault**) as one JSON, or restore one back in — dates revived, items merged.
+- **Full snapshot** — `/settings → Backups`: download a complete backup (every table **including the encrypted vault and your whiteboard**) as one JSON, or restore one back in — dates revived, items merged.
 - **Connect a folder** — grant a local folder via the [File System Access API](https://developer.mozilla.org/docs/Web/API/File_System_Access_API) and Life OS writes a fresh backup there **automatically** (~every 12h while the app is open), with a "last backed up" indicator. Disconnect anytime.
 - **Export / Import** — `/settings → Data` for a quick items + day-notes JSON.
 - **Trash** — deletes are recoverable; auto-purged after 30 days.
-- **Optional Gist sync** — opt in to mirror your items to a private GitHub Gist so a second device can pull them down. The encrypted vault is **excluded** by design.
+- **Optional Gist sync** — opt in to mirror your items to a private GitHub Gist so a second device can pull them down. The encrypted vault and your cached messages are **excluded** by design.
 
 > ⚠️ Everything lives in IndexedDB, which a browser *can* evict under storage pressure. Connect a backup folder (or export periodically) if it matters.
 
@@ -167,9 +173,10 @@ Life OS installs as a [PWA](https://developer.mozilla.org/docs/Web/Progressive_w
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **Dexie 4** for IndexedDB
 - **AI SDK** + `@ai-sdk/anthropic` + `@ai-sdk/openai` (direct, no gateway) · **zod** for tool schemas
+- **@excalidraw/excalidraw** for the infinite whiteboard
 - **@dnd-kit** for the drag-and-drop Today dashboard
 - **Tailwind v4** · **cmdk** (⌘K) · **sonner** (toasts) · **lucide-react** (icons)
-- **Web Crypto** (vault) · **Web Speech API** (voice) · **Service Worker + Notifications + File System Access** (PWA, nudges, folder backups) · YouTube IFrame + Data API (music)
+- **Web Crypto** (vault) · **Web Speech API** (voice) · **Service Worker + Notifications + File System Access** (PWA, nudges, folder backups) · Gmail API (messages) · YouTube IFrame + Data API (music)
 
 No database, no auth provider, no ORM, no backend of your own.
 
@@ -181,18 +188,23 @@ No database, no auth provider, no ORM, no backend of your own.
 src/
   app/
     (app)/            all app routes share the sidebar layout
-      today/ inbox/ notes/ tasks/ habits/ health/ goals/ finance/
-      subscriptions/ projects/ people/ calendar/ graph/ music/ vault/
-      ask/ share/ highlights/ reviews/ tags/ templates/ settings/
+      today/ inbox/ messages/ notes/ whiteboard/ tasks/ habits/ goals/
+      finance/ subscriptions/ projects/ people/ calendar/ music/ vault/
+      ask/ bookmarks/ files/ share/ highlights/ reviews/ tags/ settings/
       items/[id]/     shared detail view (dispatches by kind)
     api/
-      ai/{ask,brief}/         agentic AI proxies
+      ai/{ask,command,brief}/                agentic AI + voice command proxies
+      voice/transcribe/                      speech-to-text proxy
       markets/{crypto,stocks,fx,quote,usd}/  live price proxies
-      youtube/...             OAuth + Data API for Music
-  components/         top-bar, sidebar, command palette, quick/voice capture, pwa-bootstrap, vault…
+      wallet/{evm,solana}/                   on-chain balance lookups
+      youtube/...                            OAuth + Data API for Music
+  components/         top-bar, sidebar, command palette, quick/voice capture,
+                     whiteboard/, pwa-bootstrap, vault/, music-player…
   lib/
-    store/            db.ts (Dexie) · items.ts · blobs.ts · snapshots.ts · health.ts
-    ai-provider.ts ask.ts notify.ts backup.ts finance.ts goals.ts links.ts vault/…
+    store/            db.ts (Dexie) · items.ts · blobs.ts · whiteboard.ts ·
+                     messaging.ts · snapshots.ts · day-notes.ts · wallets.ts
+    messaging/        Gmail client + credentials      sync/  gist.ts
+    ai-provider.ts ask.ts notify.ts backup.ts finance.ts goals.ts links.ts voice/ vault/…
   public/            manifest.webmanifest · sw.js (service worker)
 marketing/            standalone landing site (deployable to Vercel)
 ```
@@ -201,7 +213,7 @@ marketing/            standalone landing site (deployable to Vercel)
 
 ## Design
 
-The **Studio** visual direction — warm-paper surfaces (`#F6F1E8` cream / near-black in dark), a terra (`#D45A3F`) accent, sage/gold/plum/sky tints, 12px cards. Type is **Geist** / **Geist Mono**. Tokens live in [`src/app/globals.css`](src/app/globals.css); legacy names alias onto the Studio palette.
+Three modes via the top-bar toggle — **light**, **cloudy** (a soft, cool frosted-glass / glassmorphism mirror mode), and **dark**. The **Studio** visual direction — warm-paper surfaces (`#F6F1E8` cream / near-black in dark), a terra (`#D45A3F`) accent, sage/gold/plum/sky tints, 12px cards. Type is **Geist** / **Geist Mono**. Tokens live in [`src/app/globals.css`](src/app/globals.css); legacy names alias onto the Studio palette.
 
 ---
 
