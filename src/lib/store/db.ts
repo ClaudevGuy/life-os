@@ -121,6 +121,19 @@ export type StoredNetWorthSnapshot = {
 export type StoredKV = { key: string; value: unknown };
 
 /**
+ * The single persisted infinite-canvas whiteboard scene. Exactly one row,
+ * `id === "main"`. Kept loosely typed here so `db.ts` stays decoupled from the
+ * Excalidraw types — the whiteboard store module casts to the real shapes.
+ */
+export type StoredWhiteboard = {
+  id: string; // always "main"
+  elements: unknown[]; // Excalidraw elements
+  appState: Record<string, unknown>; // whitelisted appState subset
+  files: Record<string, unknown>; // Excalidraw BinaryFiles
+  updatedAt: Date;
+};
+
+/**
  * An encrypted vault entry. Only `type` and timestamps are in the clear (for
  * filtering/sorting); the title and all fields live inside `ct`, AES-GCM
  * encrypted under the passcode-derived key. Never synced — local only.
@@ -146,6 +159,7 @@ class LifeOSDB extends Dexie {
   msgAccounts!: EntityTable<MsgAccount, "id">;
   msgThreads!: EntityTable<MsgThread, "id">;
   msgMessages!: EntityTable<MsgMessage, "id">;
+  whiteboard!: EntityTable<StoredWhiteboard, "id">;
 
   constructor() {
     super("life-os");
@@ -278,6 +292,25 @@ class LifeOSDB extends Dexie {
       msgAccounts: "id, channel, status",
       msgThreads: "id, accountId, channel, lastTs",
       msgMessages: "id, threadId, accountId, ts",
+    });
+    // v12: single infinite whiteboard canvas (local-only).
+    this.version(12).stores({
+      items: "id, kind, status, capturedAt, topic, isPinned, [kind+status]",
+      blobs: "id, createdAt",
+      tombstones: "id, deletedAt",
+      trash: "id, trashedAt, kind",
+      dayNotes: "date, updatedAt",
+      netWorthSnapshots: "date, updatedAt",
+      vault: "id, type, updatedAt",
+      healthLogs: "date, updatedAt",
+      appKV: "key",
+      exercises: "id, name, muscle, type, custom",
+      workouts: "id, date, *focus",
+      routines: "id, name",
+      msgAccounts: "id, channel, status",
+      msgThreads: "id, accountId, channel, lastTs",
+      msgMessages: "id, threadId, accountId, ts",
+      whiteboard: "id",
     });
   }
 }

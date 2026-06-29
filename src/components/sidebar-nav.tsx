@@ -23,6 +23,7 @@ import {
   Target,
   Shield,
   MessagesSquare,
+  PenTool,
 } from "lucide-react";
 
 type RailIcon = React.ComponentType<{
@@ -59,6 +60,7 @@ const SECTIONS: RailSection[] = [
       { href: "/inbox", label: "Inbox", icon: Inbox, badgeKey: "inboxCount" },
       { href: "/messages", label: "Messages", icon: MessagesSquare },
       { href: "/notes", label: "Notes", icon: NotebookPen },
+      { href: "/whiteboard", label: "Whiteboard", icon: PenTool },
       { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
       { href: "/files", label: "Files", icon: Files },
     ],

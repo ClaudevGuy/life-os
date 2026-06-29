@@ -26,12 +26,13 @@ export function supportsFolderBackup(): boolean {
 // ── build / restore ───────────────────────────────────────────────────────────
 
 export async function buildBackupObject() {
-  const [items, dayNotes, netWorthSnapshots, vault] =
+  const [items, dayNotes, netWorthSnapshots, vault, whiteboard] =
     await Promise.all([
       db.items.toArray(),
       db.dayNotes.toArray(),
       db.netWorthSnapshots.toArray(),
       db.vault.toArray(),
+      db.whiteboard.toArray(),
     ]);
   let vaultGuard: unknown = null;
   try {
@@ -42,7 +43,7 @@ export async function buildBackupObject() {
   }
   return {
     app: "life-os",
-    schema: 8,
+    schema: 9,
     exportedAt: new Date().toISOString(),
     counts: { items: items.length },
     items,
@@ -50,6 +51,7 @@ export async function buildBackupObject() {
     netWorthSnapshots,
     vault,
     vaultGuard,
+    whiteboard,
   };
 }
 
@@ -84,6 +86,8 @@ export async function restoreFromObject(
       /* ignore */
     }
   }
+  const wb = revive(data.whiteboard, ["updatedAt"]);
+  if (wb.length) await db.whiteboard.bulkPut(wb as never);
   return { items: n };
 }
 
