@@ -711,64 +711,144 @@ function Hero() {
     const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    const y = (e.clientY - r.top) / r.height;
     el.style.setProperty("--lp-mx", `${e.clientX - r.left}px`);
     el.style.setProperty("--lp-my", `${e.clientY - r.top}px`);
+    // pointer-driven tilt + parallax for the product stage
+    el.style.setProperty("--lp-ry", `${(x - 0.5) * 11}deg`);
+    el.style.setProperty("--lp-rx", `${(0.5 - y) * 7}deg`);
+    el.style.setProperty("--lp-tx", `${(x - 0.5) * 26}px`);
+    el.style.setProperty("--lp-ty", `${(y - 0.5) * 26}px`);
+  }
+  function onLeave() {
+    const el = ref.current;
+    if (!el) return;
+    for (const k of ["--lp-rx", "--lp-ry", "--lp-tx", "--lp-ty"]) el.style.setProperty(k, "0px");
   }
   return (
-    <section ref={ref} onMouseMove={onMove} className="relative overflow-hidden">
+    <section ref={ref} onMouseMove={onMove} onMouseLeave={onLeave} className="lp-hero2">
+      {/* atmosphere */}
+      <div className="lp-hero2-wash" />
+      <span className="lp-beam b1" aria-hidden />
+      <span className="lp-beam b2" aria-hidden />
       <div className="lp-grid" />
-      <div className="lp-floor" />
-      <div className="lp-blob lp-anim-drift" style={{ top: -120, left: -80, width: 460, height: 460, background: "var(--lp-terra)" }} />
-      <div className="lp-blob lp-anim-drift" style={{ top: 40, right: -120, width: 420, height: 420, background: "var(--lp-gold)", animationDelay: "-6s" }} />
-      <div className="lp-blob lp-anim-drift" style={{ bottom: -160, left: "40%", width: 380, height: 380, background: "var(--lp-sky)", opacity: 0.3, animationDelay: "-11s" }} />
+      <div className="lp-blob lp-anim-drift" style={{ top: -160, left: -110, width: 500, height: 500, background: "var(--lp-terra)" }} />
+      <div className="lp-blob lp-anim-drift" style={{ top: -40, right: -140, width: 460, height: 460, background: "var(--lp-gold)", animationDelay: "-6s" }} />
+      <div className="lp-blob lp-anim-drift" style={{ bottom: -200, left: "48%", width: 420, height: 420, background: "var(--lp-sky)", opacity: 0.3, animationDelay: "-11s" }} />
       <div className="lp-spotlight" />
       <div className="lp-noise" />
 
-      <div className="relative max-w-6xl mx-auto px-5 sm:px-6 pt-16 sm:pt-24 pb-20">
-        <div className="lp-hero-in max-w-3xl">
-          <span className="lp-chip">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--lp-sky)", boxShadow: "0 0 8px var(--lp-sky)" }} />
-            Local-first · private · v1.0
-          </span>
-          <h1 className="mt-6 text-[44px] sm:text-[68px] leading-[1.02] font-semibold tracking-[-0.03em]">
-            The operating system
-            <br />
-            for <span className="lp-grad">your entire life.</span>
-          </h1>
-          <p className="mt-6 text-[17px] sm:text-[19px] leading-relaxed max-w-2xl" style={{ color: "var(--lp-muted)" }}>
-            Capture notes, think on an infinite whiteboard, plan your day, build habits, track your money,
-            read your inbox, and ask an AI that actually does the work — all in one beautiful app that runs on{" "}
-            <span style={{ color: "var(--lp-ink)" }}>your device</span>, not someone&apos;s cloud.
-          </p>
-          <div className="mt-9 flex items-center gap-3 flex-wrap">
-            <Link href={DOWNLOAD_WINDOWS} download className="lp-btn lp-btn-primary">
-              Download for Windows
-              <Download size={17} />
-            </Link>
-            <a href="#features" className="lp-btn lp-btn-ghost">Explore features</a>
-          </div>
-          <Link
-            href={GITHUB}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-5 inline-flex items-center gap-1.5 text-[13px] hover:opacity-70 transition-opacity"
-            style={{ color: "var(--lp-muted)" }}
-          >
-            <Github size={14} /> or view the source on GitHub
-          </Link>
-          <div className="mt-10 flex items-center gap-6 sm:gap-9 flex-wrap text-[13px]" style={{ color: "var(--lp-faint)" }}>
-            <Stat value={<Counter to={30} suffix="+" />} label="tools, one app" />
-            <Stat value={<Counter to={100} suffix="%" />} label="on your device" />
-            <Stat value="3" label="themes · 1 toggle" />
-            <Stat value="AES-256" label="encrypted vault" />
-          </div>
-        </div>
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 pt-16 sm:pt-20 lg:pt-24 pb-20 lg:pb-28">
+        <div className="grid lg:grid-cols-[1.04fr_1fr] gap-12 lg:gap-10 items-center">
+          {/* ── left: the pitch ── */}
+          <div className="lp-hero-in">
+            <span className="lp-eyebrow">
+              <span className="dot" />
+              Local-first · private · v1.0
+            </span>
 
-        <div className="mt-14 sm:mt-20 relative">
-          <HeroPreview />
+            <h1 className="lp-h1 mt-7">
+              <span className="block">The operating system for your</span>
+              <span className="block ser lp-grad">entire life.</span>
+            </h1>
+
+            <p className="mt-7 text-[16.5px] sm:text-[18px] leading-relaxed max-w-xl" style={{ color: "var(--lp-muted)" }}>
+              Capture notes, think on an infinite whiteboard, plan your day, build habits, track your money,
+              and ask an AI that <strong style={{ color: "var(--lp-ink)", fontWeight: 600 }}>actually does the work</strong> — all in one
+              beautiful app that runs on <span className="lp-mark">your device</span>, not someone&apos;s cloud.
+            </p>
+
+            <div className="mt-9 flex items-center gap-3 flex-wrap">
+              <Link href={DOWNLOAD_WINDOWS} download className="lp-btn lp-btn-primary lp-shine">
+                Download for Windows
+                <Download size={17} />
+              </Link>
+              <a href="#features" className="lp-btn lp-btn-ghost">Explore features</a>
+            </div>
+
+            <Link
+              href={GITHUB}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 inline-flex items-center gap-1.5 text-[13px] hover:opacity-70 transition-opacity"
+              style={{ color: "var(--lp-muted)" }}
+            >
+              <Github size={14} /> or view the source on <span className="underline underline-offset-2">GitHub</span>
+            </Link>
+
+            <div className="lp-spec mt-10 text-[13px]" style={{ color: "var(--lp-faint)" }}>
+              <Stat value={<Counter to={30} suffix="+" />} label="tools, one app" />
+              <Stat value={<Counter to={100} suffix="%" />} label="on your device" />
+              <Stat value="AES-256" label="encrypted vault" />
+            </div>
+          </div>
+
+          {/* ── right: pointer-driven 3D product stage ── */}
+          <div
+            className="lp-stage relative"
+            style={{ animation: "lp-rise 1s cubic-bezier(0.2,0.7,0.2,1) 0.4s both" }}
+          >
+            <div className="relative lp-tilt">
+              <span className="lp-screenglow" aria-hidden />
+              <div className="lp-pop" style={{ "--k": 0.4, "--z": "0px" } as React.CSSProperties}>
+                <div className="lp-anim-float-slow">
+                  <AppWindow />
+                </div>
+              </div>
+              <FloatChip className="right-0 sm:-right-5 -top-7" k={1.7} z={104} delay="-1.5s" color="var(--lp-sky)" icon={Inbox} title="Inbox at zero" sub="AI cleared 18 emails" />
+              <FloatChip className="-left-3 sm:-left-8 bottom-3" k={2.1} z={118} delay="-3.4s" color="var(--lp-terra)" icon={Flame} title="128-day streak" sub="habits on track" />
+              <FloatChip className="-right-2 sm:-right-7 bottom-24" k={1.4} z={64} delay="-2.4s" color="var(--lp-violet)" icon={Lock} title="Vault locked" sub="AES-256, on device" />
+            </div>
+          </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function FloatChip({
+  className,
+  k,
+  z,
+  delay,
+  color,
+  icon: Icon,
+  title,
+  sub,
+}: {
+  className: string;
+  k: number;
+  z: number;
+  delay: string;
+  color: string;
+  icon: typeof Coins;
+  title: string;
+  sub?: string;
+}) {
+  return (
+    <div
+      className={`hidden sm:block absolute lp-pop ${className}`}
+      style={{ "--k": k, "--z": `${z}px` } as React.CSSProperties}
+    >
+      <div className="lp-anim-float" style={{ animationDelay: delay }}>
+        <div
+          className="lp-glass rounded-2xl px-3 py-2.5 flex items-center gap-2.5"
+          style={{ boxShadow: "var(--lp-shadow-lg)" }}
+        >
+          <span
+            className="grid place-items-center w-8 h-8 rounded-xl shrink-0"
+            style={{ background: `color-mix(in oklch, ${color} 16%, transparent)`, color }}
+          >
+            <Icon size={15} />
+          </span>
+          <div className="leading-tight pr-1">
+            <div className="text-[12.5px] font-semibold" style={{ color: "var(--lp-ink)" }}>{title}</div>
+            {sub && <div className="text-[11px]" style={{ color: "var(--lp-muted)" }}>{sub}</div>}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -866,34 +946,6 @@ function AppWindow() {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function HeroPreview() {
-  return (
-    <div className="relative max-w-3xl mx-auto">
-      <div className="lp-anim-float-slow">
-        <AppWindow />
-      </div>
-      <div className="hidden sm:block absolute -left-2 sm:-left-6 top-12 lp-anim-float" style={{ animationDelay: "-1.5s" }}>
-        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2" style={{ boxShadow: "var(--lp-shadow)" }}>
-          <Coins size={15} style={{ color: "var(--lp-gold)" }} />
-          <span className="text-[12.5px]">BTC <b style={{ color: "var(--lp-ink)" }}>+4.2%</b></span>
-        </div>
-      </div>
-      <div className="hidden sm:block absolute -right-2 sm:-right-6 top-28 lp-anim-float" style={{ animationDelay: "-3s" }}>
-        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2" style={{ boxShadow: "var(--lp-shadow)" }}>
-          <Lock size={14} style={{ color: "var(--lp-terra)" }} />
-          <span className="text-[12.5px]">Vault locked</span>
-        </div>
-      </div>
-      <div className="hidden sm:block absolute right-10 -bottom-3 lp-anim-float" style={{ animationDelay: "-4.5s" }}>
-        <div className="lp-glass rounded-xl px-3.5 py-2.5 flex items-center gap-2" style={{ boxShadow: "var(--lp-shadow)" }}>
-          <Flame size={15} style={{ color: "var(--lp-terra)" }} fill="var(--lp-terra)" />
-          <span className="text-[12.5px]">14-day streak</span>
         </div>
       </div>
     </div>
