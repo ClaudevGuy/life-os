@@ -219,4 +219,4 @@ Three modes via the top-bar toggle — **light**, **cloudy** (a soft, cool frost
 
 ## License
 
-No license file yet — treat this as personal-use only unless that changes.
+[MIT](LICENSE) © ClaudevGuy
