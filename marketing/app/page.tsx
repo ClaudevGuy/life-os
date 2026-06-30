@@ -32,7 +32,6 @@ import {
   Highlighter,
   FolderKanban,
   Bookmark,
-  ChevronRight,
   Bell,
   Mic,
   Palette,
@@ -45,7 +44,22 @@ import {
   MessagesSquare,
 } from "lucide-react";
 
+// lucide-react dropped brand/logo icons (no `Github` export in this version) —
+// a tiny inline mark is simpler than pulling in a whole icon-set dependency.
+function Github({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.04-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.3 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.02 2.89-.02 3.29 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12Z" />
+    </svg>
+  );
+}
+
 const GITHUB = "https://github.com/ClaudevGuy/life-os";
+// Always points at whichever release is current — the filename is fixed
+// across releases (see package.json `build.win.artifactName`), so this link
+// never needs to change when a new version ships.
+const DOWNLOAD_WINDOWS =
+  "https://github.com/ClaudevGuy/life-os/releases/latest/download/Life-OS-Setup.exe";
 
 // ───────────────────────────────────────────────────────────────────────────
 // Theme — mirrors the app's light / cloudy / dark system (data-theme on <html>)
@@ -669,9 +683,20 @@ function Nav() {
           </div>
           <div className="flex items-center gap-2.5">
             <ThemeToggle />
-            <Link href={GITHUB} target="_blank" rel="noreferrer" className="lp-btn lp-btn-primary !px-4 !py-2 !text-[13.5px]">
-              Get it on GitHub
-              <ArrowRight size={15} />
+            <Link
+              href={GITHUB}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="View source on GitHub"
+              title="View source on GitHub"
+              className="hidden sm:grid place-items-center w-9 h-9 rounded-[10px] transition-transform active:scale-95"
+              style={{ border: "1px solid var(--lp-line-2)", background: "var(--lp-card)", color: "var(--lp-muted)" }}
+            >
+              <Github size={16} />
+            </Link>
+            <Link href={DOWNLOAD_WINDOWS} download className="lp-btn lp-btn-primary !px-4 !py-2 !text-[13.5px]">
+              Download for Windows
+              <Download size={15} />
             </Link>
           </div>
         </div>
@@ -716,12 +741,21 @@ function Hero() {
             <span style={{ color: "var(--lp-ink)" }}>your device</span>, not someone&apos;s cloud.
           </p>
           <div className="mt-9 flex items-center gap-3 flex-wrap">
-            <Link href={GITHUB} target="_blank" rel="noreferrer" className="lp-btn lp-btn-primary">
-              Get Life OS
-              <ArrowRight size={17} />
+            <Link href={DOWNLOAD_WINDOWS} download className="lp-btn lp-btn-primary">
+              Download for Windows
+              <Download size={17} />
             </Link>
             <a href="#features" className="lp-btn lp-btn-ghost">Explore features</a>
           </div>
+          <Link
+            href={GITHUB}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-5 inline-flex items-center gap-1.5 text-[13px] hover:opacity-70 transition-opacity"
+            style={{ color: "var(--lp-muted)" }}
+          >
+            <Github size={14} /> or view the source on GitHub
+          </Link>
           <div className="mt-10 flex items-center gap-6 sm:gap-9 flex-wrap text-[13px]" style={{ color: "var(--lp-faint)" }}>
             <Stat value={<Counter to={30} suffix="+" />} label="tools, one app" />
             <Stat value={<Counter to={100} suffix="%" />} label="on your device" />
@@ -1260,9 +1294,9 @@ function FinalCTA() {
               Private. Local. Beautiful. Everything in one place — and it opens instantly.
             </p>
             <div className="mt-9 flex items-center justify-center gap-3 flex-wrap">
-              <Link href={GITHUB} target="_blank" rel="noreferrer" className="lp-btn lp-btn-primary !text-[16px] !px-7 !py-4">
-                Get Life OS
-                <ChevronRight size={18} />
+              <Link href={DOWNLOAD_WINDOWS} download className="lp-btn lp-btn-primary !text-[16px] !px-7 !py-4">
+                Download for Windows
+                <Download size={18} />
               </Link>
               <a href="#everything" className="lp-btn lp-btn-ghost !px-6 !py-4">See everything</a>
             </div>
